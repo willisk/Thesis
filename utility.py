@@ -26,6 +26,8 @@ def train(net, data_loader, num_epochs=1, print_every=10):
 
             running_loss += loss.item()
 
+        net.stop_statistics_tracking()
+
         if epoch % print_every == 0:
             print("[%d / %d] loss: %.3f" %
                   (epoch, num_epochs, running_loss))
@@ -65,28 +67,22 @@ def plot_stats_mean(mean):
     else:
         mean = mean.T
         plt.scatter(mean[0], mean[1], c=np.arange(L),
-                    cmap=cmap, edgecolors='k')
+                    cmap=cmap, edgecolors='k', alpha=0.5)
 
 
-def cat_cond_mean(input, labels, n_classes, n_features, mean=None, N_class=None):
-    batch_size = len(input)
+def cat_cond_mean_(inputs, labels, n_classes, n_features, mean, class_count):
+    batch_size = len(inputs)
     # mask = torch.zeros((batch_size, n_classes, n_features))
     # mask[torch.arange(batch_size), labels, torch.arange(n_features)] = 1
     # mask = F.one_hot(labels, num_classes=n_classes)  # (64, 3)
     # c = input.unsqueeze(1).repeat(1, n_classes, 1)
 
-    if not N_class:
-        N_class = torch.ones(n_classes).unsqueeze(-1)
-    if not mean:
-        mean = torch.zeros(n_classes, n_features)
-
     total = torch.zeros((batch_size, n_classes, n_features))
-    for i, sample in enumerate(input):
+    for i, sample in enumerate(inputs):
         total[i, labels[i]] = sample
 
-    mean = mean * N_class
-    N_class += torch.bincount(labels, minlength=n_classes).unsqueeze(-1)
-    mean = mean + total.sum(axis=0)
-    mean = mean / N_class
-
-    return mean, N_class
+    N_class = torch.bincount(labels, minlength=n_classes).unsqueeze(-1)
+    curr_class_f = class_count.float()
+    class_count.add_(N_class)
+    mean.mul_(curr_class_f / class_count)
+    mean.add_(total.sum(axis=0) / class_count)
