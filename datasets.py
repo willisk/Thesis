@@ -7,7 +7,13 @@ import torch
 
 class Dataset2D(torch.utils.data.Dataset):
 
-    def __init__(self, X, Y):
+    def __init__(self, type, **params):
+        if type == 0:
+            X, Y = make_blobs(n_features=2, centers=3, **params)
+            X = np.array(X, dtype='float32')
+        if type == 1:
+            X, Y = make_circles(**params)
+            X = np.array(X, dtype='float32')
         self.X, self.Y = X, Y
 
     def __len__(self):
@@ -21,19 +27,3 @@ class Dataset2D(torch.utils.data.Dataset):
 
     def full(self):
         return self.X, self.Y
-
-
-class Dataset01(Dataset2D):
-    def __init__(self, **kwargs):
-        X, Y = make_blobs(n_features=2, centers=3, **kwargs)
-        X = np.array(X, dtype='float32')
-        super(Dataset01, self).__init__(X, Y)
-
-
-class Dataset02(Dataset2D):
-    def __init__(self, **kwargs):
-        X, Y = make_circles(**kwargs)
-        X = np.array(X, dtype='float32')
-        super(Dataset02, self).__init__(X, Y)
-
-# dataset01_generator()
