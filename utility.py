@@ -39,8 +39,8 @@ def plot_decision_boundary(dataset, net, contourgrad=False):
     cmap = 'Spectral'
     X, Y = dataset.full()
     h = 0.05
-    x_min, x_max = X[:, 0].min() - 10*h, X[:, 0].max() + 10*h
-    y_min, y_max = X[:, 1].min() - 10*h, X[:, 1].max() + 10*h
+    x_min, x_max = X[:, 0].min() - 10 * h, X[:, 0].max() + 10 * h
+    y_min, y_max = X[:, 1].min() - 10 * h, X[:, 1].max() + 10 * h
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
                          np.arange(y_min, y_max, h))
     mesh = (np.c_[xx.ravel(), yy.ravel()])
@@ -55,7 +55,7 @@ def plot_decision_boundary(dataset, net, contourgrad=False):
     else:
         plt.contourf(xx, yy, Z, cmap=cmap, alpha=.3)
     plt.contour(xx, yy, Z, colors='k', linewidths=0.5)
-    plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap=cmap)
+    plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap=cmap, alpha=.4)
     # plt.scatter(np.mean(X[:, 0]), np.mean(X[:, 1]), c='g')
 
 
