@@ -13,7 +13,7 @@ import numpy as np
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utility import train, plot_decision_boundary
+from utility import plot_decision_boundary
 from datasets import Dataset2D
 
 
@@ -33,22 +33,20 @@ def train(net, data_loader, num_epochs=1, print_every=10):
 
     net.train()
 
-    batch_total = 1
-
     for epoch in range(1, num_epochs + 1):
 
         total_count = 0.0
         total_loss = 0.0
         total_correct = 0.0
 
-        for batch_i, data in enumerate(data_loader, batch_total):
+        for data in data_loader:
             inputs, labels = data
             x = {'inputs': inputs,
                  'labels': labels}
 
             net.optimizer.zero_grad()
 
-            outputs = net(x)
+            outputs = net(inputs)
             loss = net.criterion(outputs, labels)
             loss.backward()
             net.optimizer.step()
@@ -58,29 +56,9 @@ def train(net, data_loader, num_epochs=1, print_every=10):
             total_loss += loss.item() * batch_size
             total_correct += count_correct(outputs, labels)
 
-            if not net.bypass_stats_layer:
-                for i, layer in enumerate(net.stats, 1):
-                    for j, feature in enumerate(layer.running_mean):
-                        for m, f in enumerate(feature):
-                            tb.add_scalar("stats%i.class%i.f%i" % (i, j, m + 1),
-                                          feature[m], batch_i)
-
-        batch_total = batch_i + 1
-
-        # net.stop_statistics_tracking()
-
         accuracy = total_correct / total_count
         tb.add_scalar('Loss', total_loss, epoch)
         tb.add_scalar('Accuracy', accuracy, epoch)
-
-        # for i, layer in enumerate(net.fc, 1):
-        #     tb.add_histogram("fc{}.bias".format(i), layer.bias, epoch)
-
-        # for i, layer in enumerate(net.fc, 1):
-        #     tb.add_histogram("fc{}.bias".format(i), layer.bias, epoch)
-        #     tb.add_histogram("fc{}.weight".format(i), layer.weight, epoch)
-        #     tb.add_histogram("fc{}.weight.grad".format(i),
-        #                      layer.weight.grad, epoch)
 
         if epoch % print_every == 0:
             print("[%d / %d] loss: %.3f" %
@@ -88,10 +66,9 @@ def train(net, data_loader, num_epochs=1, print_every=10):
     print("Finished Training")
 
 
-def learn_stats(net, data_loader, num_epochs=1):
+def learn_stats(stats_net, data_loader, num_epochs=1):
 
-    net.eval()
-    net.start_tracking_stats()
+    stats_net.start_tracking_stats()
 
     batch_total = 1
 
@@ -105,9 +82,9 @@ def learn_stats(net, data_loader, num_epochs=1):
             inputs, labels = data
             x = {'inputs': inputs,
                  'labels': labels}
-            net(x)
+            stats_net(x)
 
-            # for i, layer in enumerate(net.stats, 1):
+            # for i, layer in enumerate(stats_net.stats, 1):
             #     for j, feature in enumerate(layer.running_mean):
             #         for m, f in enumerate(feature):
             #             tb.add_scalar("stats%i.class%i.f%i" % (i, j, m + 1),
@@ -115,7 +92,7 @@ def learn_stats(net, data_loader, num_epochs=1):
 
         batch_total = batch_i + 1
 
-    net.stop_tracking_stats()
+    stats_net.disable_hooks()
     print("Finished Tracking Stats")
 
 # %%
@@ -170,17 +147,11 @@ class Net01(nn.Module):
         super(Net01, self).__init__()
 
         self.fc = nn.ModuleList()
-
         for i in range(len(layer_dims) - 1):
-            n_in = layer_dims[i]
-            n_out = layer_dims[i + 1]
-            layer = nn.Linear(n_in, n_out)
-            self.fc.append(layer)
+            self.fc.append(nn.Linear(layer_dims[i], layer_dims[i + 1]))
 
-    def forward(self, data):
-
+    def forward(self, x):
         L = len(self.fc)
-
         for i in range(L):
             x = self.fc[i](x)
             if i < L - 1:
@@ -197,179 +168,119 @@ class Net01(nn.Module):
         return torch.argmax(y, dim=-1)
 
 
-class CStatistics(nn.Module):
-
-    def __init__(self, num_features, num_classes, class_conditional=True,
-                 unbiased_count=False):
-        super(CStatistics, self).__init__()
-        if not class_conditional:
-            num_classes = 1
-        if unbiased_count:
-            cc_init = 1
-        else:
-            cc_init = 0
-        shape = (num_classes, num_features)
-        self.register_buffer('running_mean', torch.zeros(shape))
-        self.register_buffer('running_var', torch.ones(shape))
-        self.register_buffer('class_count',
-                             torch.full((num_classes, 1),
-                                        cc_init,
-                                        dtype=torch.long))
-        self.num_classes = num_classes
-        self.num_features = num_features
-        self.shape = shape
-        self.class_conditional = class_conditional
-        self.tracking_stats = False
-
-    def reset_parameters(self):
-        self.running_mean.zero_()
-        self.running_var.fill_(1)
-        self.class_count.fill_(1)
-
-    def forward(self, inputs, labels):
-        if self.tracking_stats:
-            cat_cond_mean_(
-                inputs, labels, self.num_classes, self.num_features,
-                mean=self.running_mean,
-                cc=self.class_count,
-                class_conditional=self.class_conditional)
-        else:
-            # print("rm req grad: " + str(self.running_mean.requires_grad))
-            means = self.running_mean[labels]
-            # print("m req grad: " + str(means.requires_grad))
-            self.regularization = (inputs - means).norm(2).sum()
-        return inputs
-
-
 class StatsHook():
 
-    def __init__(self, module, num_features, num_classes,
-                 input_stats=False, class_conditional=True, unbiased_count=False):
+    def __init__(self, stats_net, module, num_classes, pre_hook=False,
+                 class_conditional=True, unbiased_count=False):
+
         self.hook = module.register_forward_hook(self.hook_fn)
 
-        self.input_stats = input_stats
+        self.stats_net = stats_net
+        self.pre_hook = pre_hook
         self.num_classes = num_classes
-        self.num_features = num_features
         self.class_conditional = class_conditional
-        self.tracking_stats = False
-
-        if not class_conditional:
-            num_classes = 1
-        if unbiased_count:
-            cc_init = 1
-        else:
-            cc_init = 0
-        shape = (num_classes, num_features)
-        self.register_buffer('running_mean', torch.zeros(shape))
-        self.register_buffer('running_var', torch.ones(shape))
-        self.register_buffer('class_count',
-                             torch.full((num_classes, 1),
-                                        cc_init,
-                                        dtype=torch.long))
-        self.shape = shape
+        self.unbiased_count = unbiased_count
+        self.tracking_stats = True
+        self.initialized = False
+        self.enabled = False
 
     def hook_fn(self, module, inputs, outputs):
-        pass
-
-    def reset_parameters(self):
-        self.running_mean.zero_()
-        self.running_var.fill_(1)
-        self.class_count.fill_(1)
-
-    def forward(self, inputs, labels):
+        if not self.enabled:
+            return
+        labels = self.stats_net.current_labels
+        if self.pre_hook:
+            x = inputs[0]
+        else:
+            x = outputs
         if self.tracking_stats:
+            if not self.initialized:
+                num_features = x.shape[1]
+                print(num_features)
+                self.init_parameters(num_features)
             cat_cond_mean_(
-                inputs, labels, self.num_classes, self.num_features,
+                x, labels, self.num_classes, self.num_features,
                 mean=self.running_mean,
                 cc=self.class_count,
                 class_conditional=self.class_conditional)
         else:
-            # print("rm req grad: " + str(self.running_mean.requires_grad))
+            if not self.initialized:
+                print("Error: Statistics Parameters not initialized")
             means = self.running_mean[labels]
-            # print("m req grad: " + str(means.requires_grad))
-            self.regularization = (inputs - means).norm(2).sum()
-        return inputs
+            self.regularization = (x - means).norm(2).sum()
+
+    def init_parameters(self, num_features):
+        self.num_features = num_features
+
+        if not self.class_conditional:
+            num_classes = 1
+        shape = (self.num_classes, self.num_features)
+
+        if self.unbiased_count:
+            cc_init = 1
+        else:
+            cc_init = 0
+
+        self.running_mean = torch.zeros(shape)
+        self.running_var = torch.ones(shape)
+        self.class_count = torch.full((self.num_classes, 1),
+                                      cc_init,
+                                      dtype=torch.long)
+        self.initialized = True
 
 
 class CStatsNet(nn.Module):
-    def __init__(self, net, class_conditional=True, unbiased_count=True):
+
+    def __init__(self, net, num_classes, class_conditional=True, unbiased_count=True):
         super(CStatsNet, self).__init__()
 
-        self.stats = nn.ModuleList()
+        self.net = net
 
-        n_classes = layer_dims[-1]
-        n_in = layer_dims[0]
-        self.stats.append(CStatistics(
-            n_in, n_classes, class_conditional=class_conditional))
+        hooks = []
+        for i, (name, m) in enumerate(net.named_modules()):
+            if isinstance(m, nn.ModuleList) or isinstance(m, nn.CrossEntropyLoss):
+                continue
+            if i == 0:  # XXX always assume this is neural net??
+                pre_hook = True
+            else:
+                pre_hook = False
+            hooks.append(StatsHook(self, m, num_classes,
+                                   pre_hook=pre_hook,
+                                   class_conditional=class_conditional,
+                                   unbiased_count=unbiased_count))
+        # hooks.append(StatsHook(self, last_module, num_classes, pre_hook=True,
+        #                        class_conditional=class_conditional,
+        #                        unbiased_count=unbiased_count))
 
-        for i in range(len(layer_dims) - 1):
-            n_in = layer_dims[i]
-            n_out = layer_dims[i + 1]
-            layer = nn.Linear(n_in, n_out)
-            self.fc.append(layer)
-            self.stats.append(CStatistics(n_out,
-                                          n_classes,
-                                          class_conditional=class_conditional,
-                                          unbiased_count=unbiased_count))
-
-        # print(vars(self.stats[0]))
+        self.hooks = hooks
         self.class_conditional = class_conditional
-        self.bypass_stats_layer = True
 
     def forward(self, data):
-
-        use_stats = isinstance(data, dict) and 'labels' in data
-        bypass_stats_layer = self.bypass_stats_layer
-
-        if use_stats:
-            x = data['inputs']
-            labels = data['labels']
-        else:
-            x = data
-            bypass_stats_layer = True  # accidentally didn't switch off
-
-        L = len(self.fc)
-
-        modules = net.modules()  # named modules?
-
-        for i in enumerate(modules):
-            # use_stats: False, when ONLY evaluating
-            # True, when training and inversion
-            # tracking_stats: might be turned off for initial training
-            # or after sufficient tracking when done training (1 epoch)
-            if not bypass_stats_layer:
-                x = self.stats[i](x, labels)
-            if i < L:
-                x = self.fc[i](x)
-            if i < L - 1:
-                x = F.relu(x)
-        return x
-
-    def __init__(self, net):
-        self.net = net
-        self.bypass_stats_layer = False
+        self.current_labels = data['labels']
+        return self.net(data['inputs'])
 
     def stop_tracking_stats(self):
-        self.bypass_stats_layer = True
-        for m in self.stats:
+        self.eval()
+        for m in self.hooks:
             m.tracking_stats = False
 
     def start_tracking_stats(self):
+        self.enable_hooks()
         self.eval()
-        self.bypass_stats_layer = False
-        for m in self.stats:
+        for m in self.hooks:
             m.tracking_stats = True
 
-    def start_inverting(self):
-        self.eval()
-        self.bypass_stats_layer = False
-        for m in self.stats:
-            m.tracking_stats = False
+    def enable_hooks(self):
+        for h in self.hooks:
+            h.enabled = True
+
+    def disable_hooks(self):
+        for h in self.hooks:
+            h.enabled = False
 
     def collect_stats(self):
         stat_vars = ['running_mean', 'running_var', 'class_count']
         stats = []
-        for m in self.stats:
+        for m in self.hooks:
             stat = {}
             for s in stat_vars:
                 stat[s] = getattr(m, s).data
@@ -377,11 +288,13 @@ class CStatsNet(nn.Module):
         return stats
 
 
-def deep_inversion(net, labels, steps=5):
+def deep_inversion(stats_net, labels, steps=5):
 
     num_features = 2
 
-    net.start_inverting()
+    net = stats_net.net
+    stats_net.stop_tracking_stats()
+    stats_net.enable_hooks()
 
     bs = len(labels)
     inputs = torch.randn((bs, num_features), requires_grad=True)
@@ -396,14 +309,14 @@ def deep_inversion(net, labels, steps=5):
         net.optimizer.zero_grad()
 
         data = {'inputs': inputs, 'labels': labels}
-        outputs = net(data)
+        outputs = stats_net(data)
         loss = net.criterion(outputs, labels)
 
         # reg_loss = sum([s.regularization for s in net.stats])
-        reg_loss = net.stats[0].regularization
+        reg_loss = stats_net.hooks[0].regularization
 
         loss = loss + reg_loss
-        # loss = net.stats[0].regularization
+        # loss = stats_net.stats[0].regularization
 
         loss.backward()
 
@@ -421,7 +334,7 @@ def deep_inversion(net, labels, steps=5):
                  linewidth=0.7,
                  alpha=1)
 
-    net.stop_tracking_stats()
+    stats_net.disable_hooks()
     return inputs
 
 
@@ -429,24 +342,33 @@ training_params = {'num_epochs': 100,
                    'print_every': 20}
 dataset_params = {
     'n_samples': 100,
+
+
     # 'noise': 0.1,
     # 'factor': 0.5
 }
 dataset_gen_params = {'batch_size': 64,
                       'shuffle': True}
 
-net = Net01([2, 8, 6, 3], class_conditional=True, unbiased_count=True)
+num_classes = 3
+
+net = Net01([2, 8, 6, num_classes])
 net.compile(lr=0.01)
 dataset = Dataset2D(type=0, **dataset_params)
 data_loader = dataset.generator(**dataset_gen_params)
 # inputs, labels = next(iter(data_loader))
+
 train(net, data_loader, **training_params)
-learn_stats(net, data_loader, num_epochs=50)
+
+stats_net = CStatsNet(net, num_classes)
+learn_stats(stats_net, data_loader, num_epochs=50)
+
 plot_decision_boundary(dataset, net)
-stats = net.collect_stats()
+stats = stats_net.collect_stats()
 plot_stats_mean(stats[0])
+
 target_labels = torch.arange(3)
-invert = deep_inversion(net, target_labels, steps=50)
+invert = deep_inversion(stats_net, target_labels, steps=50)
 plot_invert(invert, target_labels)
 plt.show()
 

@@ -14,19 +14,16 @@ def train(net, data_loader, num_epochs=1, print_every=10):
 
         for i, data in enumerate(data_loader, 1):
             inputs, labels = data
-            x = {'inputs': inputs,
-                 'labels': labels}
-
             net.optimizer.zero_grad()
 
-            outputs = net(x)
+            outputs = net(inputs)
             loss = net.criterion(outputs, labels)
             loss.backward()
             net.optimizer.step()
 
             running_loss += loss.item()
 
-        net.stop_statistics_tracking()
+        # net.stop_statistics_tracking()
 
         if epoch % print_every == 0:
             print("[%d / %d] loss: %.3f" %
@@ -56,7 +53,6 @@ def plot_decision_boundary(dataset, net, contourgrad=False):
         plt.contourf(xx, yy, Z, cmap=cmap, alpha=.3)
     plt.contour(xx, yy, Z, colors='k', linewidths=0.5)
     plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap=cmap, alpha=.4)
-    # plt.scatter(np.mean(X[:, 0]), np.mean(X[:, 1]), c='g')
 
 
 def plot_stats_mean(mean):
