@@ -109,7 +109,7 @@ def plot_stats_mean(stats):
     else:
         c = np.arange(num_classes)
     plt.scatter(mean[0], mean[1], c=c,
-                cmap=cmap, edgecolors='k', alpha=0.4,
+                cmap=cmap, edgecolors='k', alpha=1,
                 marker='^')
 
 
@@ -170,19 +170,19 @@ class Net01(nn.Module):
 
 class StatsHook():
 
-    def __init__(self, stats_net, module, num_classes, pre_hook=False,
+    def __init__(self, stats_net, module, num_classes,
                  class_conditional=True, unbiased_count=False):
 
         self.hook = module.register_forward_hook(self.hook_fn)
 
         self.stats_net = stats_net
-        self.pre_hook = pre_hook
         self.num_classes = num_classes
         self.class_conditional = class_conditional
         self.unbiased_count = unbiased_count
         self.tracking_stats = True
         self.initialized = False
         self.enabled = False
+        self.pre_hook = True  # remove?
 
     def hook_fn(self, module, inputs, outputs):
         if not self.enabled:
@@ -195,7 +195,6 @@ class StatsHook():
         if self.tracking_stats:
             if not self.initialized:
                 num_features = x.shape[1]
-                print(num_features)
                 self.init_parameters(num_features)
             cat_cond_mean_(
                 x, labels, self.num_classes, self.num_features,
@@ -240,16 +239,13 @@ class CStatsNet(nn.Module):
             if isinstance(m, nn.ModuleList) or isinstance(m, nn.CrossEntropyLoss):
                 continue
             if i == 0:  # XXX always assume this is neural net??
-                pre_hook = True
-            else:
-                pre_hook = False
+                continue
+            #     pre_hook = True
+            # else:
+            #     pre_hook = False
             hooks.append(StatsHook(self, m, num_classes,
-                                   pre_hook=pre_hook,
                                    class_conditional=class_conditional,
                                    unbiased_count=unbiased_count))
-        # hooks.append(StatsHook(self, last_module, num_classes, pre_hook=True,
-        #                        class_conditional=class_conditional,
-        #                        unbiased_count=unbiased_count))
 
         self.hooks = hooks
         self.class_conditional = class_conditional
@@ -306,17 +302,17 @@ def deep_inversion(stats_net, labels, steps=5):
 
     for step in range(1, steps + 1):
 
-        net.optimizer.zero_grad()
+        optimizer.zero_grad()
 
         data = {'inputs': inputs, 'labels': labels}
         outputs = stats_net(data)
         loss = net.criterion(outputs, labels)
 
         # reg_loss = sum([s.regularization for s in net.stats])
-        reg_loss = stats_net.hooks[0].regularization
+        # reg_loss = stats_net.hooks[0].regularization
 
-        loss = loss + reg_loss
-        # loss = stats_net.stats[0].regularization
+        # loss = loss + reg_loss
+        loss = stats_net.hooks[0].regularization
 
         loss.backward()
 
@@ -328,11 +324,9 @@ def deep_inversion(stats_net, labels, steps=5):
     cmap = matplotlib.cm.get_cmap('Spectral')
     labels_max = max(labels).float().item()
     for i, d in enumerate(data):
-        plt.plot(d[0], d[1],
-                 '--',
-                 c=cmap(labels[i].item() / labels_max),
-                 linewidth=0.7,
-                 alpha=1)
+        c = cmap(labels[i].item() / labels_max)
+        plt.plot(d[0], d[1], '--', c=c, linewidth=0.7, alpha=1)
+        # plt.plot(d[0], d[1], 'x', c=c, alpha=0.3)
 
     stats_net.disable_hooks()
     return inputs
@@ -342,32 +336,30 @@ training_params = {'num_epochs': 100,
                    'print_every': 20}
 dataset_params = {
     'n_samples': 100,
-
-
     # 'noise': 0.1,
     # 'factor': 0.5
 }
 dataset_gen_params = {'batch_size': 64,
                       'shuffle': True}
 
-num_classes = 3
+
+dataset = Dataset2D(type=0, **dataset_params)
+data_loader = dataset.generator(**dataset_gen_params)
+num_classes = dataset.get_num_classes()
 
 net = Net01([2, 8, 6, num_classes])
 net.compile(lr=0.01)
-dataset = Dataset2D(type=0, **dataset_params)
-data_loader = dataset.generator(**dataset_gen_params)
-# inputs, labels = next(iter(data_loader))
 
 train(net, data_loader, **training_params)
 
-stats_net = CStatsNet(net, num_classes)
+stats_net = CStatsNet(net, num_classes, class_conditional=True)
 learn_stats(stats_net, data_loader, num_epochs=50)
 
 plot_decision_boundary(dataset, net)
 stats = stats_net.collect_stats()
 plot_stats_mean(stats[0])
 
-target_labels = torch.arange(3)
+target_labels = torch.arange(num_classes)
 invert = deep_inversion(stats_net, target_labels, steps=50)
 plot_invert(invert, target_labels)
 plt.show()

@@ -51,7 +51,7 @@ def plot_decision_boundary(dataset, net, contourgrad=False):
         plt.contourf(xx, yy, A.T.reshape(xx.shape), cmap=cmap, alpha=.3)
     else:
         plt.contourf(xx, yy, Z, cmap=cmap, alpha=.3)
-    plt.contour(xx, yy, Z, colors='k', linewidths=0.5)
+    plt.contour(xx, yy, Z, colors='k', linewidth=0.2)
     plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap=cmap, alpha=.4)
 
 
