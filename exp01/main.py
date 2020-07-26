@@ -10,15 +10,68 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 import numpy as np
+from sklearn.datasets import make_blobs, make_circles, make_moons
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utility import plot_decision_boundary
-from datasets import Dataset2D
+# from utility import plot_decision_boundary
+# from datasets import Dataset2D
 
+np.random.seed(0)
+torch.manual_seed(0)
 
 comment = ""
 tb = SummaryWriter(comment=comment)
+
+# %% DATASET
+
+
+class Dataset2D(torch.utils.data.Dataset):
+
+    def __init__(self, dataset_type, **params):
+        if dataset_type == 0:
+            X, Y = make_blobs(n_features=2, centers=3, **params)
+            for i, _ in enumerate(X):
+                if Y[i] == 0:
+                    X[i] = X[i] * 2
+        if dataset_type == 1:
+            X, Y = make_circles(noise=.1, **params)
+            for i, _ in enumerate(X):
+                if Y[i] == 0:
+                    X[i][0] = X[i][0] * 2
+            X = X * 3
+        if dataset_type == 2:
+            X, Y = make_moons(noise=.2, **params)
+        if dataset_type == 3:
+            X, Y = make_blobs(n_features=2, centers=25,
+                              cluster_std=0.2, **params)
+            Y = Y % 2
+
+        X = np.array(X, dtype='float32')
+        self.X, self.Y = X, Y
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, index):
+        return self.X[index], self.Y[index]
+
+    def get_num_classes(self):
+        return max(self.Y).item() + 1
+
+    def mean(self):
+        return [self.X[self.Y == y].mean(axis=0)
+                for y in range(self.get_num_classes())]
+
+    def var(self):
+        return [self.X[self.Y == y].var(axis=0)
+                for y in range(self.get_num_classes())]
+
+    def generator(self, **params):
+        return torch.utils.data.DataLoader(self, **params)
+
+    def full(self):
+        return self.X, self.Y
 
 # %% utility
 
@@ -28,7 +81,78 @@ def count_correct(outputs, labels):
     return (preds == labels).sum()
 
 
-def train(net, data_loader, num_epochs=1, print_every=10):
+def plot_decision_boundary(dataset, net, contourgrad=False):
+
+    cmap = 'Spectral'
+    X, Y = dataset.full()
+    h = 0.05
+    x_min, x_max = X[:, 0].min() - 10 * h, X[:, 0].max() + 10 * h
+    y_min, y_max = X[:, 1].min() - 10 * h, X[:, 1].max() + 10 * h
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                         np.arange(y_min, y_max, h))
+    mesh = (np.c_[xx.ravel(), yy.ravel()])
+    mesh = torch.from_numpy(mesh.astype('float32'))
+    Z = net.predict(mesh)
+    Z = Z.T.reshape(xx.shape)
+
+    plt.figure(figsize=(5, 5))
+    if contourgrad:
+        A = net(mesh)
+        plt.contourf(xx, yy, A.T.reshape(xx.shape), cmap=cmap, alpha=.3)
+    else:
+        plt.contourf(xx, yy, Z, cmap=cmap, alpha=.3)
+    plt.contour(xx, yy, Z, colors='k')
+    plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap=cmap, alpha=.4)
+
+
+def plot_stats_mean(stats):
+    cmap = matplotlib.cm.get_cmap('Spectral')
+    mean = stats['running_mean']
+    var = stats['running_var']
+
+    size = torch.sqrt(var) * 2
+
+    num_classes = mean.shape[0]
+    # mean = mean.T
+    if num_classes == 1:    # no class_conditional
+        c = 'k'
+    else:
+        colors = cmap(np.arange(num_classes) / (num_classes - 1.))
+    Ellipse = matplotlib.patches.Ellipse
+    for m, v, c in zip(mean, size, colors):
+        ell = Ellipse(m, v[0], v[1], edgecolor=c, lw=1, fill=False)
+        plt.gca().add_artist(ell)
+        # plt.scatter(mean[0], mean[1], c=c,
+        #         cmap=cmap, edgecolors='k', alpha=0.5,
+        #         s=var,
+        #         marker='^')
+
+
+def cat_cond_mean_(inputs, labels, n_classes, n_features, mean, var, cc,
+                   class_conditional=True, bessel_correction=True):
+
+    if class_conditional:
+        total = torch.zeros((n_classes, n_features))
+        total.index_add_(0, labels, inputs)
+        N_class = torch.bincount(labels, minlength=n_classes).unsqueeze(-1)
+    else:
+        total = inputs.sum(dim=0)
+        N_class = len(inputs)
+
+    cc_f = cc.float()
+    cc.add_(N_class)
+    mean.mul_(cc_f / cc)
+    mean.add_(total / cc)
+    ##
+    total_2 = torch.zeros((n_classes, n_features))
+    # total_var.index_add_(0, labels, inputs - mean[labels])
+    for i, x in enumerate(inputs):
+        total_2[labels[i]] += (inputs[i])**2
+    var.mul_(cc_f / cc)
+    var.add_((total_2 - N_class * mean**2) / cc)
+
+
+def train(net, data_loader, criterion, optimizer, num_epochs=1, print_every=10):
     "Training Loop"
 
     net.train()
@@ -44,12 +168,12 @@ def train(net, data_loader, num_epochs=1, print_every=10):
             x = {'inputs': inputs,
                  'labels': labels}
 
-            net.optimizer.zero_grad()
+            optimizer.zero_grad()
 
             outputs = net(inputs)
-            loss = net.criterion(outputs, labels)
+            loss = criterion(outputs, labels)
             loss.backward()
-            net.optimizer.step()
+            optimizer.step()
 
             batch_size = len(inputs)
             total_count += batch_size
@@ -57,8 +181,8 @@ def train(net, data_loader, num_epochs=1, print_every=10):
             total_correct += count_correct(outputs, labels)
 
         accuracy = total_correct / total_count
-        tb.add_scalar('Loss', total_loss, epoch)
-        tb.add_scalar('Accuracy', accuracy, epoch)
+        # tb.add_scalar('Loss', total_loss, epoch)
+        # tb.add_scalar('Accuracy', accuracy, epoch)
 
         if epoch % print_every == 0:
             print("[%d / %d] loss: %.3f" %
@@ -96,48 +220,6 @@ def learn_stats(stats_net, data_loader, num_epochs=1):
     print("Finished Tracking Stats")
 
 # %%
-
-
-def plot_stats_mean(stats):
-    cmap = 'Spectral'
-    mean = stats["running_mean"]
-
-    num_classes = mean.shape[0]
-    mean = mean.T
-    if num_classes == 1:    # no class_conditional
-        c = 'k'
-    else:
-        c = np.arange(num_classes)
-    plt.scatter(mean[0], mean[1], c=c,
-                cmap=cmap, edgecolors='k', alpha=1,
-                marker='^')
-
-
-def plot_invert(x, labels):
-    cmap = 'Spectral'
-    x = x.detach().T
-    plt.scatter(x[0], x[1], c=labels,
-                cmap=cmap, edgecolors='k',
-                marker='x',
-                alpha=1)
-
-
-def cat_cond_mean_(inputs, labels, n_classes, n_features, mean, cc, class_conditional=True):
-
-    if not class_conditional:
-        total = inputs.sum(dim=0)
-        N_class = len(inputs)
-    else:
-        total = torch.zeros((n_classes, n_features))
-        total.index_add_(0, labels, inputs.detach())
-        N_class = torch.bincount(labels, minlength=n_classes).unsqueeze(-1)
-
-    cc_f = cc.float()
-    cc.add_(N_class)
-    mean.mul_(cc_f / cc)
-    mean.add_(total / cc)
-
-
 # %%
 
 
@@ -158,50 +240,44 @@ class Net01(nn.Module):
                 x = F.relu(x)
         return x
 
-    def compile(self, lr=0.01):
-        self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.SGD(self.parameters(), lr=lr)
-
     def predict(self, x):
         net.eval()
         y = self.__call__(x)
         return torch.argmax(y, dim=-1)
 
 
-class StatsHook():
+class StatsHook(nn.Module):
 
     def __init__(self, stats_net, module, num_classes,
-                 class_conditional=True, unbiased_count=False):
+                 class_conditional=True, bessel_correction=False):
+        super(StatsHook, self).__init__()
 
         self.hook = module.register_forward_hook(self.hook_fn)
 
-        self.stats_net = stats_net
+        self.stats_net = [stats_net]
         self.num_classes = num_classes
         self.class_conditional = class_conditional
-        self.unbiased_count = unbiased_count
+        self.bessel_correction = bessel_correction
         self.tracking_stats = True
         self.initialized = False
         self.enabled = False
-        self.pre_hook = True  # remove?
 
     def hook_fn(self, module, inputs, outputs):
         if not self.enabled:
             return
-        labels = self.stats_net.current_labels
-        if self.pre_hook:
-            x = inputs[0]
-        else:
-            x = outputs
+        labels = self.stats_net[0].current_labels
+        x = inputs[0]
         if self.tracking_stats:
             if not self.initialized:
                 num_features = x.shape[1]
                 self.init_parameters(num_features)
-            cat_cond_mean_(
-                x, labels, self.num_classes, self.num_features,
-                mean=self.running_mean,
-                cc=self.class_count,
-                class_conditional=self.class_conditional)
-        else:
+            cat_cond_mean_(x.detach(), labels, self.num_classes, self.num_features,
+                           mean=self.running_mean,
+                           var=self.running_var,
+                           cc=self.class_count,
+                           class_conditional=self.class_conditional,
+                           bessel_correction=self.bessel_correction)
+        else:   # inverting
             if not self.initialized:
                 print("Error: Statistics Parameters not initialized")
             means = self.running_mean[labels]
@@ -212,43 +288,35 @@ class StatsHook():
 
         if not self.class_conditional:
             num_classes = 1
-        shape = (self.num_classes, self.num_features)
-
-        if self.unbiased_count:
-            cc_init = 1
         else:
-            cc_init = 0
+            num_classes = self.num_classes
+        shape = (num_classes, self.num_features)
 
-        self.running_mean = torch.zeros(shape)
-        self.running_var = torch.ones(shape)
-        self.class_count = torch.full((self.num_classes, 1),
-                                      cc_init,
-                                      dtype=torch.long)
+        self.register_buffer('running_mean', torch.zeros(shape))
+        self.register_buffer('running_var', torch.zeros(shape))
+        self.register_buffer('class_count', torch.zeros((num_classes, 1),
+                                                        dtype=torch.long))
         self.initialized = True
 
 
 class CStatsNet(nn.Module):
 
-    def __init__(self, net, num_classes, class_conditional=True, unbiased_count=True):
+    def __init__(self, net, num_classes, class_conditional=True, bessel_correction=True):
         super(CStatsNet, self).__init__()
 
         self.net = net
 
-        hooks = []
+        self.hooks = nn.ModuleList()
         for i, (name, m) in enumerate(net.named_modules()):
             if isinstance(m, nn.ModuleList) or isinstance(m, nn.CrossEntropyLoss):
                 continue
             if i == 0:  # XXX always assume this is neural net??
                 continue
-            #     pre_hook = True
-            # else:
-            #     pre_hook = False
-            hooks.append(StatsHook(self, m, num_classes,
-                                   class_conditional=class_conditional,
-                                   unbiased_count=unbiased_count))
+            self.hooks.append(StatsHook(self, m, num_classes,
+                                        class_conditional=class_conditional,
+                                        bessel_correction=bessel_correction))
 
-        self.hooks = hooks
-        self.class_conditional = class_conditional
+        # self.class_conditional = class_conditional
 
     def forward(self, data):
         self.current_labels = data['labels']
@@ -295,7 +363,7 @@ def deep_inversion(stats_net, labels, steps=5):
     bs = len(labels)
     inputs = torch.randn((bs, num_features), requires_grad=True)
 
-    optimizer = optim.SGD([inputs], lr=0.1)
+    optimizer = optim.Adam([inputs], lr=0.1)
 
     history = []
     history.append(inputs.data.detach().clone())
@@ -306,7 +374,7 @@ def deep_inversion(stats_net, labels, steps=5):
 
         data = {'inputs': inputs, 'labels': labels}
         outputs = stats_net(data)
-        loss = net.criterion(outputs, labels)
+        loss = criterion(outputs, labels)
 
         # reg_loss = sum([s.regularization for s in net.stats])
         # reg_loss = stats_net.hooks[0].regularization
@@ -327,15 +395,20 @@ def deep_inversion(stats_net, labels, steps=5):
         c = cmap(labels[i].item() / labels_max)
         plt.plot(d[0], d[1], '--', c=c, linewidth=0.7, alpha=1)
         # plt.plot(d[0], d[1], 'x', c=c, alpha=0.3)
+    x = inputs.detach().T
+    plt.scatter(x[0], x[1], c='k', alpha=1, marker='x')
+    plt.scatter(x[0], x[1],
+                c=labels, cmap=cmap, alpha=0.9, marker='x')
 
     stats_net.disable_hooks()
     return inputs
 
 
-training_params = {'num_epochs': 100,
+training_params = {'num_epochs': 200,
                    'print_every': 20}
 dataset_params = {
-    'n_samples': 100,
+    'dataset_type': 3,
+    'n_samples': 500,
     # 'noise': 0.1,
     # 'factor': 0.5
 }
@@ -343,25 +416,27 @@ dataset_gen_params = {'batch_size': 64,
                       'shuffle': True}
 
 
-dataset = Dataset2D(type=0, **dataset_params)
+dataset = Dataset2D(**dataset_params)
 data_loader = dataset.generator(**dataset_gen_params)
 num_classes = dataset.get_num_classes()
 
 net = Net01([2, 8, 6, num_classes])
-net.compile(lr=0.01)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(net.parameters(), lr=0.01)
 
-train(net, data_loader, **training_params)
+train(net, data_loader, criterion, optimizer, **training_params)
 
 stats_net = CStatsNet(net, num_classes, class_conditional=True)
 learn_stats(stats_net, data_loader, num_epochs=50)
 
-plot_decision_boundary(dataset, net)
-stats = stats_net.collect_stats()
-plot_stats_mean(stats[0])
 
-target_labels = torch.arange(num_classes)
-invert = deep_inversion(stats_net, target_labels, steps=50)
-plot_invert(invert, target_labels)
+plot_decision_boundary(dataset, net)
+plot_stats_mean(stats_net.collect_stats()[0])
+
+target_labels = torch.arange(num_classes) % num_classes
+invert = deep_inversion(stats_net, target_labels, steps=100)
+# plot_invert(invert, target_labels)
+# tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
 plt.show()
 
 tb.close()
