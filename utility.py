@@ -4,81 +4,98 @@ import matplotlib.pyplot as plt
 import torch
 
 
-def train(net, data_loader, num_epochs=1, print_every=10):
+def count_correct(outputs, labels):
+    preds = outputs.argmax(dim=-1)
+    return (preds == labels).sum()
+
+
+def cat_cond_mean_(inputs, labels, n_classes, n_features, mean, var, cc,
+                   class_conditional=True, bessel_correction=True):
+
+    if class_conditional:
+        total = torch.zeros((n_classes, n_features))
+        total.index_add_(0, labels, inputs)
+        N_class = torch.bincount(labels, minlength=n_classes).unsqueeze(-1)
+    else:
+        total = inputs.sum(dim=0)
+        N_class = len(inputs)
+
+    cc_f = cc.float()
+    cc.add_(N_class)
+    mean.mul_(cc_f / cc)
+    mean.add_(total / cc)
+    ##
+    total_2 = torch.zeros((n_classes, n_features))
+    # total_var.index_add_(0, labels, inputs - mean[labels])
+    for i, x in enumerate(inputs):
+        total_2[labels[i]] += (inputs[i])**2
+    var.mul_(cc_f / cc)
+    var.add_((total_2 - N_class * mean**2) / cc)
+
+
+def train(net, data_loader, criterion, optimizer, num_epochs=1, print_every=10):
+    "Training Loop"
 
     net.train()
 
     for epoch in range(1, num_epochs + 1):
 
-        running_loss = 0.0
+        total_count = 0.0
+        total_loss = 0.0
+        total_correct = 0.0
 
-        for i, data in enumerate(data_loader, 1):
+        for data in data_loader:
             inputs, labels = data
-            net.optimizer.zero_grad()
+            x = {'inputs': inputs,
+                 'labels': labels}
+
+            optimizer.zero_grad()
 
             outputs = net(inputs)
-            loss = net.criterion(outputs, labels)
+            loss = criterion(outputs, labels)
             loss.backward()
-            net.optimizer.step()
+            optimizer.step()
 
-            running_loss += loss.item()
+            batch_size = len(inputs)
+            total_count += batch_size
+            total_loss += loss.item() * batch_size
+            total_correct += count_correct(outputs, labels)
 
-        # net.stop_statistics_tracking()
+        accuracy = total_correct / total_count
+        # tb.add_scalar('Loss', total_loss, epoch)
+        # tb.add_scalar('Accuracy', accuracy, epoch)
 
         if epoch % print_every == 0:
             print("[%d / %d] loss: %.3f" %
-                  (epoch, num_epochs, running_loss))
+                  (epoch, num_epochs, total_loss))
     print("Finished Training")
 
 
-def plot_decision_boundary(dataset, net, contourgrad=False):
+def learn_stats(stats_net, data_loader, num_epochs=1):
 
-    cmap = 'Spectral'
-    X, Y = dataset.full()
-    h = 0.05
-    x_min, x_max = X[:, 0].min() - 10 * h, X[:, 0].max() + 10 * h
-    y_min, y_max = X[:, 1].min() - 10 * h, X[:, 1].max() + 10 * h
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                         np.arange(y_min, y_max, h))
-    mesh = (np.c_[xx.ravel(), yy.ravel()])
-    mesh = torch.from_numpy(mesh.astype('float32'))
-    Z = net.predict(mesh)
-    Z = Z.T.reshape(xx.shape)
+    stats_net.start_tracking_stats()
 
-    plt.figure(figsize=(5, 5))
-    if contourgrad:
-        A = net(mesh)
-        plt.contourf(xx, yy, A.T.reshape(xx.shape), cmap=cmap, alpha=.3)
-    else:
-        plt.contourf(xx, yy, Z, cmap=cmap, alpha=.3)
-    plt.contour(xx, yy, Z, colors='k', linewidth=0.2)
-    plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap=cmap, alpha=.4)
+    batch_total = 1
 
+    for epoch in range(1, num_epochs + 1):
 
-def plot_stats_mean(mean):
-    cmap = 'Spectral'
-    L = mean.shape[0]
-    if L == 1:
-        plt.scatter(mean[0], mean[1], c='k')
-    else:
-        mean = mean.T
-        plt.scatter(mean[0], mean[1], c=np.arange(L),
-                    cmap=cmap, edgecolors='k', alpha=0.5)
+        total_count = 0.0
+        total_loss = 0.0
+        total_correct = 0.0
 
+        for batch_i, data in enumerate(data_loader, batch_total):
+            inputs, labels = data
+            x = {'inputs': inputs,
+                 'labels': labels}
+            stats_net(x)
 
-def cat_cond_mean_(inputs, labels, n_classes, n_features, mean, class_count):
-    batch_size = len(inputs)
-    # mask = torch.zeros((batch_size, n_classes, n_features))
-    # mask[torch.arange(batch_size), labels, torch.arange(n_features)] = 1
-    # mask = F.one_hot(labels, num_classes=n_classes)  # (64, 3)
-    # c = input.unsqueeze(1).repeat(1, n_classes, 1)
+            # for i, layer in enumerate(stats_net.stats, 1):
+            #     for j, feature in enumerate(layer.running_mean):
+            #         for m, f in enumerate(feature):
+            #             tb.add_scalar("stats%i.class%i.f%i" % (i, j, m + 1),
+            #                           feature[m], batch_i)
 
-    total = torch.zeros((batch_size, n_classes, n_features))
-    for i, sample in enumerate(inputs):
-        total[i, labels[i]] = sample
+        batch_total = batch_i + 1
 
-    N_class = torch.bincount(labels, minlength=n_classes).unsqueeze(-1)
-    curr_class_f = class_count.float()
-    class_count.add_(N_class)
-    mean.mul_(curr_class_f / class_count)
-    mean.add_(total.sum(axis=0) / class_count)
+    stats_net.disable_hooks()
+    print("Finished Tracking Stats")
