@@ -31,6 +31,8 @@ class StatsHook(nn.Module):
 
         x = inputs[0]
 
+        print(x.shape)
+
         if not self.initialized:
             self.init_parameters(num_features=x.shape[1])
 
@@ -86,8 +88,11 @@ class CStatsNet(nn.Module):
         # self.class_conditional = class_conditional
 
     def forward(self, data):
-        self.current_labels = data['labels']
-        return self.net(data['inputs'])
+        if isinstance(data, dict):
+            self.current_labels = data['labels']
+            return self.net(data['inputs'])
+        else:
+            return self.net(data)
 
     def init_hooks(self, data_loader):
         self.net(next(iter(data_loader))[0])

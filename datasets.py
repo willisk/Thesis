@@ -1,9 +1,12 @@
 import os
 import sys
 import numpy as np
-from sklearn.datasets import make_blobs, make_circles, make_moons, load_iris
 import matplotlib
 import matplotlib.pyplot as plt
+import pandas as pd
+
+from sklearn.datasets import make_blobs, make_circles, make_moons, load_iris, load_digits
+
 
 import torch
 import torch.nn as nn
@@ -21,30 +24,8 @@ importlib.reload(statsnet)
 
 training_params = {'num_epochs': 200,
                    'print_every': 20}
-dataset_params = {
-    'n_samples': 500,
-    # 'noise': 0.1,
-    # 'factor': 0.5
-}
 dataset_gen_params = {'batch_size': 64,
                       'shuffle': True}
-
-
-def load2D(type=1):
-
-    dataset = Dataset2D(type, **dataset_params)
-    num_classes = dataset.get_num_classes()
-
-    net = Net01([2, 8, 6, num_classes])
-    path = "csnet{}.pt".format(type)
-
-    stats_net = dataset.pretrained_statsnet(net, path)
-
-    return stats_net, dataset
-
-
-def loadIris():
-    dataset = DatasetIris()
 
 
 class Dataset(torch.utils.data.Dataset):
@@ -67,6 +48,12 @@ class Dataset(torch.utils.data.Dataset):
     def var(self):
         return [self.X[self.Y == y].var(axis=0)
                 for y in range(self.get_num_classes())]
+
+    def print_accuracy(self, net):
+        inputs, labels = torch.Tensor(self.X), torch.Tensor(self.Y)
+        preds = net(inputs).argmax(dim=-1)
+        acc = (preds == labels).type(torch.FloatTensor).mean()
+        print("Accuracy: {:3f}".format(acc))
 
     def generator(self, **params):
         return torch.utils.data.DataLoader(self, **params)
@@ -94,8 +81,8 @@ class Dataset(torch.utils.data.Dataset):
             stats_net.load_state_dict(checkpoint['csnet_state_dict'])
             print("Model loaded: {}".format(path))
         else:
-            utility.train(net, data_loader, criterion,
-                          optimizer, **training_params)
+            # utility.train(net, data_loader, criterion,
+            #               optimizer, **training_params)
             utility.learn_stats(stats_net, data_loader, num_epochs=50)
             torch.save({
                 'epoch': training_params['num_epochs'],
@@ -104,16 +91,83 @@ class Dataset(torch.utils.data.Dataset):
             print("Model saved: {}".format(path))
         return stats_net
 
+    def load_statsnet(self):
+        pass
+
+    def plot(self, net):
+        pass
+
+    def plot_stats(self, stats_net):
+        pass
+
+    def plot_history(self, history, labels):
+        pass
+
 
 class DatasetIris(Dataset):
-    def __init__(self, type, **params):
-        iris_data = load_iris()
-        self.X, self.Y = iris_data.data, iris_data.target
+    def __init__(self):
+        self.iris = load_iris()
+        self.X = np.array(self.iris['data'], dtype='float32')
+        self.Y = self.iris['target']
+
+    def load_statsnet(self):
+        layer_dims = [4, 16, 16, self.get_num_classes()]
+        net = FCNet(layer_dims)
+        path = "csnet_iris.pt"
+        stats_net = self.pretrained_statsnet(net, path)
+        return stats_net
+
+    def plot(self, net):
+        self.fig = utility.scatter_matrix(self.X, self.Y,
+                                          feature_names=self.iris['feature_names'],
+                                          s=10,
+                                          alpha=0.7,
+                                          cmap='brg')
+
+    def plot_history(self, invert, labels):
+        utility.scatter_matrix(invert, labels,
+                               fig=self.fig,
+                               marker='x',
+                               c='k',
+                               s=60)
+        utility.scatter_matrix(invert, labels,
+                               fig=self.fig,
+                               marker='x',
+                               s=50,
+                               cmap='brg')
+
+
+class DatasetDigits(Dataset):
+    def __init__(self):
+        digits = load_digits()
+        self.X = torch.FloatTensor(digits['data']).reshape(-1, 1, 8, 8)
+        self.Y = digits['target']
+
+    def load_statsnet(self):
+        layer_dims = [16, 32, 32, 16, 8 * 8 * 16, self.get_num_classes()]
+        net = ConvNet(layer_dims, 3)
+        print(net)
+        path = "csnet_digits.pt"
+        stats_net = self.pretrained_statsnet(net, path)
+        return stats_net
+
+    def plot(self):
+        for i in range(9):
+            plt.subplot(3, 3, i + 1)
+            plt.imshow(self.X[i], cmap='gray', interpolation='none')
+            plt.title("Label: {}".format(self.Y[i]))
+            plt.xticks()
+            plt.yticks()
 
 
 class Dataset2D(Dataset):
 
-    def __init__(self, type, **params):
+    def __init__(self, type):
+        params = {
+            'n_samples': 500,
+            # 'noise': 0.1,
+            # 'factor': 0.5
+        }
         if type == 0:
             X, Y = make_blobs(n_features=2, centers=3, **params)
             for i, _ in enumerate(X):
@@ -133,30 +187,18 @@ class Dataset2D(Dataset):
             Y = Y % 2
 
         X = np.array(X, dtype='float32')
+        self.type = type
         self.X, self.Y = X, Y
 
+    def load_statsnet(self):
+        layer_dims = [2, 8, 6, self.get_num_classes()]
+        net = FCNet(layer_dims)
+        path = "csnet{}.pt".format(self.type)
+        stats_net = self.pretrained_statsnet(net, path)
+        return stats_net
+
     def plot(self, net, contourgrad=False):
-
-        cmap = 'Spectral'
-        X, Y = self.full()
-        h = 0.05
-        x_min, x_max = X[:, 0].min() - 10 * h, X[:, 0].max() + 10 * h
-        y_min, y_max = X[:, 1].min() - 10 * h, X[:, 1].max() + 10 * h
-        xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                             np.arange(y_min, y_max, h))
-        mesh = (np.c_[xx.ravel(), yy.ravel()])
-        mesh = torch.from_numpy(mesh.astype('float32'))
-        Z = net.predict(mesh)
-        Z = Z.T.reshape(xx.shape)
-
-        plt.figure(figsize=(5, 5))
-        if contourgrad:
-            A = net(mesh)
-            plt.contourf(xx, yy, A.T.reshape(xx.shape), cmap=cmap, alpha=.3)
-        else:
-            plt.contourf(xx, yy, Z, cmap=cmap, alpha=.3)
-        plt.contour(xx, yy, Z, colors='k')
-        plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap=cmap, alpha=.4)
+        utility.plot_prediction2d(self.X, self.Y, net)
 
     def plot_stats(self, stats_net):
         cmap = matplotlib.cm.get_cmap('Spectral')
@@ -195,24 +237,62 @@ class Dataset2D(Dataset):
                     c=labels, cmap=cmap, alpha=0.9, marker='x')
 
 
-class Net01(nn.Module):
+class Net(nn.Module):
+    def __init__(self, **kwargs):
+        super(Net, self).__init__()
 
-    def __init__(self, layer_dims):
-        super(Net01, self).__init__()
-
-        self.fc = nn.ModuleList()
-        for i in range(len(layer_dims) - 1):
-            self.fc.append(nn.Linear(layer_dims[i], layer_dims[i + 1]))
-
-    def forward(self, x):
-        L = len(self.fc)
-        for i in range(L):
-            x = self.fc[i](x)
-            if i < L - 1:
-                x = F.relu(x)
-        return x
+        self.layers = nn.ModuleList()
 
     def predict(self, x):
         self.eval()
         y = self.__call__(x)
         return torch.argmax(y, dim=-1)
+
+
+class FCNet(Net):
+
+    def __init__(self, layer_dims):
+        super(FCNet, self).__init__()
+
+        for i in range(len(layer_dims) - 1):
+            self.layers.append(nn.Linear(layer_dims[i], layer_dims[i + 1]))
+
+    def forward(self, x):
+        L = len(self.layers)
+        for i in range(L):
+            x = self.layers[i](x)
+            if i < L - 1:
+                x = F.relu(x)
+        return x
+
+
+class ConvNet(Net):
+
+    def __init__(self, layer_dims, kernel_size):
+        super(ConvNet, self).__init__()
+
+        L = len(layer_dims) - 2
+        in_channels = 1
+
+        padding = int((kernel_size - 1) / 2)
+
+        for i in range(L):
+            out_channels = layer_dims[i]
+            self.layers.append(nn.Conv2d(in_channels,
+                                         out_channels,
+                                         kernel_size=kernel_size,
+                                         padding=padding))
+            in_channels = out_channels
+        self.layers.append(nn.Linear(layer_dims[i + 1],
+                                     layer_dims[i + 2]))
+
+    def forward(self, x):
+        L = len(self.layers)
+        for i in range(L):
+            if i < L - 1:
+                x = self.layers[i](x)
+                x = F.relu(x)
+            else:
+                x = nn.Flatten()(x)
+                x = self.layers[i](x)
+        return x

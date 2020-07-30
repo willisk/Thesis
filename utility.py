@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 
 import torch
 
+import itertools
+
 
 def count_correct(outputs, labels):
     preds = outputs.argmax(dim=-1)
@@ -99,3 +101,77 @@ def learn_stats(stats_net, data_loader, num_epochs=1):
 
     stats_net.disable_hooks()
     print("Finished Tracking Stats")
+
+
+def scatter_matrix(data, labels,
+                   feature_names=[], fig=None, **kwargs):
+    ndata, ncols = data.shape
+    data = data.T
+    if fig is None:
+        fig, axes = plt.subplots(nrows=ncols, ncols=ncols, figsize=(12, 12))
+        fig.subplots_adjust(hspace=0.05, wspace=0.05)
+    else:
+        axes = np.array(fig.axes).reshape(4, 4)
+
+    for ax in axes.flat:
+        ax.xaxis.set_visible(False)
+        ax.yaxis.set_visible(False)
+
+        if ax.is_first_col():
+            ax.yaxis.set_ticks_position('left')
+        if ax.is_last_col():
+            ax.yaxis.set_ticks_position('right')
+        if ax.is_first_row():
+            ax.xaxis.set_ticks_position('top')
+        if ax.is_last_row():
+            ax.xaxis.set_ticks_position('bottom')
+
+    # Plot the data.
+    for i, j in zip(*np.triu_indices_from(axes, k=1)):
+        for x, y in [(i, j), (j, i)]:
+            if 'c' in kwargs:
+                axes[x, y].scatter(data[x], data[y], **kwargs)
+            else:
+                axes[x, y].scatter(data[x], data[y],
+                                   c=labels, **kwargs)
+            # plot_prediction2d(data_2d, labels, net,
+            #                   num=100, axis=axes[x, y], cmap=cmap)
+
+    for i, label in enumerate(feature_names):
+        axes[i, i].annotate(label, (0.5, 0.5), xycoords='axes fraction',
+                            ha='center', va='center')
+
+    for i, j in zip(range(ncols), itertools.cycle((-1, 0))):
+        axes[j, i].xaxis.set_visible(True)
+        axes[i, j].yaxis.set_visible(True)
+
+    return fig
+
+
+def plot_prediction2d(data, labels, net, num=400, axis=None, cmap='Spectral', contourgrad=False):
+
+    print(data.shape)
+    X, Y = data, labels
+    h = 0.05
+    x_min, x_max = X[:, 0].min() - 10 * h, X[:, 0].max() + 10 * h
+    y_min, y_max = X[:, 1].min() - 10 * h, X[:, 1].max() + 10 * h
+    xx, yy = np.meshgrid(np.linspace(x_min, x_max, num),
+                         np.linspace(y_min, y_max, num))
+    mesh = (np.c_[xx.ravel(), yy.ravel()])
+    mesh = torch.from_numpy(mesh.astype('float32'))
+    Z = net.predict(mesh)
+    Z = Z.T.reshape(xx.shape)
+
+    if axis is None:
+        _plt = plt
+        plt.figure(figsize=(5, 5))
+    else:
+        _plt = axis
+
+    # if contourgrad:
+    #     A = net(mesh)
+    #     _plt.contourf(xx, yy, A.T.reshape(xx.shape), cmap=cmap, alpha=.3)
+    # else:
+    _plt.contourf(xx, yy, Z, cmap=cmap, alpha=.3)
+    _plt.contour(xx, yy, Z, colors='k')
+    _plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap=cmap, alpha=.4)

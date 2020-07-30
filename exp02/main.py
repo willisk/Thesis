@@ -30,11 +30,8 @@ comment = ""
 tb = SummaryWriter(comment=comment)
 
 
-def deep_inversion(stats_net, criterion, labels, steps=5, track_history=False):
+def deep_inversion(stats_net, criterion, labels, num_features=2, steps=5, track_history=False):
 
-    num_features = 2
-
-    net = stats_net.net
     stats_net.stop_tracking_stats()
     stats_net.enable_hooks()
 
@@ -74,21 +71,31 @@ def deep_inversion(stats_net, criterion, labels, steps=5, track_history=False):
 
     if track_history:
         return history
-    return inputs
+    return inputs.data.detach()
 
 
-stats_net, dataset = datasets.load2D(type=3)
+# dataset = datasets.Dataset2D(type=3)
+dataset = datasets.DatasetDigits()
+# dataset = datasets.DatasetIris()
+
+stats_net = dataset.load_statsnet()
+dataset.print_accuracy(stats_net)
+
+# num_classes = dataset.get_num_classes()
+# target_labels = torch.arange(num_classes) % num_classes
+# history = deep_inversion(stats_net, dataset.get_criterion(),
+#                          target_labels,
+#                          steps=100,
+#                          num_features=4,
+#                          track_history=False
+#                          #  track_history=True
+#                          )
+
 dataset.plot(stats_net)
-dataset.plot_stats(stats_net)
+# dataset.plot_stats(stats_net)
+# dataset.plot_history(history, target_labels)
 
-num_classes = dataset.get_num_classes()
-target_labels = torch.arange(num_classes) % num_classes
-history = deep_inversion(stats_net, dataset.get_criterion(),
-                         target_labels, steps=100, track_history=True)
-invert = history[-1]
-dataset.plot_history(history, target_labels)
-# dataset.plot_invert(invert, target_labels)
-# tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
+# # tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
 plt.show()
 
 tb.close()

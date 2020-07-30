@@ -1,0 +1,10 @@
+[MASTER]
+init-hook='import sys; sys.path.append(".")'
+
+[TYPECHECK]
+
+generated-members=numpy.*, torch.*, self.*
+
+[MESSAGES CONTROL]
+
+disable=not-callable
