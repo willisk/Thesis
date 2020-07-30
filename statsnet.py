@@ -31,16 +31,14 @@ class StatsHook(nn.Module):
 
         x = inputs[0]
 
-        print(x.shape)
-
         if not self.initialized:
-            self.init_parameters(num_features=x.shape[1])
+            self.init_parameters(x.shape[1:])
 
         if not self.enabled:
             return
         labels = self.stats_net[0].current_labels
         if self.tracking_stats:
-            utility.cat_cond_mean_(x.detach(), labels, self.num_classes, self.num_features,
+            utility.cat_cond_mean_(x.detach(), labels,
                                    mean=self.running_mean,
                                    var=self.running_var,
                                    cc=self.class_count,
@@ -52,19 +50,20 @@ class StatsHook(nn.Module):
             means = self.running_mean[labels]
             self.regularization = (x - means).norm(2).sum()
 
-    def init_parameters(self, num_features):
-        self.num_features = num_features
-
-        if not self.class_conditional:
-            num_classes = 1
-        else:
+    def init_parameters(self, shape):
+        if self.class_conditional:
             num_classes = self.num_classes
-        shape = (num_classes, self.num_features)
+        else:
+            num_classes = 1
 
-        self.register_buffer('running_mean', torch.zeros(shape))
-        self.register_buffer('running_var', torch.zeros(shape))
-        self.register_buffer('class_count', torch.zeros((num_classes, 1),
-                                                        dtype=torch.long))
+        self.shape = [num_classes] + list(shape)
+
+        self.register_buffer('running_mean', torch.zeros(self.shape))
+        self.register_buffer('running_var', torch.zeros(self.shape))
+        self.register_buffer('class_count',
+                             utility.expand_as_r(
+                                 torch.zeros(num_classes, dtype=torch.long),
+                                 self.running_mean))
         self.initialized = True
 
 
@@ -95,7 +94,9 @@ class CStatsNet(nn.Module):
             return self.net(data)
 
     def init_hooks(self, data_loader):
-        self.net(next(iter(data_loader))[0])
+        inputs = next(iter(data_loader))[0]
+        self.net(inputs)
+        self.input_shape = inputs.shape[1:]
 
     def predict(self, inputs):
         return self.net.predict(inputs)

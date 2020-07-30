@@ -81,8 +81,8 @@ class Dataset(torch.utils.data.Dataset):
             stats_net.load_state_dict(checkpoint['csnet_state_dict'])
             print("Model loaded: {}".format(path))
         else:
-            # utility.train(net, data_loader, criterion,
-            #               optimizer, **training_params)
+            utility.train(net, data_loader, criterion,
+                          optimizer, **training_params)
             utility.learn_stats(stats_net, data_loader, num_epochs=50)
             torch.save({
                 'epoch': training_params['num_epochs'],
@@ -146,18 +146,21 @@ class DatasetDigits(Dataset):
     def load_statsnet(self):
         layer_dims = [16, 32, 32, 16, 8 * 8 * 16, self.get_num_classes()]
         net = ConvNet(layer_dims, 3)
-        print(net)
         path = "csnet_digits.pt"
         stats_net = self.pretrained_statsnet(net, path)
         return stats_net
 
-    def plot(self):
-        for i in range(9):
-            plt.subplot(3, 3, i + 1)
-            plt.imshow(self.X[i], cmap='gray', interpolation='none')
-            plt.title("Label: {}".format(self.Y[i]))
-            plt.xticks()
-            plt.yticks()
+    def plot(self, net):
+        idx = np.arange(9)
+        X = self.X[idx]
+        Y = self.Y[idx]
+        pred = net.predict(X).numpy()
+        colors = np.array(['red', 'green'])[(pred == Y).astype(int)]
+        utility.plot_num_matrix(X, pred, "pred: {}", colors)
+        plt.show()
+
+    def plot_history(self, invert, labels):
+        utility.plot_num_matrix(invert, labels, "target: {}")
 
 
 class Dataset2D(Dataset):

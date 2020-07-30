@@ -11,23 +11,33 @@ def count_correct(outputs, labels):
     return (preds == labels).sum()
 
 
-def cat_cond_mean_(inputs, labels, n_classes, n_features, mean, var, cc,
+def expand_as_r(a, b):
+    diff = len(b.shape) - len(a.shape)
+    shape = list(a.shape) + diff * [1]
+    return a.reshape(shape)
+
+
+def cat_cond_mean_(inputs, labels, mean, var, cc,
                    class_conditional=True, bessel_correction=True):
 
+    shape = mean.shape
+    n_classes = shape[0]
+
     if class_conditional:
-        total = torch.zeros((n_classes, n_features))
+        total = torch.zeros(shape)
         total.index_add_(0, labels, inputs)
-        N_class = torch.bincount(labels, minlength=n_classes).unsqueeze(-1)
+        N_class = expand_as_r(torch.bincount(labels, minlength=n_classes), cc)
     else:
         total = inputs.sum(dim=0)
         N_class = len(inputs)
 
     cc_f = cc.float()
     cc.add_(N_class)
+
     mean.mul_(cc_f / cc)
-    mean.add_(total / cc)
+    mean.add_((total / cc).expand_as(mean))
     ##
-    total_2 = torch.zeros((n_classes, n_features))
+    total_2 = torch.zeros(shape)
     # total_var.index_add_(0, labels, inputs - mean[labels])
     for i, x in enumerate(inputs):
         total_2[labels[i]] += (inputs[i])**2
@@ -175,3 +185,21 @@ def plot_prediction2d(data, labels, net, num=400, axis=None, cmap='Spectral', co
     _plt.contourf(xx, yy, Z, cmap=cmap, alpha=.3)
     _plt.contour(xx, yy, Z, colors='k')
     _plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap=cmap, alpha=.4)
+
+
+def plot_num_matrix(X, labels, title_fmt, colors=None):
+    L = len(X)
+    ncols = 3
+    nrows = -(-L // ncols)
+    for i in range(L):
+        plt.subplot(nrows, ncols, i + 1)
+        plt.tight_layout()
+        plt.imshow(X[i].squeeze(),
+                   cmap='gray', interpolation='none')
+        if colors is None:
+            color = 'k'
+        else:
+            color = colors[i]
+        plt.title(title_fmt.format(labels[i]), color=color)
+        plt.xticks([])
+        plt.yticks([])

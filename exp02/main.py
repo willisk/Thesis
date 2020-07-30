@@ -35,8 +35,8 @@ def deep_inversion(stats_net, criterion, labels, num_features=2, steps=5, track_
     stats_net.stop_tracking_stats()
     stats_net.enable_hooks()
 
-    bs = len(labels)
-    inputs = torch.randn((bs, num_features), requires_grad=True)
+    shape = [len(labels)] + list(stats_net.input_shape)
+    inputs = torch.randn(shape, requires_grad=True)
 
     optimizer = optim.Adam([inputs], lr=0.1)
 
@@ -81,19 +81,19 @@ dataset = datasets.DatasetDigits()
 stats_net = dataset.load_statsnet()
 dataset.print_accuracy(stats_net)
 
-# num_classes = dataset.get_num_classes()
-# target_labels = torch.arange(num_classes) % num_classes
-# history = deep_inversion(stats_net, dataset.get_criterion(),
-#                          target_labels,
-#                          steps=100,
-#                          num_features=4,
-#                          track_history=False
-#                          #  track_history=True
-#                          )
+num_classes = dataset.get_num_classes()
+target_labels = torch.arange(num_classes) % num_classes
+history = deep_inversion(stats_net, dataset.get_criterion(),
+                         target_labels,
+                         steps=100,
+                         num_features=4,
+                         track_history=False
+                         #  track_history=True
+                         )
 
 dataset.plot(stats_net)
 # dataset.plot_stats(stats_net)
-# dataset.plot_history(history, target_labels)
+dataset.plot_history(history, target_labels)
 
 # # tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
 plt.show()
