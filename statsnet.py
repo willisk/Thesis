@@ -15,7 +15,7 @@ class StatsHook(nn.Module):
 
     def __init__(self, stats_net, module, num_classes,
                  class_conditional=True, bessel_correction=False):
-        super(StatsHook, self).__init__()
+        super().__init__()
 
         self.hook = module.register_forward_hook(self.hook_fn)
 
@@ -70,7 +70,7 @@ class StatsHook(nn.Module):
 class CStatsNet(nn.Module):
 
     def __init__(self, net, num_classes, class_conditional=True, bessel_correction=True):
-        super(CStatsNet, self).__init__()
+        super().__init__()
 
         self.net = net
 
@@ -103,14 +103,14 @@ class CStatsNet(nn.Module):
 
     def stop_tracking_stats(self):
         self.eval()
-        for m in self.hooks:
-            m.tracking_stats = False
+        for h in self.hooks:
+            h.tracking_stats = False
 
     def start_tracking_stats(self):
-        self.enable_hooks()
         self.eval()
-        for m in self.hooks:
-            m.tracking_stats = True
+        self.enable_hooks()
+        for h in self.hooks:
+            h.tracking_stats = True
 
     def enable_hooks(self):
         for h in self.hooks:

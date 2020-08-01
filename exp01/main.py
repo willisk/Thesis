@@ -226,7 +226,7 @@ def learn_stats(stats_net, data_loader, num_epochs=1):
 class Net01(nn.Module):
 
     def __init__(self, layer_dims):
-        super(Net01, self).__init__()
+        super().__init__()
 
         self.fc = nn.ModuleList()
         for i in range(len(layer_dims) - 1):
@@ -250,7 +250,7 @@ class StatsHook(nn.Module):
 
     def __init__(self, stats_net, module, num_classes,
                  class_conditional=True, bessel_correction=False):
-        super(StatsHook, self).__init__()
+        super().__init__()
 
         self.hook = module.register_forward_hook(self.hook_fn)
 
@@ -302,7 +302,7 @@ class StatsHook(nn.Module):
 class CStatsNet(nn.Module):
 
     def __init__(self, net, num_classes, class_conditional=True, bessel_correction=True):
-        super(CStatsNet, self).__init__()
+        super().__init__()
 
         self.net = net
 

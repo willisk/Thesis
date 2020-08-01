@@ -3,14 +3,12 @@ import sys
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-import pandas as pd
 
 from sklearn.datasets import make_blobs, make_circles, make_moons, load_iris, load_digits
 
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
 import importlib
@@ -19,8 +17,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import utility
 import statsnet
+import nets
 importlib.reload(utility)
 importlib.reload(statsnet)
+importlib.reload(nets)
 
 training_params = {'num_epochs': 200,
                    'print_every': 20}
@@ -112,7 +112,7 @@ class DatasetIris(Dataset):
 
     def load_statsnet(self):
         layer_dims = [4, 16, 16, self.get_num_classes()]
-        net = FCNet(layer_dims)
+        net = nets.FCNet(layer_dims)
         path = "csnet_iris.pt"
         stats_net = self.pretrained_statsnet(net, path)
         return stats_net
@@ -145,8 +145,66 @@ class DatasetDigits(Dataset):
 
     def load_statsnet(self):
         layer_dims = [16, 32, 32, 16, 8 * 8 * 16, self.get_num_classes()]
-        net = ConvNet(layer_dims, 3)
+        net = nets.ConvNet(layer_dims, 3)
         path = "csnet_digits.pt"
+        stats_net = self.pretrained_statsnet(net, path)
+        return stats_net
+
+    def plot(self, net):
+        idx = np.arange(9)
+        X = self.X[idx]
+        Y = self.Y[idx]
+        pred = net.predict(X).numpy()
+        colors = np.array(['red', 'green'])[(pred == Y).astype(int)]
+        utility.plot_num_matrix(X, pred, "pred: {}", colors)
+        plt.show()
+
+    def plot_history(self, invert, labels):
+        utility.plot_num_matrix(invert, labels, "target: {}")
+
+
+import torchvision
+import torchvision.transforms as transforms
+
+
+class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
+    def __init__(self):
+
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+        super().__init__(root='./data', train=True,
+                         download=True, transform=transform)
+
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
+                                                  shuffle=True, num_workers=2)
+
+        testset = torchvision.datasets.CIFAR10(root='./data', train=False,
+                                               download=True, transform=transform)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=4,
+                                                 shuffle=False, num_workers=2)
+
+        classes = ('plane', 'car', 'bird', 'cat',
+                   'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+
+
+class DatasetImagenet(Dataset):
+
+    def __init__(self):
+        self.imagenet_data = torchvision.datasets.ImageNet(
+            'imagenet_data', split='train', download=True)
+        digits = load_digits()
+        self.X = torch.FloatTensor(digits['data']).reshape(-1, 1, 8, 8)
+        self.Y = digits['target']
+
+    def generator(self, **params):
+        return torch.utils.data.DataLoader(self.imagenet_data, **params)
+
+    def load_statsnet(self):
+        net = torchvision.models.resnet50(pretrained=True)
+        print("pretrained")
+        path = "resnet50.pt"
         stats_net = self.pretrained_statsnet(net, path)
         return stats_net
 
@@ -195,7 +253,7 @@ class Dataset2D(Dataset):
 
     def load_statsnet(self):
         layer_dims = [2, 8, 6, self.get_num_classes()]
-        net = FCNet(layer_dims)
+        net = nets.FCNet(layer_dims)
         path = "csnet{}.pt".format(self.type)
         stats_net = self.pretrained_statsnet(net, path)
         return stats_net
@@ -238,64 +296,3 @@ class Dataset2D(Dataset):
         plt.scatter(x[0], x[1], c='k', alpha=1, marker='x')
         plt.scatter(x[0], x[1],
                     c=labels, cmap=cmap, alpha=0.9, marker='x')
-
-
-class Net(nn.Module):
-    def __init__(self, **kwargs):
-        super(Net, self).__init__()
-
-        self.layers = nn.ModuleList()
-
-    def predict(self, x):
-        self.eval()
-        y = self.__call__(x)
-        return torch.argmax(y, dim=-1)
-
-
-class FCNet(Net):
-
-    def __init__(self, layer_dims):
-        super(FCNet, self).__init__()
-
-        for i in range(len(layer_dims) - 1):
-            self.layers.append(nn.Linear(layer_dims[i], layer_dims[i + 1]))
-
-    def forward(self, x):
-        L = len(self.layers)
-        for i in range(L):
-            x = self.layers[i](x)
-            if i < L - 1:
-                x = F.relu(x)
-        return x
-
-
-class ConvNet(Net):
-
-    def __init__(self, layer_dims, kernel_size):
-        super(ConvNet, self).__init__()
-
-        L = len(layer_dims) - 2
-        in_channels = 1
-
-        padding = int((kernel_size - 1) / 2)
-
-        for i in range(L):
-            out_channels = layer_dims[i]
-            self.layers.append(nn.Conv2d(in_channels,
-                                         out_channels,
-                                         kernel_size=kernel_size,
-                                         padding=padding))
-            in_channels = out_channels
-        self.layers.append(nn.Linear(layer_dims[i + 1],
-                                     layer_dims[i + 2]))
-
-    def forward(self, x):
-        L = len(self.layers)
-        for i in range(L):
-            if i < L - 1:
-                x = self.layers[i](x)
-                x = F.relu(x)
-            else:
-                x = nn.Flatten()(x)
-                x = self.layers[i](x)
-        return x
