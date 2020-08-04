@@ -173,7 +173,7 @@ class DatasetDigits(Dataset):
         Y = self.Y[idx]
         pred = net.predict(X).numpy()
         colors = np.array(['red', 'green'])[(pred == Y).astype(int)]
-        utility.make_grid(X, pred, "pred: {}", colors)
+        utility.make_grid(X, pred, "pred: {}", colors=colors)
         plt.show()
 
     def plot_history(self, invert, labels):
@@ -194,6 +194,9 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         super().__init__(root=DATADIR, train=True,
                          download=True, transform=transform)
 
+        self.test_set = torchvision.datasets.CIFAR10(root=DATADIR, train=True,
+                                                     download=True, transform=transform)
+
         Dataset.__init__(self)
 
         self.classes = ('plane', 'car', 'bird', 'cat',
@@ -207,6 +210,9 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
     def train_loader(self, **params):
         return torch.utils.data.DataLoader(self, **params)
 
+    def test_loader(self, **params):
+        return torch.utils.data.DataLoader(self.test_set, **params)
+
     def get_num_classes(self):
         return 10
 
@@ -217,6 +223,19 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
 
     def print_accuracy(self, net):
         pass
+
+    def plot(self, net):
+        data, labels = next(iter(self.test_loader()))
+        idx = np.arange(9)
+        X = data[idx]
+        Y = labels[idx]
+        pred = net.predict(X).numpy()
+        colors = np.array(['red', 'green'])[(pred == Y).astype(int)]
+        utility.make_grid(X, pred, "pred: {}", colors=colors)
+        plt.show()
+
+    def plot_history(self, invert, labels):
+        utility.make_grid(invert, labels, "target: {}")
 
 
 class Dataset2D(Dataset):

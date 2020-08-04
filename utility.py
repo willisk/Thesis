@@ -216,9 +216,8 @@ def plot_prediction2d(data, labels, net, num=400, axis=None, cmap='Spectral', co
     _plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap=cmap, alpha=.4)
 
 
-def plot_num_matrix(X, labels, title_fmt, cmap='gray', colors=None):
+def make_grid(X, labels, title_fmt, cmap='gray', ncols=3, colors=None):
     L = len(X)
-    ncols = 3
     nrows = -(-L // ncols)
     for i in range(L):
         plt.subplot(nrows, ncols, i + 1)

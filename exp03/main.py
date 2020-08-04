@@ -48,7 +48,7 @@ dataset.print_accuracy(stats_net)
 #                                        track_history_every=10
 #                                        )
 
-# dataset.plot(stats_net)
+dataset.plot(stats_net)
 # dataset.plot_stats(stats_net)
 # dataset.plot_history(history, target_labels)
 
