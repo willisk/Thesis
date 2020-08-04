@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class Net(nn.Module):
@@ -53,6 +54,11 @@ class ResNet(Net):
             self.in_channels = num_filters
 
         return nn.Sequential(*layers)
+
+
+class ResNet20(ResNet):
+    def __init__(self, num_classes):
+        super().__init__(num_classes, [3, 3, 3])
 
 
 class ResidualBlock(nn.Module):

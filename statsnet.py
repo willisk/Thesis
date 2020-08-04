@@ -5,7 +5,7 @@ import torch.nn as nn
 
 import importlib
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import utility
 importlib.reload(utility)

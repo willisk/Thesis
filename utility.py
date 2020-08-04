@@ -91,10 +91,6 @@ def learn_stats(stats_net, data_loader, num_epochs=1):
 
     for epoch in range(1, num_epochs + 1):
 
-        total_count = 0.0
-        total_loss = 0.0
-        total_correct = 0.0
-
         for batch_i, data in enumerate(data_loader, batch_total):
             inputs, labels = data
             x = {'inputs': inputs,

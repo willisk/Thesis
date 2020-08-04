@@ -7,7 +7,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 np.random.seed(0)
 torch.manual_seed(0)
@@ -29,20 +29,22 @@ tb = SummaryWriter(comment=comment)
 
 # dataset = datasets.Dataset2D(type=3)
 # dataset = datasets.DatasetDigits()
-# dataset = datasets.DatasetIris()
-dataset = datasets.DatasetImagenet()
+dataset = datasets.DatasetIris()
+# dataset = datasets.DatasetImagenet()
+# dataset = datasets.DatasetCifar10()
 
 
 stats_net = dataset.load_statsnet()
 dataset.print_accuracy(stats_net)
 
-num_classes = dataset.get_num_classes()
-target_labels = torch.arange(num_classes) % num_classes
+# num_classes = dataset.get_num_classes()
+# target_labels = torch.arange(num_classes) % num_classes
 # history = deepinversion.deep_inversion(stats_net, dataset.get_criterion(),
 #                                        target_labels,
 #                                        steps=100,
-#                                        track_history=False
+#                                        track_history=False,
 #                                        #  track_history=True
+#                                        track_history_every=10
 #                                        )
 
 # dataset.plot(stats_net)

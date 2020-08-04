@@ -1,4 +1,8 @@
 **__pycache__
 **.pyc
+
 .vscode
+
 **runs
+data/**
+models/**

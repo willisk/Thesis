@@ -13,7 +13,14 @@ import torch.optim as optim
 
 import importlib
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PWD = os.path.dirname(os.path.abspath(__file__))
+MODELDIR = os.path.join(PWD, "models")
+DATADIR = os.path.join(PWD, "data")
+
+if not os.path.exists(MODELDIR):
+    os.mkdir(MODELDIR)
+
+sys.path.append(PWD)
 
 import utility
 import statsnet
@@ -55,7 +62,7 @@ class Dataset(torch.utils.data.Dataset):
         acc = (preds == labels).type(torch.FloatTensor).mean()
         print("Accuracy: {:3f}".format(acc))
 
-    def generator(self, **params):
+    def train_loader(self, **params):
         return torch.utils.data.DataLoader(self, **params)
 
     def full(self):
@@ -64,8 +71,8 @@ class Dataset(torch.utils.data.Dataset):
     def get_criterion(self):
         return nn.CrossEntropyLoss()
 
-    def pretrained_statsnet(self, net, path):
-        data_loader = self.generator(**dataset_gen_params)
+    def pretrained_statsnet(self, net, filename):
+        data_loader = self.train_loader(**dataset_gen_params)
 
         criterion = self.get_criterion()
         optimizer = optim.SGD(net.parameters(), lr=0.01)
@@ -75,6 +82,8 @@ class Dataset(torch.utils.data.Dataset):
         stats_net = statsnet.CStatsNet(
             net, num_classes, class_conditional=True)
         stats_net.init_hooks(data_loader)
+
+        path = os.path.join(MODELDIR, filename)
 
         if os.path.exists(path):
             checkpoint = torch.load(path)
@@ -113,8 +122,7 @@ class DatasetIris(Dataset):
     def load_statsnet(self):
         layer_dims = [4, 16, 16, self.get_num_classes()]
         net = nets.FCNet(layer_dims)
-        path = "csnet_iris.pt"
-        stats_net = self.pretrained_statsnet(net, path)
+        stats_net = self.pretrained_statsnet(net, "csnet_iris.pt")
         return stats_net
 
     def plot(self, net):
@@ -146,8 +154,8 @@ class DatasetDigits(Dataset):
     def load_statsnet(self):
         layer_dims = [16, 32, 32, 16, 8 * 8 * 16, self.get_num_classes()]
         net = nets.ConvNet(layer_dims, 3)
-        path = "csnet_digits.pt"
-        stats_net = self.pretrained_statsnet(net, path)
+        filename = "csnet_digits.pt"
+        stats_net = self.pretrained_statsnet(net, filename)
         return stats_net
 
     def plot(self, net):
@@ -174,19 +182,26 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-        super().__init__(root='./data', train=True,
+        super().__init__(root='../data', train=True,
                          download=True, transform=transform)
 
-        trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
-                                                  shuffle=True, num_workers=2)
+        self.classes = ('plane', 'car', 'bird', 'cat',
+                        'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+        print("post init")
 
-        testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                               download=True, transform=transform)
-        testloader = torch.utils.data.DataLoader(testset, batch_size=4,
-                                                 shuffle=False, num_workers=2)
+    def train_loader(self, **params):
+        return torch.utils.data.DataLoader(self, **params)
 
-        classes = ('plane', 'car', 'bird', 'cat',
-                   'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+    def get_num_classes(self):
+        return 10
+
+    def load_statsnet(self):
+        net = nets.ResNet20(10)
+        filename = "resnet20-Cifar10.pt"
+        print("pre statsnet")
+        stats_net = self.pretrained_statsnet(net, filename)
+        print("post statsnet")
+        return stats_net
 
 
 class DatasetImagenet(Dataset):
@@ -198,14 +213,14 @@ class DatasetImagenet(Dataset):
         self.X = torch.FloatTensor(digits['data']).reshape(-1, 1, 8, 8)
         self.Y = digits['target']
 
-    def generator(self, **params):
+    def train_loader(self, **params):
         return torch.utils.data.DataLoader(self.imagenet_data, **params)
 
     def load_statsnet(self):
-        net = torchvision.models.resnet50(pretrained=True)
-        print("pretrained")
-        path = "resnet50.pt"
-        stats_net = self.pretrained_statsnet(net, path)
+        # net = torchvision.models.resnet50(pretrained=True)
+        # print("pretrained")
+        net = nets.ResNet20(10)
+        stats_net = self.pretrained_statsnet(net, "resnet20-Imagenet.pt")
         return stats_net
 
     def plot(self, net):
@@ -254,8 +269,8 @@ class Dataset2D(Dataset):
     def load_statsnet(self):
         layer_dims = [2, 8, 6, self.get_num_classes()]
         net = nets.FCNet(layer_dims)
-        path = "csnet{}.pt".format(self.type)
-        stats_net = self.pretrained_statsnet(net, path)
+        filename = "csnet{}.pt".format(self.type)
+        stats_net = self.pretrained_statsnet(net, filename)
         return stats_net
 
     def plot(self, net, contourgrad=False):

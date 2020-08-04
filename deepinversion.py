@@ -2,7 +2,8 @@ import torch
 import torch.optim as optim
 
 
-def deep_inversion(stats_net, criterion, labels, steps=5, track_history=False):
+def deep_inversion(stats_net, criterion, labels,
+                   steps=5, track_history=False, track_history_every=1):
 
     stats_net.stop_tracking_stats()
     stats_net.enable_hooks()
@@ -34,7 +35,7 @@ def deep_inversion(stats_net, criterion, labels, steps=5, track_history=False):
 
         optimizer.step()
 
-        if track_history:
+        if track_history and (step % track_history_every == 0 or step == steps):
             history.append(inputs.data.detach().clone())
 
     print("Finished Inverting")

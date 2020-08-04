@@ -14,7 +14,7 @@ from sklearn.datasets import make_blobs, make_circles, make_moons
 
 import importlib
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 np.random.seed(0)
 torch.manual_seed(0)
