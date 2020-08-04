@@ -63,8 +63,11 @@ class Dataset(torch.utils.data.Dataset):
         acc = (preds == labels).type(torch.FloatTensor).mean()
         print("Accuracy: {:3f}".format(acc))
 
-    def train_loader(self, **params):
-        return torch.utils.data.DataLoader(self, **params)
+    def train_loader(self):
+        return torch.utils.data.DataLoader(self, **self.dataset_gen_params)
+
+    def test_loader(self):
+        return torch.utils.data.DataLoader(self.test_set, **self.dataset_gen_params)
 
     def full(self):
         return self.X, self.Y
@@ -73,7 +76,7 @@ class Dataset(torch.utils.data.Dataset):
         return nn.CrossEntropyLoss()
 
     def pretrained_statsnet(self, net, name):
-        data_loader = self.train_loader(**self.dataset_gen_params)
+        data_loader = self.train_loader()
 
         criterion = self.get_criterion()
         optimizer = optim.SGD(net.parameters(), lr=0.01)
@@ -206,12 +209,6 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         self.training_params['print_every'] = 1
         self.training_params['save_every'] = 1
         self.training_params['resume_training'] = False
-
-    def train_loader(self, **params):
-        return torch.utils.data.DataLoader(self, **params)
-
-    def test_loader(self, **params):
-        return torch.utils.data.DataLoader(self.test_set, **params)
 
     def get_num_classes(self):
         return 10
