@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -45,12 +47,21 @@ def cat_cond_mean_(inputs, labels, mean, var, cc,
     var.add_((total_2 - N_class * mean**2) / cc)
 
 
-def train(net, data_loader, criterion, optimizer, num_epochs=1, print_every=10):
+def train(net, data_loader, criterion, optimizer,
+          num_epochs=1, print_every=10, save_every=None, model_path=None):
     "Training Loop"
 
     net.train()
 
-    for epoch in range(1, num_epochs + 1):
+    if model_path is not None and os.path.exists(model_path):
+        checkpoint = torch.load(model_path)
+        net.load_state_dict(checkpoint['net_state_dict'])
+        init_epoch = checkpoint['epoch']
+        print("Training Checkpoint restored: " + model_path)
+    else:
+        init_epoch = 1
+
+    for epoch in range(init_epoch, num_epochs + 1):
 
         total_count = 0.0
         total_loss = 0.0
@@ -58,8 +69,6 @@ def train(net, data_loader, criterion, optimizer, num_epochs=1, print_every=10):
 
         for data in data_loader:
             inputs, labels = data
-            x = {'inputs': inputs,
-                 'labels': labels}
 
             optimizer.zero_grad()
 
@@ -74,12 +83,29 @@ def train(net, data_loader, criterion, optimizer, num_epochs=1, print_every=10):
             total_correct += count_correct(outputs, labels)
 
         accuracy = total_correct / total_count
-        # tb.add_scalar('Loss', total_loss, epoch)
+        # tb.add_scalar('Loss/train', total_loss, epoch)
         # tb.add_scalar('Accuracy', accuracy, epoch)
 
         if epoch % print_every == 0:
-            print("[%d / %d] loss: %.3f" %
-                  (epoch, num_epochs, total_loss))
+            print("[%d / %d] loss: %.3f, accuracy: %.3f" %
+                  (epoch, num_epochs, total_loss, accuracy))
+
+        if save_every is not None \
+                and epoch % save_every == 0 \
+                and model_path is not None:
+            torch.save({
+                'epoch': epoch,
+                'net_state_dict': net.state_dict(),
+            }, model_path)
+            print("Checkpoint saved: " + model_path)
+
+    if model_path is not None:
+        torch.save({
+            'epoch': epoch,
+            'net_state_dict': net.state_dict(),
+        }, model_path)
+        print("Checkpoint saved: " + model_path)
+
     print("Finished Training")
 
 

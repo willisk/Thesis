@@ -6,8 +6,8 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-FILEDIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(FILEDIR))
+PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PWD)
 
 np.random.seed(0)
 torch.manual_seed(0)
@@ -24,14 +24,15 @@ importlib.reload(utility)
 importlib.reload(deepinversion)
 
 comment = ""
-tb = SummaryWriter(log_dir=FILEDIR, comment=comment)
+LOGDIR = os.path.join(PWD, "runs/exp03")
+tb = SummaryWriter(log_dir=LOGDIR, comment=comment)
 
 
 # dataset = datasets.Dataset2D(type=3)
 # dataset = datasets.DatasetDigits()
-dataset = datasets.DatasetIris()
+# dataset = datasets.DatasetIris()
 # dataset = datasets.DatasetImagenet()
-# dataset = datasets.DatasetCifar10()
+dataset = datasets.DatasetCifar10()
 
 
 stats_net = dataset.load_statsnet()

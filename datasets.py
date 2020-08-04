@@ -37,7 +37,8 @@ dataset_gen_params = {'batch_size': 64,
 
 class Dataset(torch.utils.data.Dataset):
     def __init__(self):
-        pass
+        self.training_params = training_params
+        self.dataset_gen_params = dataset_gen_params
 
     def __len__(self):
         return len(self.X)
@@ -71,8 +72,8 @@ class Dataset(torch.utils.data.Dataset):
     def get_criterion(self):
         return nn.CrossEntropyLoss()
 
-    def pretrained_statsnet(self, net, filename):
-        data_loader = self.train_loader(**dataset_gen_params)
+    def pretrained_statsnet(self, net, name):
+        data_loader = self.train_loader(**self.dataset_gen_params)
 
         criterion = self.get_criterion()
         optimizer = optim.SGD(net.parameters(), lr=0.01)
@@ -83,21 +84,26 @@ class Dataset(torch.utils.data.Dataset):
             net, num_classes, class_conditional=True)
         stats_net.init_hooks(data_loader)
 
-        path = os.path.join(MODELDIR, filename)
+        net_path = os.path.join(MODELDIR, "net_" + name + ".pt")
+        csnet_path = os.path.join(MODELDIR, "csnet_" + name + ".pt")
 
-        if os.path.exists(path):
-            checkpoint = torch.load(path)
-            stats_net.load_state_dict(checkpoint['csnet_state_dict'])
-            print("Model loaded: {}".format(path))
+        if os.path.exists(csnet_path):
+            checkpoint = torch.load(csnet_path)
+            stats_net.load_state_dict(checkpoint)
+            print("CSNet loaded: " + csnet_path)
         else:
-            utility.train(net, data_loader, criterion,
-                          optimizer, **training_params)
-            utility.learn_stats(stats_net, data_loader, num_epochs=50)
-            torch.save({
-                'epoch': training_params['num_epochs'],
-                'csnet_state_dict': stats_net.state_dict(),
-            }, path)
-            print("Model saved: {}".format(path))
+            if os.path.exists(net_path):
+                checkpoint = torch.load(net_path)
+                net.load_state_dict(checkpoint['net_state_dict'])
+            else:
+                print("Beginning training.")
+                utility.train(net, data_loader, criterion, optimizer,
+                              model_path=net_path,
+                              **self.training_params)
+                print("Beginning tracking stats.")
+                utility.learn_stats(stats_net, data_loader, num_epochs=2)
+                torch.save(stats_net.state_dict(), csnet_path)
+                print("CSNet saved: {}".format(csnet_path))
         return stats_net
 
     def load_statsnet(self):
@@ -115,6 +121,7 @@ class Dataset(torch.utils.data.Dataset):
 
 class DatasetIris(Dataset):
     def __init__(self):
+        super().__init__()
         self.iris = load_iris()
         self.X = np.array(self.iris['data'], dtype='float32')
         self.Y = self.iris['target']
@@ -122,7 +129,7 @@ class DatasetIris(Dataset):
     def load_statsnet(self):
         layer_dims = [4, 16, 16, self.get_num_classes()]
         net = nets.FCNet(layer_dims)
-        stats_net = self.pretrained_statsnet(net, "csnet_iris.pt")
+        stats_net = self.pretrained_statsnet(net, "iris")
         return stats_net
 
     def plot(self, net):
@@ -147,15 +154,17 @@ class DatasetIris(Dataset):
 
 class DatasetDigits(Dataset):
     def __init__(self):
+        super().__init__()
         digits = load_digits()
         self.X = torch.FloatTensor(digits['data']).reshape(-1, 1, 8, 8)
         self.Y = digits['target']
 
+        self.training_params['save_every'] = 20
+
     def load_statsnet(self):
         layer_dims = [16, 32, 32, 16, 8 * 8 * 16, self.get_num_classes()]
         net = nets.ConvNet(layer_dims, 3)
-        filename = "csnet_digits.pt"
-        stats_net = self.pretrained_statsnet(net, filename)
+        stats_net = self.pretrained_statsnet(net, "digits")
         return stats_net
 
     def plot(self, net):
@@ -185,9 +194,14 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         super().__init__(root='../data', train=True,
                          download=True, transform=transform)
 
+        Dataset.__init__(self)
+
         self.classes = ('plane', 'car', 'bird', 'cat',
                         'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-        print("post init")
+
+        self.training_params['num_epochs'] = 10
+        self.training_params['print_every'] = 1
+        self.training_params['save_every'] = 1
 
     def train_loader(self, **params):
         return torch.utils.data.DataLoader(self, **params)
@@ -197,10 +211,7 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
 
     def load_statsnet(self):
         net = nets.ResNet20(10)
-        filename = "resnet20-Cifar10.pt"
-        print("pre statsnet")
-        stats_net = self.pretrained_statsnet(net, filename)
-        print("post statsnet")
+        stats_net = self.pretrained_statsnet(net, "cifar10-resnet20")
         return stats_net
 
 
@@ -220,7 +231,7 @@ class DatasetImagenet(Dataset):
         # net = torchvision.models.resnet50(pretrained=True)
         # print("pretrained")
         net = nets.ResNet20(10)
-        stats_net = self.pretrained_statsnet(net, "resnet20-Imagenet.pt")
+        stats_net = self.pretrained_statsnet(net, "Imagenet-resnet20")
         return stats_net
 
     def plot(self, net):
