@@ -87,23 +87,23 @@ class Dataset(torch.utils.data.Dataset):
         net_path = os.path.join(MODELDIR, "net_" + name + ".pt")
         csnet_path = os.path.join(MODELDIR, "csnet_" + name + ".pt")
 
+        learn_stats = True
         if os.path.exists(csnet_path):
             checkpoint = torch.load(csnet_path)
             stats_net.load_state_dict(checkpoint)
             print("CSNet loaded: " + csnet_path)
-        else:
-            if os.path.exists(net_path):
-                checkpoint = torch.load(net_path)
-                net.load_state_dict(checkpoint['net_state_dict'])
-            else:
-                print("Beginning training.")
-                utility.train(net, data_loader, criterion, optimizer,
-                              model_path=net_path,
-                              **self.training_params)
-                print("Beginning tracking stats.")
-                utility.learn_stats(stats_net, data_loader, num_epochs=2)
-                torch.save(stats_net.state_dict(), csnet_path)
-                print("CSNet saved: {}".format(csnet_path))
+            learn_stats = False
+
+        # XXX verify if loading csnet_dict overwrites net_dict
+        utility.train(net, data_loader, criterion, optimizer,
+                      model_path=net_path,
+                      **self.training_params)
+
+        if learn_stats:
+            utility.learn_stats(stats_net, data_loader)
+            torch.save(stats_net.state_dict(), csnet_path)
+            print("CSNet saved: {}".format(csnet_path))
+
         return stats_net
 
     def load_statsnet(self):
@@ -173,11 +173,11 @@ class DatasetDigits(Dataset):
         Y = self.Y[idx]
         pred = net.predict(X).numpy()
         colors = np.array(['red', 'green'])[(pred == Y).astype(int)]
-        utility.plot_num_matrix(X, pred, "pred: {}", colors)
+        utility.make_grid(X, pred, "pred: {}", colors)
         plt.show()
 
     def plot_history(self, invert, labels):
-        utility.plot_num_matrix(invert, labels, "target: {}")
+        utility.make_grid(invert, labels, "target: {}")
 
 
 import torchvision
@@ -191,7 +191,7 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-        super().__init__(root='../data', train=True,
+        super().__init__(root=DATADIR, train=True,
                          download=True, transform=transform)
 
         Dataset.__init__(self)
@@ -202,6 +202,7 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         self.training_params['num_epochs'] = 10
         self.training_params['print_every'] = 1
         self.training_params['save_every'] = 1
+        self.training_params['resume_training'] = False
 
     def train_loader(self, **params):
         return torch.utils.data.DataLoader(self, **params)
@@ -214,37 +215,8 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         stats_net = self.pretrained_statsnet(net, "cifar10-resnet20")
         return stats_net
 
-
-class DatasetImagenet(Dataset):
-
-    def __init__(self):
-        self.imagenet_data = torchvision.datasets.ImageNet(
-            'imagenet_data', split='train', download=True)
-        digits = load_digits()
-        self.X = torch.FloatTensor(digits['data']).reshape(-1, 1, 8, 8)
-        self.Y = digits['target']
-
-    def train_loader(self, **params):
-        return torch.utils.data.DataLoader(self.imagenet_data, **params)
-
-    def load_statsnet(self):
-        # net = torchvision.models.resnet50(pretrained=True)
-        # print("pretrained")
-        net = nets.ResNet20(10)
-        stats_net = self.pretrained_statsnet(net, "Imagenet-resnet20")
-        return stats_net
-
-    def plot(self, net):
-        idx = np.arange(9)
-        X = self.X[idx]
-        Y = self.Y[idx]
-        pred = net.predict(X).numpy()
-        colors = np.array(['red', 'green'])[(pred == Y).astype(int)]
-        utility.plot_num_matrix(X, pred, "pred: {}", colors)
-        plt.show()
-
-    def plot_history(self, invert, labels):
-        utility.plot_num_matrix(invert, labels, "target: {}")
+    def print_accuracy(self, net):
+        pass
 
 
 class Dataset2D(Dataset):
@@ -280,7 +252,7 @@ class Dataset2D(Dataset):
     def load_statsnet(self):
         layer_dims = [2, 8, 6, self.get_num_classes()]
         net = nets.FCNet(layer_dims)
-        filename = "csnet{}.pt".format(self.type)
+        filename = "csnet_{}.pt".format(self.type)
         stats_net = self.pretrained_statsnet(net, filename)
         return stats_net
 

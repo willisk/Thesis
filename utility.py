@@ -48,7 +48,8 @@ def cat_cond_mean_(inputs, labels, mean, var, cc,
 
 
 def train(net, data_loader, criterion, optimizer,
-          num_epochs=1, print_every=10, save_every=None, model_path=None):
+          num_epochs=1, print_every=10, save_every=None,
+          model_path=None, resume_training=False):
     "Training Loop"
 
     net.train()
@@ -56,12 +57,16 @@ def train(net, data_loader, criterion, optimizer,
     if model_path is not None and os.path.exists(model_path):
         checkpoint = torch.load(model_path)
         net.load_state_dict(checkpoint['net_state_dict'])
-        init_epoch = checkpoint['epoch']
+        init_epoch = checkpoint['epoch'] + 1
         print("Training Checkpoint restored: " + model_path)
+        if not resume_training:
+            return
     else:
         init_epoch = 1
 
-    for epoch in range(init_epoch, num_epochs + 1):
+    print("Beginning training.")
+
+    for epoch in range(init_epoch, init_epoch + num_epochs):
 
         total_count = 0.0
         total_loss = 0.0
@@ -114,6 +119,8 @@ def learn_stats(stats_net, data_loader, num_epochs=1):
     stats_net.start_tracking_stats()
 
     batch_total = 1
+
+    print("Beginning tracking stats.")
 
     for epoch in range(1, num_epochs + 1):
 
@@ -209,7 +216,7 @@ def plot_prediction2d(data, labels, net, num=400, axis=None, cmap='Spectral', co
     _plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap=cmap, alpha=.4)
 
 
-def plot_num_matrix(X, labels, title_fmt, colors=None):
+def plot_num_matrix(X, labels, title_fmt, cmap='gray', colors=None):
     L = len(X)
     ncols = 3
     nrows = -(-L // ncols)
@@ -217,7 +224,7 @@ def plot_num_matrix(X, labels, title_fmt, colors=None):
         plt.subplot(nrows, ncols, i + 1)
         plt.tight_layout()
         plt.imshow(X[i].squeeze(),
-                   cmap='gray', interpolation='none')
+                   cmap=cmap, interpolation='none')
         if colors is None:
             color = 'k'
         else:
