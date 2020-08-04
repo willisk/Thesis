@@ -6,8 +6,8 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+FILEDIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(FILEDIR))
 
 np.random.seed(0)
 torch.manual_seed(0)
@@ -24,7 +24,7 @@ importlib.reload(utility)
 importlib.reload(deepinversion)
 
 comment = ""
-tb = SummaryWriter(comment=comment)
+tb = SummaryWriter(log_dir=FILEDIR, comment=comment)
 
 
 # dataset = datasets.Dataset2D(type=3)
