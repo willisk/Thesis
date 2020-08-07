@@ -35,8 +35,8 @@ tb = SummaryWriter(log_dir=LOGDIR, comment=comment)
 dataset = datasets.DatasetCifar10()
 
 
-stats_net = dataset.load_statsnet(resume_training=True)
-dataset.print_accuracy(stats_net)
+stats_net = dataset.load_statsnet(resume_training=True, use_drive=True)
+# dataset.print_accuracy(stats_net)
 
 # num_classes = dataset.get_num_classes()
 # target_labels = torch.arange(num_classes) % num_classes

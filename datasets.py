@@ -75,9 +75,7 @@ class Dataset(torch.utils.data.Dataset):
     def get_criterion(self):
         return nn.CrossEntropyLoss()
 
-    def pretrained_statsnet(self, net, name, resume_training=False):
-
-        use_drive = True
+    def pretrained_statsnet(self, net, name, resume_training=False, use_drive=False):
 
         data_loader = self.train_loader()
 
@@ -95,14 +93,17 @@ class Dataset(torch.utils.data.Dataset):
         if use_drive:
             csnet_path = utility.search_drive(csnet_path)
 
+        pretrained = False
         if os.path.exists(csnet_path):
             checkpoint = torch.load(csnet_path)
             stats_net.load_state_dict(checkpoint)
             print("CSNet loaded: " + csnet_path)
+            pretrained = True
 
-        else:
+        if resume_training or not pretrained:
             utility.train(net, data_loader, criterion, optimizer,
-                          model_path=net_path, resume_training=resume_training
+                          model_path=net_path, resume_training=resume_training,
+                          use_drive=use_drive,
                           ** self.training_params)
 
             utility.learn_stats(stats_net, data_loader)
@@ -131,10 +132,11 @@ class DatasetIris(Dataset):
         self.X = np.array(self.iris['data'], dtype='float32')
         self.Y = self.iris['target']
 
-    def load_statsnet(self, resume_training=False):
+    def load_statsnet(self, resume_training=False, use_drive=False):
         layer_dims = [4, 16, 16, self.get_num_classes()]
         net = nets.FCNet(layer_dims)
-        stats_net = self.pretrained_statsnet(net, "iris", resume_training)
+        stats_net = self.pretrained_statsnet(
+            net, "iris", resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
     def plot(self, net):
@@ -166,10 +168,11 @@ class DatasetDigits(Dataset):
 
         self.training_params['save_every'] = 20
 
-    def load_statsnet(self, resume_training=False):
+    def load_statsnet(self, resume_training=False, use_drive=False):
         layer_dims = [16, 32, 32, 16, 8 * 8 * 16, self.get_num_classes()]
         net = nets.ConvNet(layer_dims, 3)
-        stats_net = self.pretrained_statsnet(net, "digits", resume_training)
+        stats_net = self.pretrained_statsnet(
+            net, "digits", resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
     def plot(self, net):
@@ -214,10 +217,10 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
     def get_num_classes(self):
         return 10
 
-    def load_statsnet(self, resume_training=False):
+    def load_statsnet(self, resume_training=False, use_drive=False):
         net = nets.ResNet20(10)
         stats_net = self.pretrained_statsnet(
-            net, "cifar10-resnet20", resume_training)
+            net, "cifar10-resnet20", resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
     def print_accuracy(self, net):
@@ -280,11 +283,12 @@ class Dataset2D(Dataset):
         self.type = type
         self.X, self.Y = X, Y
 
-    def load_statsnet(self, resume_training=False):
+    def load_statsnet(self, resume_training=False, use_drive=False):
         layer_dims = [2, 8, 6, self.get_num_classes()]
         net = nets.FCNet(layer_dims)
         filename = "csnet_{}.pt".format(self.type)
-        stats_net = self.pretrained_statsnet(net, filename, resume_training)
+        stats_net = self.pretrained_statsnet(
+            net, filename, resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
     def plot(self, net, contourgrad=False):
