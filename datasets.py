@@ -76,6 +76,9 @@ class Dataset(torch.utils.data.Dataset):
         return nn.CrossEntropyLoss()
 
     def pretrained_statsnet(self, net, name):
+
+        use_drive = True
+
         data_loader = self.train_loader()
 
         criterion = self.get_criterion()
@@ -90,7 +93,8 @@ class Dataset(torch.utils.data.Dataset):
         net_path = os.path.join(MODELDIR, "net_" + name + ".pt")
         csnet_path = os.path.join(MODELDIR, "csnet_" + name + ".pt")
 
-        csnet_path = utility.search_drive(csnet_path)
+        if use_drive:
+            csnet_path = utility.search_drive(csnet_path)
 
         if os.path.exists(csnet_path):
             checkpoint = torch.load(csnet_path)
