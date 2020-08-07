@@ -7,7 +7,6 @@ import torch
 
 import itertools
 
-
 def count_correct(outputs, labels):
     preds = outputs.argmax(dim=-1)
     return (preds == labels).sum()
@@ -46,13 +45,25 @@ def cat_cond_mean_(inputs, labels, mean, var, cc,
     var.mul_(cc_f / cc)
     var.add_((total_2 - N_class * mean**2) / cc)
 
+def search_drive(path):
+    drive_path = path.replace('Thesis', 'drive/My Drive/Thesis')
+    if os.path.exists(drive_path):
+        print("Using Drive.")
+        return drive_path
+    else:
+        return path
+
 
 def train(net, data_loader, criterion, optimizer,
           num_epochs=1, print_every=10, save_every=None,
-          model_path=None, resume_training=False):
+          model_path=None, use_drive=False, 
+          resume_training=False):
     "Training Loop"
 
     net.train()
+
+    if use_drive:
+        model_path = search_drive(model_path)
 
     if model_path is not None and os.path.exists(model_path):
         checkpoint = torch.load(model_path)
@@ -62,6 +73,7 @@ def train(net, data_loader, criterion, optimizer,
         if not resume_training:
             return
     else:
+        print("No Checkpoint found.")
         init_epoch = 1
 
     print("Beginning training.")
@@ -89,7 +101,7 @@ def train(net, data_loader, criterion, optimizer,
 
         accuracy = total_correct / total_count
         # tb.add_scalar('Loss/train', total_loss, epoch)
-        # tb.add_scalar('Accuracy', accuracy, epoch)
+        # tb.add_scalar('Accuracy/train', accuracy, epoch)
 
         if epoch % print_every == 0:
             print("[%d / %d] loss: %.3f, accuracy: %.3f" %

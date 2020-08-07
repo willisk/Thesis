@@ -90,19 +90,18 @@ class Dataset(torch.utils.data.Dataset):
         net_path = os.path.join(MODELDIR, "net_" + name + ".pt")
         csnet_path = os.path.join(MODELDIR, "csnet_" + name + ".pt")
 
-        learn_stats = True
+        csnet_path = utility.search_drive(csnet_path)
+
         if os.path.exists(csnet_path):
             checkpoint = torch.load(csnet_path)
             stats_net.load_state_dict(checkpoint)
             print("CSNet loaded: " + csnet_path)
-            learn_stats = False
 
-        # XXX verify if loading csnet_dict overwrites net_dict
-        utility.train(net, data_loader, criterion, optimizer,
-                      model_path=net_path,
-                      **self.training_params)
+        else:
+            utility.train(net, data_loader, criterion, optimizer,
+                          model_path=net_path,
+                          **self.training_params)
 
-        if learn_stats:
             utility.learn_stats(stats_net, data_loader)
             torch.save(stats_net.state_dict(), csnet_path)
             print("CSNet saved: {}".format(csnet_path))
@@ -202,8 +201,8 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
 
         Dataset.__init__(self)
 
-        self.classes = ('plane', 'car', 'bird', 'cat',
-                        'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+        self.classes = np.array(['plane', 'car', 'bird', 'cat',
+                                 'deer', 'dog', 'frog', 'horse', 'ship', 'truck'])
 
         self.training_params['num_epochs'] = 10
         self.training_params['print_every'] = 1
@@ -219,16 +218,30 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         return stats_net
 
     def print_accuracy(self, net):
-        pass
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for data in self.test_loader():
+                images, labels = data
+                outputs = net(images)
+                pred = net.predict(images)
+                total += labels.size(0)
+                correct += (pred == labels).sum().item()
+
+        acc = correct / total
+        print("Accuracy on test set: {:3f}".format(acc))
 
     def plot(self, net):
         data, labels = next(iter(self.test_loader()))
         idx = np.arange(9)
         X = data[idx]
-        Y = labels[idx]
+        Y = labels[idx].numpy()
         pred = net.predict(X).numpy()
         colors = np.array(['red', 'green'])[(pred == Y).astype(int)]
-        utility.make_grid(X, pred, "pred: {}", colors=colors)
+
+        X_numpy = X.permute(0, 2, 3, 1) / 2 + 0.5
+        utility.make_grid(X_numpy, self.classes[pred],
+                          "pred: {}", colors=colors)
         plt.show()
 
     def plot_history(self, invert, labels):
