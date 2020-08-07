@@ -75,7 +75,7 @@ class Dataset(torch.utils.data.Dataset):
     def get_criterion(self):
         return nn.CrossEntropyLoss()
 
-    def pretrained_statsnet(self, net, name):
+    def pretrained_statsnet(self, net, name, resume_training=False):
 
         use_drive = True
 
@@ -92,7 +92,6 @@ class Dataset(torch.utils.data.Dataset):
 
         net_path = os.path.join(MODELDIR, "net_" + name + ".pt")
         csnet_path = os.path.join(MODELDIR, "csnet_" + name + ".pt")
-
         if use_drive:
             csnet_path = utility.search_drive(csnet_path)
 
@@ -103,8 +102,8 @@ class Dataset(torch.utils.data.Dataset):
 
         else:
             utility.train(net, data_loader, criterion, optimizer,
-                          model_path=net_path,
-                          **self.training_params)
+                          model_path=net_path, resume_training=resume_training
+                          ** self.training_params)
 
             utility.learn_stats(stats_net, data_loader)
             torch.save(stats_net.state_dict(), csnet_path)
@@ -132,10 +131,10 @@ class DatasetIris(Dataset):
         self.X = np.array(self.iris['data'], dtype='float32')
         self.Y = self.iris['target']
 
-    def load_statsnet(self):
+    def load_statsnet(self, resume_training=False):
         layer_dims = [4, 16, 16, self.get_num_classes()]
         net = nets.FCNet(layer_dims)
-        stats_net = self.pretrained_statsnet(net, "iris")
+        stats_net = self.pretrained_statsnet(net, "iris", resume_training)
         return stats_net
 
     def plot(self, net):
@@ -167,10 +166,10 @@ class DatasetDigits(Dataset):
 
         self.training_params['save_every'] = 20
 
-    def load_statsnet(self):
+    def load_statsnet(self, resume_training=False):
         layer_dims = [16, 32, 32, 16, 8 * 8 * 16, self.get_num_classes()]
         net = nets.ConvNet(layer_dims, 3)
-        stats_net = self.pretrained_statsnet(net, "digits")
+        stats_net = self.pretrained_statsnet(net, "digits", resume_training)
         return stats_net
 
     def plot(self, net):
@@ -211,14 +210,14 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         self.training_params['num_epochs'] = 10
         self.training_params['print_every'] = 1
         self.training_params['save_every'] = 1
-        self.training_params['resume_training'] = False
 
     def get_num_classes(self):
         return 10
 
-    def load_statsnet(self):
+    def load_statsnet(self, resume_training=False):
         net = nets.ResNet20(10)
-        stats_net = self.pretrained_statsnet(net, "cifar10-resnet20")
+        stats_net = self.pretrained_statsnet(
+            net, "cifar10-resnet20", resume_training)
         return stats_net
 
     def print_accuracy(self, net):
@@ -227,7 +226,6 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         with torch.no_grad():
             for data in self.test_loader():
                 images, labels = data
-                outputs = net(images)
                 pred = net.predict(images)
                 total += labels.size(0)
                 correct += (pred == labels).sum().item()
@@ -282,11 +280,11 @@ class Dataset2D(Dataset):
         self.type = type
         self.X, self.Y = X, Y
 
-    def load_statsnet(self):
+    def load_statsnet(self, resume_training=False):
         layer_dims = [2, 8, 6, self.get_num_classes()]
         net = nets.FCNet(layer_dims)
         filename = "csnet_{}.pt".format(self.type)
-        stats_net = self.pretrained_statsnet(net, filename)
+        stats_net = self.pretrained_statsnet(net, filename, resume_training)
         return stats_net
 
     def plot(self, net, contourgrad=False):
