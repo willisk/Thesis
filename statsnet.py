@@ -74,17 +74,18 @@ class CStatsNet(nn.Module):
 
         self.net = net
 
-        self.hooks = nn.ModuleList()
+        self.hooks = nn.ModuleDict()
         for i, (name, m) in enumerate(net.named_modules()):
             if (isinstance(m, nn.ModuleList)
-                    # or isinstance(m, nn.Sequential)
+                    or isinstance(m, nn.Sequential)
                     or isinstance(m, nn.CrossEntropyLoss)):
                 continue
-            if i == 0:  # XXX always assume this is neural net??
-                continue
-            print("adding hook to module " + name)
-            self.hooks.append(StatsHook(self, m, num_classes,
-                                        class_conditional=class_conditional))
+            # if i == 0:  # XXX always assume this is neural net??
+            #     continue
+            if isinstance(m, nn.BatchNorm2d):
+                print("adding hook to module " + name)
+                self.hooks[name] = (StatsHook(self, m, num_classes,
+                                              class_conditional=class_conditional))
 
         # self.class_conditional = class_conditional
 
