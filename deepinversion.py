@@ -44,7 +44,7 @@ def deep_inversion(stats_net, criterion, labels,
         outputs = stats_net(data)
         loss = criterion(outputs, labels)
 
-        components = [s.regularization for s in stats_net.hooks]
+        components = [h.regularization for h in stats_net.hooks.values()]
         reg_loss = reg_weighting(components)
         # reg_loss = stats_net.hooks[-1].regularization
         # loss = stats_net.hooks[-1].regularization

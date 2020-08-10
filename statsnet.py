@@ -107,29 +107,29 @@ class CStatsNet(nn.Module):
 
     def stop_tracking_stats(self):
         self.eval()
-        for h in self.hooks:
+        for h in self.hooks.values():
             h.tracking_stats = False
 
     def start_tracking_stats(self):
         self.eval()
         self.enable_hooks()
-        for h in self.hooks:
+        for h in self.hooks.values():
             h.tracking_stats = True
 
     def enable_hooks(self):
-        for h in self.hooks:
+        for h in self.hooks.values():
             h.enabled = True
 
     def disable_hooks(self):
-        for h in self.hooks:
+        for h in self.hooks.values():
             h.enabled = False
 
     def collect_stats(self):
         stat_vars = ['running_mean', 'running_var', 'class_count']
         stats = []
-        for m in self.hooks:
+        for h in self.hooks.values():
             stat = {}
             for s in stat_vars:
-                stat[s] = getattr(m, s).data
+                stat[s] = getattr(h, s).data
             stats.append(stat)
         return stats
