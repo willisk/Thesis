@@ -238,7 +238,11 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         acc = correct / total
         print("Accuracy on test set: {:3f}".format(acc))
 
+    def to_image_plt(self, im):
+        return im.permute(0, 2, 3, 1) / 2 + 0.5
+
     def plot(self, net):
+        print("random samples:")
         data, labels = next(iter(self.test_loader()))
         idx = np.arange(9)
         X = data[idx]
@@ -246,13 +250,14 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         pred = net.predict(X).numpy()
         colors = np.array(['red', 'green'])[(pred == Y).astype(int)]
 
-        X_numpy = X.permute(0, 2, 3, 1) / 2 + 0.5
-        utility.make_grid(X_numpy, self.classes[pred],
+        utility.make_grid(self.to_image_plt(X), self.classes[pred],
                           "pred: {}", colors=colors)
         plt.show()
 
     def plot_history(self, invert, labels):
-        utility.make_grid(invert, labels, "target: {}")
+        print("inverted:")
+        utility.make_grid(self.to_image_plt(invert),
+                          self.classes[labels], "target: {}")
 
 
 class Dataset2D(Dataset):
@@ -331,7 +336,7 @@ class Dataset2D(Dataset):
         for i, d in enumerate(data):
             c = cmap(labels[i].item() / labels_max)
             plt.plot(d[0], d[1], '--', c=c, linewidth=0.7, alpha=1)
-            # plt.plot(d[0], d[1], 'x', c=c, alpha=0.3)
+            plt.plot(d[0], d[1], '.', c='k', markersize=2, alpha=1)
         x = history[-1].detach().T
         plt.scatter(x[0], x[1], c='k', alpha=1, marker='x')
         plt.scatter(x[0], x[1],

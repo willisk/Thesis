@@ -20,7 +20,7 @@ def expand_as_r(a, b):
 
 
 def cat_cond_mean_(inputs, labels, mean, var, cc,
-                   class_conditional=True, bessel_correction=True):
+                   class_conditional=True):
 
     shape = mean.shape
     n_classes = shape[0]
@@ -218,7 +218,6 @@ def scatter_matrix(data, labels,
 
 def plot_prediction2d(data, labels, net, num=400, axis=None, cmap='Spectral', contourgrad=False):
 
-    print(data.shape)
     X, Y = data, labels
     h = 0.05
     x_min, x_max = X[:, 0].min() - 10 * h, X[:, 0].max() + 10 * h

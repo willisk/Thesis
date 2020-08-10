@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 import torch
-from torch.utils.tensorboard import SummaryWriter
 
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
@@ -12,49 +11,47 @@ sys.path.append(PWD)
 np.random.seed(0)
 torch.manual_seed(0)
 
+
 import datasets
 import statsnet
 import utility
 import deepinversion
+import shared
 
 import importlib
 importlib.reload(datasets)
 importlib.reload(statsnet)
 importlib.reload(utility)
 importlib.reload(deepinversion)
+importlib.reload(shared)
 
-comment = ""
 LOGDIR = os.path.join(PWD, "runs/exp03")
-tb = SummaryWriter(log_dir=LOGDIR, comment=comment)
+tb = shared.init_summary_writer(log_dir=LOGDIR, comment="")
 
-
-dataset = datasets.Dataset2D(type=3)
-# dataset = datasets.DatasetDigits()
-# dataset = datasets.DatasetIris()
-# dataset = datasets.DatasetImagenet()
-# dataset = datasets.DatasetCifar10()
+dataset = datasets.DatasetCifar10()
 
 
 # stats_net = dataset.load_statsnet(resume_training=True, use_drive=True)
 stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
-dataset.print_accuracy(stats_net)
+# dataset.print_accuracy(stats_net)
 
-num_classes = dataset.get_num_classes()
-target_labels = torch.arange(num_classes) % num_classes
-history = deepinversion.deep_inversion(stats_net, dataset.get_criterion(),
-                                       target_labels,
-                                       steps=500,
-                                       lr=2,
-                                       #    track_history=False,
-                                       track_history=True,
-                                       track_history_every=10
-                                       )
 
-dataset.plot(stats_net)
-dataset.plot_stats(stats_net)
-dataset.plot_history(history, target_labels)
+# num_classes = dataset.get_num_classes()
+# target_labels = torch.arange(num_classes) % num_classes
+# history = deepinversion.deep_inversion(stats_net, dataset.get_criterion(),
+#                                        target_labels,
+#                                        steps=100,
+#                                        lr=0.1,
+#                                        track_history=False,
+#                                        #    track_history=True,
+#                                        #    track_history_every=10
+#                                        )
 
-# # tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
-plt.show()
+# dataset.plot(stats_net)
+# # dataset.plot_stats(stats_net)
+# dataset.plot_history(history, target_labels)
 
-tb.close()
+# tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
+# plt.show()
+
+# tb.close()
