@@ -84,8 +84,9 @@ class CStatsNet(nn.Module):
             #     continue
             if isinstance(m, nn.BatchNorm2d):
                 print("adding hook to module " + name)
-                self.hooks[name] = (StatsHook(self, m, num_classes,
-                                              class_conditional=class_conditional))
+                hook_name = name.replace('.', '-')
+                self.hooks[hook_name] = StatsHook(self, m, num_classes,
+                                                  class_conditional=class_conditional)
 
         # self.class_conditional = class_conditional
 
