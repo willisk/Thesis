@@ -48,7 +48,8 @@ class StatsHook(nn.Module):
             if not self.initialized:
                 print("Error: Statistics Parameters not initialized")
             means = self.running_mean[labels]
-            self.regularization = (x - means).norm(2).sum()
+            vars = self.running_var[labels]
+            self.regularization = ((x - means) / vars).norm(2).sum()
 
     def init_parameters(self, shape):
         if self.class_conditional:

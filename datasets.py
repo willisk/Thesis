@@ -90,14 +90,15 @@ class Dataset(torch.utils.data.Dataset):
 
         net_path = os.path.join(MODELDIR, "net_" + name + ".pt")
         csnet_path = os.path.join(MODELDIR, "csnet_" + name + ".pt")
+
         if use_drive:
-            csnet_path = utility.search_drive(csnet_path)
+            csnet_save_path, csnet_load_path = utility.search_drive(csnet_path)
 
         pretrained = False
-        if os.path.exists(csnet_path):
-            checkpoint = torch.load(csnet_path)
+        if os.path.exists(csnet_load_path):
+            checkpoint = torch.load(csnet_load_path)
             stats_net.load_state_dict(checkpoint)
-            print("CSNet loaded: " + csnet_path)
+            print("CSNet loaded: " + csnet_load_path)
             pretrained = True
 
         if resume_training or not pretrained:
@@ -106,9 +107,10 @@ class Dataset(torch.utils.data.Dataset):
                           use_drive=use_drive,
                           ** self.training_params)
 
-            utility.learn_stats(stats_net, data_loader)
-            torch.save(stats_net.state_dict(), csnet_path)
-            print("CSNet saved: {}".format(csnet_path))
+            if not pretrained:
+                utility.learn_stats(stats_net, data_loader)
+            torch.save(stats_net.state_dict(), csnet_save_path)
+            print("CSNet saved: " + csnet_save_path)
 
         return stats_net
 
@@ -261,6 +263,12 @@ class Dataset2D(Dataset):
             # 'noise': 0.1,
             # 'factor': 0.5
         }
+        super().__init__()
+
+        self.training_params['num_epochs'] = 500
+        self.training_params['print_every'] = 100
+        # self.training_params['save_every'] = 1
+
         if type == 0:
             X, Y = make_blobs(n_features=2, centers=3, **params)
             for i, _ in enumerate(X):
@@ -286,9 +294,9 @@ class Dataset2D(Dataset):
     def load_statsnet(self, resume_training=False, use_drive=False):
         layer_dims = [2, 8, 6, self.get_num_classes()]
         net = nets.FCNet(layer_dims)
-        filename = "csnet_{}.pt".format(self.type)
+        name = "toy_{}".format(self.type)
         stats_net = self.pretrained_statsnet(
-            net, filename, resume_training=resume_training, use_drive=use_drive)
+            net, name, resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
     def plot(self, net, contourgrad=False):
@@ -312,10 +320,9 @@ class Dataset2D(Dataset):
         for m, v, c in zip(mean, size, colors):
             ell = Ellipse(m, v[0], v[1], edgecolor=c, lw=1, fill=False)
             plt.gca().add_artist(ell)
-            # plt.scatter(mean[0], mean[1], c=c,
-            #         cmap=cmap, edgecolors='k', alpha=0.5,
-            #         s=var,
-            #         marker='^')
+            plt.scatter(m[0], m[1], color=c,
+                        edgecolors='k', alpha=0.5,
+                        marker='^')
 
     def plot_history(self, history, labels):
         data = torch.stack(history, dim=-1)

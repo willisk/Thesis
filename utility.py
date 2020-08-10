@@ -7,6 +7,7 @@ import torch
 
 import itertools
 
+
 def count_correct(outputs, labels):
     preds = outputs.argmax(dim=-1)
     return (preds == labels).sum()
@@ -45,31 +46,44 @@ def cat_cond_mean_(inputs, labels, mean, var, cc,
     var.mul_(cc_f / cc)
     var.add_((total_2 - N_class * mean**2) / cc)
 
+
 def search_drive(path):
-    drive_path = path.replace('Thesis', 'drive/My Drive/Thesis')
-    if os.path.exists(drive_path):
-        print("Using Drive.")
-        return drive_path
-    else:
-        return path
+    pwd = 'Thesis'
+
+    drive_root = path.split(pwd)[0] + 'drive/My Drive/' + pwd
+    drive_path = path.replace(pwd, 'drive/My Drive/' + pwd)
+
+    save_path, load_path = path, path
+
+    if os.path.exists(drive_root):
+        save_path = drive_path
+        if os.path.exists(drive_path):
+            load_path = drive_path
+
+    return save_path, load_path
 
 
 def train(net, data_loader, criterion, optimizer,
           num_epochs=1, print_every=10, save_every=None,
-          model_path=None, use_drive=False, 
+          model_path=None, use_drive=False,
           resume_training=False):
     "Training Loop"
 
     net.train()
 
-    if use_drive:
-        model_path = search_drive(model_path)
+    if model_path is not None:
+        if use_drive:
+            save_path, load_path = search_drive(model_path)
+        else:
+            save_path, load_path = model_path, model_path
+    else:
+        save_path, load_path = None, None
 
-    if model_path is not None and os.path.exists(model_path):
-        checkpoint = torch.load(model_path)
+    if load_path is not None and os.path.exists(load_path):
+        checkpoint = torch.load(load_path)
         net.load_state_dict(checkpoint['net_state_dict'])
         init_epoch = checkpoint['epoch'] + 1
-        print("Training Checkpoint restored: " + model_path)
+        print("Training Checkpoint restored: " + load_path)
         if not resume_training:
             return
     else:
@@ -79,6 +93,8 @@ def train(net, data_loader, criterion, optimizer,
     print("Beginning training.")
 
     for epoch in range(init_epoch, init_epoch + num_epochs):
+
+        saved_epoch = False
 
         total_count = 0.0
         total_loss = 0.0
@@ -105,23 +121,24 @@ def train(net, data_loader, criterion, optimizer,
 
         if epoch % print_every == 0:
             print("[%d / %d] loss: %.3f, accuracy: %.3f" %
-                  (epoch, num_epochs, total_loss, accuracy))
+                  (epoch, init_epoch + num_epochs - 1, total_loss, accuracy))
 
         if save_every is not None \
                 and epoch % save_every == 0 \
-                and model_path is not None:
+                and save_path is not None:
             torch.save({
                 'epoch': epoch,
                 'net_state_dict': net.state_dict(),
-            }, model_path)
-            print("Checkpoint saved: " + model_path)
+            }, save_path)
+            print("Checkpoint saved: " + save_path)
+            saved_epoch = True
 
-    if model_path is not None:
+    if save_path is not None and not saved_epoch:
         torch.save({
             'epoch': epoch,
             'net_state_dict': net.state_dict(),
-        }, model_path)
-        print("Checkpoint saved: " + model_path)
+        }, save_path)
+        print("Checkpoint saved: " + save_path)
 
     print("Finished Training")
 

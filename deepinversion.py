@@ -3,7 +3,8 @@ import torch.optim as optim
 
 
 def deep_inversion(stats_net, criterion, labels,
-                   steps=5, track_history=False, track_history_every=1):
+                   steps=5, lr=0.1,
+                   track_history=False, track_history_every=1):
 
     stats_net.stop_tracking_stats()
     stats_net.enable_hooks()
@@ -11,7 +12,7 @@ def deep_inversion(stats_net, criterion, labels,
     shape = [len(labels)] + list(stats_net.input_shape)
     inputs = torch.randn(shape, requires_grad=True)
 
-    optimizer = optim.Adam([inputs], lr=0.1)
+    optimizer = optim.Adam([inputs], lr=lr)
 
     if track_history:
         history = []
@@ -25,11 +26,11 @@ def deep_inversion(stats_net, criterion, labels,
         outputs = stats_net(data)
         loss = criterion(outputs, labels)
 
-        # reg_loss = sum([s.regularization for s in net.stats])
-        # reg_loss = stats_net.hooks[0].regularization
+        reg_loss = sum([s.regularization for s in stats_net.hooks])
+        reg_loss = stats_net.hooks[-1].regularization
+        # loss = stats_net.hooks[-1].regularization
 
-        # loss = loss + reg_loss
-        loss = stats_net.hooks[0].regularization
+        loss = loss + reg_loss
 
         loss.backward()
 
