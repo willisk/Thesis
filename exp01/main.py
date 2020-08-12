@@ -1,3 +1,5 @@
+"""Test if counting categorical mean and variance is implemented correctly
+"""
 import os
 import sys
 import matplotlib.pyplot as plt
@@ -26,31 +28,30 @@ importlib.reload(deepinversion)
 importlib.reload(shared)
 
 LOGDIR = os.path.join(PWD, "runs/exp01")
-tb = shared.init_summary_writer(log_dir=LOGDIR, comment="")
+shared.init_summary_writer(log_dir=LOGDIR)
+tb = shared.get_summary_writer("")
 
 dataset = datasets.Dataset2D(type=3)
 
-
-# stats_net = dataset.load_statsnet(resume_training=True, use_drive=True)
 stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
-# dataset.print_accuracy(stats_net)
+dataset.print_accuracy(stats_net)
 
-num_classes = dataset.get_num_classes()
-target_labels = torch.arange(num_classes) % num_classes
-history = deepinversion.deep_inversion(stats_net, dataset.get_criterion(),
-                                       target_labels,
-                                       steps=10000,
-                                       lr=0.1,
-                                       #    track_history=False,
-                                       track_history=True,
-                                       track_history_every=10
-                                       )
-
+plt.figure(figsize=(7, 7))
 dataset.plot(stats_net)
 dataset.plot_stats(stats_net)
-dataset.plot_history(history, target_labels)
 
-tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
+tb.add_figure("Data Set", plt.gcf(), close=False)
 plt.show()
 
+# verify stats
+
+stats = stats_net.collect_stats()[0]
+mean = stats['running_mean']
+var = stats['running_var']
+
+X, Y = dataset.full()
+for c in range(dataset.get_num_classes()):
+    data = X[Y == c]
+    assert np.allclose(mean[c], data.mean(axis=0))
+    assert np.allclose(np.sqrt(var[c]), data.std(axis=0))
 tb.close()

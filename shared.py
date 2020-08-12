@@ -6,13 +6,16 @@
 from torch.utils.tensorboard import SummaryWriter
 
 tb = None
+LOGDIR = None
 
 
-def init_summary_writer(log_dir, comment=""):
+def init_summary_writer(log_dir):
+    global LOGDIR
+    LOGDIR = log_dir
+
+
+def get_summary_writer(comment=None):
     global tb
-    tb = SummaryWriter(log_dir=log_dir, comment=comment)
-    return tb
-
-
-def get_summary_writer():
+    if comment is not None:
+        tb = SummaryWriter(LOGDIR + "_" + comment)
     return tb

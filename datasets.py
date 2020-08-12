@@ -25,9 +25,11 @@ sys.path.append(PWD)
 import utility
 import statsnet
 import nets
+import deepinversion
 importlib.reload(utility)
 importlib.reload(statsnet)
 importlib.reload(nets)
+importlib.reload(deepinversion)
 
 training_params = {'num_epochs': 200,
                    'print_every': 20}
@@ -75,7 +77,7 @@ class Dataset(torch.utils.data.Dataset):
     def get_criterion(self):
         return nn.CrossEntropyLoss()
 
-    def pretrained_statsnet(self, net, name, resume_training=False, use_drive=False):
+    def pretrained_statsnet(self, net, name, hook_before_bn=False, resume_training=False, use_drive=False):
 
         data_loader = self.train_loader()
 
@@ -85,7 +87,7 @@ class Dataset(torch.utils.data.Dataset):
         num_classes = self.get_num_classes()
 
         stats_net = statsnet.CStatsNet(
-            net, num_classes, class_conditional=True)
+            net, num_classes, hook_before_bn=hook_before_bn, class_conditional=True)
         stats_net.init_hooks(data_loader)
 
         net_path = os.path.join(MODELDIR, "net_" + name + ".pt")
@@ -111,6 +113,9 @@ class Dataset(torch.utils.data.Dataset):
                 utility.learn_stats(stats_net, data_loader)
             torch.save(stats_net.state_dict(), csnet_save_path)
             print("CSNet saved: " + csnet_save_path)
+
+        stats_net.stop_tracking_stats()
+        stats_net.enable_hooks()
 
         return stats_net
 
@@ -222,7 +227,7 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
     def load_statsnet(self, resume_training=False, use_drive=False):
         net = nets.ResNet20(10)
         stats_net = self.pretrained_statsnet(
-            net, "cifar10-resnet20", resume_training=resume_training, use_drive=use_drive)
+            net, "cifar10-resnet20", hook_before_bn=True, resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
     def print_accuracy(self, net):
@@ -304,8 +309,26 @@ class Dataset2D(Dataset):
             net, name, resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
-    def plot(self, net, contourgrad=False):
-        utility.plot_prediction2d(self.X, self.Y, net)
+    def plot_uq(self, stats_net, weights, target_class, cmap='bone'):
+
+        criterion = nn.CrossEntropyLoss(reduction='none')
+
+        def uq_loss(inputs):
+            labels = torch.LongTensor(
+                [target_class] * len(inputs))
+            data = {'inputs': inputs.detach(), 'labels': labels}
+            stats_net.set_reg_reduction_type('none')
+            return deepinversion.inversion_loss(data, stats_net, weights, criterion).detach()
+
+        X, Y = self.X, self.Y
+        utility.plot_contourf_data(
+            X, uq_loss, n_grid=100, scale_grid=2, cmap=cmap, colorbar=True)
+        plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap='Spectral', alpha=.4)
+
+    def plot(self, net):
+        X, Y = self.X, self.Y
+        utility.plot_contourf_data(X, net.predict, contour=True)
+        plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap='Spectral', alpha=.4)
 
     def plot_stats(self, stats_net):
         cmap = matplotlib.cm.get_cmap('Spectral')

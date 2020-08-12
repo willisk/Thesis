@@ -6,11 +6,27 @@ import matplotlib.pyplot as plt
 import torch
 
 import itertools
+from functools import reduce
+from itertools import product
+
+
+def dict_product(params):
+    return [dict(zip(params.keys(), v)) for v in product(*params.values())]
+
+
+def dict_to_str(p):
+    return " ".join([k + "=" + str(v) for k, v in p.items()])
 
 
 def count_correct(outputs, labels):
     preds = outputs.argmax(dim=-1)
     return (preds == labels).sum()
+
+
+def sum_all_but(x, dim):
+    dims = list(range(len(x.shape)))
+    dims.remove(dim)
+    return x.sum(dim=dims)
 
 
 def expand_as_r(a, b):
@@ -19,32 +35,67 @@ def expand_as_r(a, b):
     return a.reshape(shape)
 
 
-def cat_cond_mean_(inputs, labels, mean, var, cc,
-                   class_conditional=True):
+def combine_mean_var(mean_a, var_a, n_a, mean_b, var_b, n_b):
+    n = n_a + n_b
+    mean = (n_a * mean_a + n_b * mean_b) / n
+    var = (n_a * var_a
+           + n_b * var_b
+           + n_a * n_b / n * (mean_a - mean_b)**2) / n
 
-    shape = mean.shape
-    n_classes = shape[0]
+    return mean, var, n
 
-    if class_conditional:
-        total = torch.zeros(shape)
-        total.index_add_(0, labels, inputs)
-        N_class = expand_as_r(torch.bincount(labels, minlength=n_classes), cc)
-    else:
-        total = inputs.sum(dim=0)
-        N_class = len(inputs)
 
-    cc_f = cc.float()
-    cc.add_(N_class)
+def reduce_mean_var(means, vars, n):
+    return reduce(lambda x, y: combine_mean_var(*x, *y), zip(means, vars, n))
 
-    mean.mul_(cc_f / cc)
-    mean.add_((total / cc).expand_as(mean))
-    ##
-    total_2 = torch.zeros(shape)
-    # total_var.index_add_(0, labels, inputs - mean[labels])
-    for i, x in enumerate(inputs):
-        total_2[labels[i]] += (inputs[i])**2
-    var.mul_(cc_f / cc)
-    var.add_((total_2 - N_class * mean**2) / cc)
+
+def nan_to_zero(x):
+    x[x != x] = 0
+
+
+def c_mean_var(data, labels, shape):
+    S = torch.zeros(shape, requires_grad=False)
+    S_2 = torch.zeros(shape, requires_grad=False)
+    n = torch.zeros(shape[0], requires_grad=False)
+    for d, c in zip(data, labels):
+        S[c] += d
+        S_2[c] += d**2
+        n[c] += 1
+    n = expand_as_r(n, S)
+    mean = S / n
+    var = (S_2 - S**2 / n) / n
+    nan_to_zero(mean)
+    nan_to_zero(var)
+    return mean, var, n
+
+
+# def cat_cond_mean_(inputs, labels, mean, var, cc,
+#                    class_conditional=True):
+
+#     shape = mean.shape
+#     n_classes = shape[0]
+
+#     if class_conditional:
+#         total = torch.zeros(shape)
+#         total.index_add_(0, labels, inputs)
+#         N_class = expand_as_r(torch.bincount(labels, minlength=n_classes), cc)
+#     else:
+#         total = inputs.sum(dim=0)
+#         N_class = len(inputs)
+
+#     cc_f = cc.float()
+#     cc.add_(N_class)
+
+#     mean.mul_(cc_f / cc)
+#     mean.add_((total / cc).expand_as(mean))
+#     ##
+#     total_2 = torch.zeros(shape)
+#     # total_var.index_add_(0, labels, inputs - mean[labels])
+#     for i, x in enumerate(inputs):
+#         total_2[labels[i]] += (inputs[i])**2
+#     var.mul_(cc_f / cc)
+#     # var.add_((total_2 - N_class * mean**2) / cc)
+#     var.add_((total_2 - mean**2) / cc)
 
 
 def search_drive(path):
@@ -216,32 +267,31 @@ def scatter_matrix(data, labels,
     return fig
 
 
-def plot_prediction2d(data, labels, net, num=400, axis=None, cmap='Spectral', contourgrad=False):
+def plot_contourf_data(data, func, n_grid=400, scale_grid=1, cmap='Spectral', alpha=.3, contour=False, colorbar=False):
+    x_min, x_max = data[:, 0].min() - 0.5, data[:, 0].max() + 0.5
+    y_min, y_max = data[:, 1].min() - 0.5, data[:, 1].max() + 0.5
+    m_x = (x_min + x_max) / 2
+    m_y = (y_min + y_max) / 2
+    x_min = scale_grid * (x_min - m_x) + m_x
+    x_max = scale_grid * (x_max - m_x) + m_x
+    y_min = scale_grid * (y_min - m_y) + m_y
+    y_max = scale_grid * (y_max - m_y) + m_y
+    plot_contourf(x_min, x_max, y_min, y_max, func,
+                  n_grid, cmap, alpha, contour, colorbar)
 
-    X, Y = data, labels
-    h = 0.05
-    x_min, x_max = X[:, 0].min() - 10 * h, X[:, 0].max() + 10 * h
-    y_min, y_max = X[:, 1].min() - 10 * h, X[:, 1].max() + 10 * h
-    xx, yy = np.meshgrid(np.linspace(x_min, x_max, num),
-                         np.linspace(y_min, y_max, num))
+
+def plot_contourf(x_min, x_max, y_min, y_max, func, n_grid=400, cmap='Spectral', alpha=.3, contour=False, colorbar=False):
+    xx, yy = np.meshgrid(np.linspace(x_min, x_max, n_grid),
+                         np.linspace(y_min, y_max, n_grid))
     mesh = (np.c_[xx.ravel(), yy.ravel()])
     mesh = torch.from_numpy(mesh.astype('float32'))
-    Z = net.predict(mesh)
+    Z = func(mesh)
     Z = Z.T.reshape(xx.shape)
-
-    if axis is None:
-        _plt = plt
-        plt.figure(figsize=(5, 5))
-    else:
-        _plt = axis
-
-    # if contourgrad:
-    #     A = net(mesh)
-    #     _plt.contourf(xx, yy, A.T.reshape(xx.shape), cmap=cmap, alpha=.3)
-    # else:
-    _plt.contourf(xx, yy, Z, cmap=cmap, alpha=.3)
-    _plt.contour(xx, yy, Z, colors='k')
-    _plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap=cmap, alpha=.4)
+    cf = plt.contourf(xx, yy, Z, cmap=cmap, alpha=alpha)
+    if contour:
+        plt.contour(xx, yy, Z, colors='k')
+    if colorbar:
+        plt.colorbar(cf)
 
 
 def make_grid(X, labels, title_fmt, cmap='gray', ncols=3, colors=None):
@@ -259,3 +309,26 @@ def make_grid(X, labels, title_fmt, cmap='gray', ncols=3, colors=None):
         plt.title(title_fmt.format(labels[i]), color=color)
         plt.xticks([])
         plt.yticks([])
+
+
+def in_product_outer(nrows, ncols, i):
+    x = i % nrows + 1
+    y = i // nrows + 1
+    return x == 1 or x == ncols or y == 1 or y == nrows
+
+
+def in_product_edge(nrows, ncols, i):
+    x = i % nrows + 1
+    y = i // nrows + 1
+    return (x == 1 and y == 1
+            or x == nrows and y == 1
+            or x == 1 and y == ncols
+            or x == nrows and y == ncols)
+
+
+def subplots_labels(x_labels, y_labels):
+    for i, ax in enumerate(plt.gcf().axes):
+        ax.set(xlabel=x_labels[i % len(x_labels)],
+               ylabel=y_labels[i // len(y_labels)])
+    for ax in plt.gcf().axes:
+        ax.label_outer()
