@@ -19,7 +19,10 @@ def inversion_loss_weights(weights, factor):
     elif factor == np.inf:
         return [0 for w in weights] + [1]
     else:
-        return [w / factor / 2 for w in weights] + [factor / 2]
+        weights = [w / factor for w in weights] + [factor]
+        s = sum(weights)
+        weights = [w / s for w in weights]
+        return weights
 
 
 # def inversion_weights(N, slope=0, power=1, factor=1):
@@ -32,10 +35,9 @@ def inversion_loss_weights(weights, factor):
 def inversion_loss(data, stats_net, weights, criterion):
     outputs = stats_net(data)
     loss = criterion(outputs, data['labels'])
-    loss_w = weights.pop()
     components = [h.regularization for h in stats_net.hooks.values()]
-    reg_loss = sum([w * c for w, c in zip(weights, components)])
-    return loss_w * loss + reg_loss
+    reg_loss = sum([w * c for w, c in zip(weights[:-1], components)])
+    return weights[-1] * loss + reg_loss
 
 
 def deep_inversion(stats_net, criterion, labels,
@@ -43,10 +45,9 @@ def deep_inversion(stats_net, criterion, labels,
                    weights=None,
                    track_history=False, track_history_every=1):
 
-    tb = shared.get_summary_writer()
+    # tb = shared.get_summary_writer()
 
     stats_net.stop_tracking_stats()
-    stats_net.enable_hooks()
 
     shape = [len(labels)] + list(stats_net.input_shape)
     inputs = torch.randn(shape, requires_grad=True)
@@ -61,14 +62,15 @@ def deep_inversion(stats_net, criterion, labels,
         history.append(inputs.detach().clone())
 
     if weights is None:
-        weights = inversion_weights(len(stats_net.hooks))
+        weights = inversion_layer_weights(N=len(stats_net.hooks))
+        weights = inversion_loss_weights(weights, 1)
 
     for step in range(1, steps + 1):
 
         optimizer.zero_grad()
 
-        data = {'inputs': inputs, 'labels': labels}
-        loss = inversion_loss(data, stats_net, weights, criterion)
+        loss = stats_net.inversion_loss(
+            inputs, labels, weights, criterion, reduction='none')
         loss.backward()
 
         optimizer.step()
@@ -77,8 +79,6 @@ def deep_inversion(stats_net, criterion, labels,
             history.append(inputs.detach().clone())
 
     print("Finished Inverting")
-
-    stats_net.disable_hooks()
 
     if track_history:
         return history

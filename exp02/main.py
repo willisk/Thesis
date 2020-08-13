@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 import torch
+import torch.nn as nn
 
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
@@ -29,6 +30,16 @@ importlib.reload(shared)
 
 LOGDIR = os.path.join(PWD, "runs/exp02")
 shared.init_summary_writer(LOGDIR)
+tb = shared.get_summary_writer("")
+
+
+def splot(nrows, ncols, i):
+    ax = plt.subplot(nrows, ncols, i)
+    plt.tight_layout()
+    plt.xticks([])
+    plt.yticks([])
+    return ax
+
 
 # weight params
 weight_params = dict(
@@ -36,40 +47,36 @@ weight_params = dict(
     b=[0.001, 0.6, 1, 2, 1000],
 )
 
+weight_params['b'] = list(reversed(weight_params['b']))
+
 nrows = len(weight_params['a'])
 ncols = len(weight_params['b'])
 
 w_param_product = utility.dict_product(weight_params)
 w_param_filtered = []
 
-n_hooks = 11
-
 for i, w_param in enumerate(w_param_product):
 
-    ax = plt.subplot(nrows, ncols, i + 1)
-    plt.tight_layout()
-    plt.xticks([])
-    plt.yticks([])
+    ax = splot(nrows, ncols, i + 1)
 
     if (utility.in_product_outer(nrows, ncols, i)
             and not utility.in_product_edge(nrows, ncols, i)):
-        plt.plot()
         for spine in ax.spines.values():
             spine.set_edgecolor('white')
-        w_param_filtered.append(None)
         continue
+    N = 11
+    weights = deepinversion.inversion_layer_weights(N=N, **w_param)
+    plt.bar(list(range(N)), weights)
     w_param_filtered.append(w_param)
-    continue
-    weights = deepinversion.inversion_layer_weights(N=n_hooks, **w_param)
-    plt.bar(list(range(n_hooks)), weights)
 
 
-xlabel = weight_params['a']
-ylabel = weight_params['b']
-xlabel[0] = "a = " + str(xlabel[0])
-ylabel[-1] = "b = " + str(xlabel[-1])
+xlabel = weight_params['b']
+ylabel = weight_params['a']
+xlabel[0] = "b = " + str(xlabel[0])
+ylabel[-1] = "a = " + str(ylabel[-1])
 utility.subplots_labels(xlabel, ylabel)
 
+tb.add_figure("Reconstruction Weights", plt.gcf(), close=False)
 plt.show()
 
 # UQ plots
@@ -83,45 +90,74 @@ num_classes = dataset.get_num_classes()
 # target_labels = torch.arange(num_classes) % num_classes
 
 
+colors = ['Reds_r', 'Blues_r']
+factor_params = [np.inf, 0, 0.5]
+
+###
+# w_param_filtered = [dict(a=0.001, b=1000)]
+# factor_params = [0]
+###
+plt.figure(figsize=(7, 7))
+dataset.plot(stats_net)
+dataset.plot_stats(stats_net)
+plt.show()
+
+first = True
 for w_param in w_param_filtered:
 
-    # ax = plt.subplot(nrows, ncols, i + 1)
+    for factor in factor_params:
 
-    weights = deepinversion.inversion_layer_weights(N=n_hooks, **w_param)
-    comment = utility.dict_to_str(w_param)
-    print(comment)
-    print("hooks: ", n_hooks)
-    print("weights: ", len(weights))
-    # tb = shared.get_summary_writer(comment)
-    plt.figure(figsize=(9, 6))
-    # plt.title("class={} ".format(c) + comment)
-    colors = ['Reds_r', 'Blues_r']
-    for c in range(num_classes):
-        plt.subplot(2, 3, c * 3 + 3)
-        plt.tight_layout()
-        plt.xticks([])
-        plt.yticks([])
-        print(weights)
-        print(w[:-1])
-        plt.bar(list(range(n_hooks)), weights)
+        if not first and factor == np.inf:  # same plots
+            continue
+        first = False
+
+        comment = "factor={} ".format(factor) + utility.dict_to_str(w_param)
+        tb = shared.get_summary_writer(comment)
+        plt.figure(figsize=(9, 3))
+
+        weights = deepinversion.inversion_layer_weights(N=n_hooks, **w_param)
+        w = deepinversion.inversion_loss_weights(weights, factor)
+
+        ncols = num_classes + 1
+
+        for c in range(num_classes):
+            splot(1, ncols, c + 1)
+            dataset.plot_uq(stats_net, c, w, cmap=colors[c])
+
+        splot(1, ncols, ncols)
+        x = list(range(n_hooks))
+        plt.gca().set_ylim([0, 1])
+        plt.bar(x, w[:-1])
         plt.bar(n_hooks, w[-1], color='red')
+        plt.xticks(x)
 
-        plt.subplot(2, 3, c * 3 + 1)
-        plt.tight_layout()
-        plt.xticks([])
-        plt.yticks([])
-        w = deepinversion.inversion_loss_weights(weights, 1)
-        print("w: ", len(w[:-1]))
-        dataset.plot_uq(stats_net, w, c, cmap=colors[c])
-        plt.subplot(2, 3, c * 3 + 2)
-        plt.tight_layout()
-        plt.xticks([])
-        plt.yticks([])
-        w = deepinversion.inversion_loss_weights(weights, 2)
-        dataset.plot_uq(stats_net, w, c, cmap=colors[c])
-
-    plt.show()
+        tb.add_figure("Loss Landscape", plt.gcf(), close=False)
+        plt.show()
     break
 
+w_param_selected = w_param_filtered[0]
+weights = deepinversion.inversion_layer_weights(N=n_hooks, **w_param_selected)
+w = deepinversion.inversion_loss_weights(weights, 0.5)
 
-# tb.close()
+target_labels = torch.arange(num_classes) % num_classes
+criterion = nn.CrossEntropyLoss(reduction='sum')
+
+history = deepinversion.deep_inversion(stats_net,
+                                       criterion,
+                                       target_labels,
+                                       steps=100,
+                                       lr=0.1,
+                                       weights=weights,
+                                       #    track_history=False,
+                                       track_history=True,
+                                       track_history_every=10
+                                       )
+
+plt.figure(figsize=(7, 7))
+dataset.plot(stats_net)
+dataset.plot_history(history, target_labels)
+
+tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
+plt.show()
+
+tb.close()

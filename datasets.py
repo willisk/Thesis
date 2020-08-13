@@ -99,7 +99,7 @@ class Dataset(torch.utils.data.Dataset):
         pretrained = False
         if os.path.exists(csnet_load_path):
             checkpoint = torch.load(csnet_load_path)
-            stats_net.load_state_dict(checkpoint)
+            stats_net.load_state_dict(checkpoint, strict=False)
             print("CSNet loaded: " + csnet_load_path)
             pretrained = True
 
@@ -115,7 +115,6 @@ class Dataset(torch.utils.data.Dataset):
             print("CSNet saved: " + csnet_save_path)
 
         stats_net.stop_tracking_stats()
-        stats_net.enable_hooks()
 
         return stats_net
 
@@ -259,6 +258,17 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
                           "pred: {}", colors=colors)
         plt.show()
 
+    def plot_stats(self, stats_net):
+        stats = stats_net.collect_stats()[0]
+        mean = stats['running_mean']
+        var = stats['running_var']
+
+        num_classes = self.get_num_classes()
+        print("dataset means:")
+        print(mean.shape)
+        utility.make_grid(self.to_image_plt(mean),
+                          self.classes, "label: {}")
+
     def plot_history(self, invert, labels):
         print("inverted:")
         utility.make_grid(self.to_image_plt(invert),
@@ -309,25 +319,24 @@ class Dataset2D(Dataset):
             net, name, resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
-    def plot_uq(self, stats_net, weights, target_class, cmap='bone'):
+    def plot_uq(self, stats_net, target_class, weights, cmap='bone'):
 
         criterion = nn.CrossEntropyLoss(reduction='none')
 
         def uq_loss(inputs):
-            labels = torch.LongTensor(
-                [target_class] * len(inputs))
-            data = {'inputs': inputs.detach(), 'labels': labels}
-            stats_net.set_reg_reduction_type('none')
-            return deepinversion.inversion_loss(data, stats_net, weights, criterion).detach()
+            return stats_net.inversion_loss(
+                inputs, target_class, weights, criterion, reduction='none').detach()
 
         X, Y = self.X, self.Y
-        utility.plot_contourf_data(
-            X, uq_loss, n_grid=100, scale_grid=2, cmap=cmap, colorbar=True)
+        with torch.no_grad():
+            utility.plot_contourf_data(
+                X, uq_loss, n_grid=100, scale_grid=1.5, cmap=cmap, levels=30, colorbar=True)
         plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap='Spectral', alpha=.4)
 
     def plot(self, net):
         X, Y = self.X, self.Y
-        utility.plot_contourf_data(X, net.predict, contour=True)
+        with torch.no_grad():
+            utility.plot_contourf_data(X, net.predict, contour=True)
         plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap='Spectral', alpha=.4)
 
     def plot_stats(self, stats_net):

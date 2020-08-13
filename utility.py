@@ -8,6 +8,11 @@ import torch
 import itertools
 from functools import reduce
 from itertools import product
+from collections.abc import Iterable
+
+
+def is_iterable(x):
+    return isinstance(x, Iterable)
 
 
 def dict_product(params):
@@ -210,15 +215,8 @@ def learn_stats(stats_net, data_loader, num_epochs=1):
                  'labels': labels}
             stats_net(x)
 
-            # for i, layer in enumerate(stats_net.stats, 1):
-            #     for j, feature in enumerate(layer.running_mean):
-            #         for m, f in enumerate(feature):
-            #             tb.add_scalar("stats%i.class%i.f%i" % (i, j, m + 1),
-            #                           feature[m], batch_i)
-
         batch_total = batch_i + 1
 
-    stats_net.disable_hooks()
     print("Finished Tracking Stats")
 
 
@@ -267,7 +265,7 @@ def scatter_matrix(data, labels,
     return fig
 
 
-def plot_contourf_data(data, func, n_grid=400, scale_grid=1, cmap='Spectral', alpha=.3, contour=False, colorbar=False):
+def plot_contourf_data(data, func, n_grid=400, scale_grid=1, cmap='Spectral', alpha=.3, levels=None, contour=False, colorbar=False):
     x_min, x_max = data[:, 0].min() - 0.5, data[:, 0].max() + 0.5
     y_min, y_max = data[:, 1].min() - 0.5, data[:, 1].max() + 0.5
     m_x = (x_min + x_max) / 2
@@ -277,17 +275,17 @@ def plot_contourf_data(data, func, n_grid=400, scale_grid=1, cmap='Spectral', al
     y_min = scale_grid * (y_min - m_y) + m_y
     y_max = scale_grid * (y_max - m_y) + m_y
     plot_contourf(x_min, x_max, y_min, y_max, func,
-                  n_grid, cmap, alpha, contour, colorbar)
+                  n_grid, cmap, alpha, levels, contour, colorbar)
 
 
-def plot_contourf(x_min, x_max, y_min, y_max, func, n_grid=400, cmap='Spectral', alpha=.3, contour=False, colorbar=False):
+def plot_contourf(x_min, x_max, y_min, y_max, func, n_grid=400, cmap='Spectral', alpha=.3, levels=None, contour=False, colorbar=False):
     xx, yy = np.meshgrid(np.linspace(x_min, x_max, n_grid),
                          np.linspace(y_min, y_max, n_grid))
     mesh = (np.c_[xx.ravel(), yy.ravel()])
     mesh = torch.from_numpy(mesh.astype('float32'))
     Z = func(mesh)
     Z = Z.T.reshape(xx.shape)
-    cf = plt.contourf(xx, yy, Z, cmap=cmap, alpha=alpha)
+    cf = plt.contourf(xx, yy, Z, levels=levels, cmap=cmap, alpha=alpha)
     if contour:
         plt.contour(xx, yy, Z, colors='k')
     if colorbar:

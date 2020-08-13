@@ -26,7 +26,8 @@ importlib.reload(deepinversion)
 importlib.reload(shared)
 
 LOGDIR = os.path.join(PWD, "runs/exp03")
-tb = shared.init_summary_writer(log_dir=LOGDIR, comment="")
+shared.init_summary_writer(log_dir=LOGDIR)
+tb = shared.get_summary_writer("")
 
 dataset = datasets.DatasetCifar10()
 
@@ -35,6 +36,8 @@ dataset = datasets.DatasetCifar10()
 stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
 # dataset.print_accuracy(stats_net)
 
+# dataset.plot(stats_net)
+# dataset.plot_stats(stats_net)
 
 # num_classes = dataset.get_num_classes()
 # target_labels = torch.arange(num_classes) % num_classes
@@ -48,7 +51,6 @@ stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
 #                                        )
 
 # dataset.plot(stats_net)
-# # dataset.plot_stats(stats_net)
 # dataset.plot_history(history, target_labels)
 
 # tb.add_figure("Data Reconstruction", plt.gcf(), close=False)

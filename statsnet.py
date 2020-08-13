@@ -7,9 +7,11 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import utility
 import shared
+import deepinversion
 
 import importlib
 importlib.reload(utility)
+importlib.reload(deepinversion)
 
 # tb = shared.get_summary_writer()
 
@@ -28,7 +30,7 @@ class StatsHook(nn.Module):
         self.reg_reduction = "mean"
         self.tracking_stats = True
         self.initialized = False
-        self.enabled = False
+        self.enabled = True
 
     def hook_fn(self, module, inputs, outputs):
 
@@ -36,9 +38,11 @@ class StatsHook(nn.Module):
 
         if not self.initialized:
             self.init_parameters(x.shape[1:])
+            return
 
         if not self.enabled:
             return
+
         labels = self.stats_net[0].current_labels
         if self.tracking_stats:
             # pylint: disable=access-member-before-definition
@@ -58,10 +62,8 @@ class StatsHook(nn.Module):
                     self.total_mean, self.total_var = utility.reduce_mean_var(
                         means, vars, self.class_count)
                 means, vars = self.total_mean, self.total_var
-            means = means.unsqueeze(0)
-            vars = vars.unsqueeze(0)
             self.regularization = utility.sum_all_but(
-                ((x - means))**2, dim=0)
+                (x - means)**2 / vars, dim=0)
             if self.reg_reduction == "mean":    # should use mean over batches
                 self.regularization = self.regularization.mean()
             if self.reg_reduction == "sum":
@@ -87,7 +89,7 @@ class StatsHook(nn.Module):
 
 class CStatsNet(nn.Module):
 
-    def __init__(self, net, num_classes, hook_before_bn=False, class_conditional=True):
+    def __init__(self, net, num_classes, hook_before_bn=False, track_inputs=True, class_conditional=True):
         super().__init__()
 
         self.net = net
@@ -95,19 +97,24 @@ class CStatsNet(nn.Module):
         self.hooks = nn.ModuleDict()
 
         for i, (name, m) in enumerate(net.named_modules()):
-            if (i == 0
-                    or isinstance(m, nn.ModuleList)
-                    or isinstance(m, nn.ModuleDict)
-                    or isinstance(m, nn.Sequential)
-                    or isinstance(m, nn.CrossEntropyLoss)):
+            if i == 0 and not track_inputs:
                 continue
-            if not hook_before_bn or isinstance(m, nn.BatchNorm2d):
-                # print("adding hook to module " + name)
-                hook_name = name.replace('.', '-')
-                if name == "":
-                    name = i
-                self.hooks[hook_name] = StatsHook(self, m, num_classes,
-                                                  class_conditional=class_conditional)
+            if (i != 0 and
+                (isinstance(m, nn.ModuleList)
+                 or isinstance(m, nn.ModuleDict)
+                 or isinstance(m, nn.Sequential)
+                 or isinstance(m, nn.CrossEntropyLoss))):
+                continue
+            if i != 0 and hook_before_bn and not isinstance(m, nn.BatchNorm2d):
+                continue
+            if i == 0:
+                name = "net_input"
+            # print("{} adding hook to module ".format(i) + name)
+            hook_name = name.replace('.', '-')
+            if name == "":
+                name = str(i)
+            self.hooks[hook_name] = StatsHook(self, m, num_classes,
+                                              class_conditional=class_conditional)
 
         # self.class_conditional = class_conditional
 
@@ -124,7 +131,22 @@ class CStatsNet(nn.Module):
         self.input_shape = inputs.shape[1:]
 
     def predict(self, inputs):
-        return self.net.predict(inputs)
+        self.disable_hooks()
+        with torch.no_grad():
+            outputs = self.net.predict(inputs)
+        self.enable_hooks()
+        return outputs
+
+    def inversion_loss(self, inputs, target, weights, criterion, reduction='mean'):
+        if utility.is_iterable(target):
+            labels = target
+        else:
+            labels = torch.LongTensor([target] * len(inputs))
+        data = {'inputs': inputs, 'labels': labels}
+        self.set_reg_reduction_type(reduction)
+        loss = deepinversion.inversion_loss(data, self, weights, criterion)
+        self.set_reg_reduction_type('mean')
+        return loss
 
     def stop_tracking_stats(self):
         self.eval()
@@ -132,18 +154,12 @@ class CStatsNet(nn.Module):
             h.tracking_stats = False
 
     def start_tracking_stats(self):
+        '''tracking_stats state is similar to self.training in eval()/train()
+           it is decoupled though, so statistics can be collected while BN stats are frozen
+        '''
         self.eval()
-        self.enable_hooks()
         for h in self.hooks.values():
             h.tracking_stats = True
-
-    def enable_hooks(self):
-        for h in self.hooks.values():
-            h.enabled = True
-
-    def disable_hooks(self):
-        for h in self.hooks.values():
-            h.enabled = False
 
     def set_reg_reduction_type(self, type):
         for h in self.hooks.values():
@@ -158,3 +174,11 @@ class CStatsNet(nn.Module):
                 stat[s] = getattr(h, s).data
             stats.append(stat)
         return stats
+
+    def enable_hooks(self):
+        for h in self.hooks.values():
+            h.enabled = True
+
+    def disable_hooks(self):
+        for h in self.hooks.values():
+            h.enabled = False
