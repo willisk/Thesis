@@ -5,7 +5,7 @@
 
 from torch.utils.tensorboard import SummaryWriter
 
-tb = None
+writer = None
 LOGDIR = None
 ENABLED = True
 
@@ -17,10 +17,10 @@ def init_summary_writer(log_dir):
 
 def get_summary_writer(comment=None):
     if ENABLED:
-        global tb
+        global writer
         if comment is not None:
-            tb = SummaryWriter(LOGDIR + " " + comment)
-        return tb
+            writer = SummaryWriter(LOGDIR + "/" + comment)
+        return writer
     else:
         return None
 

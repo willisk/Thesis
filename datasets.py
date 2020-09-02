@@ -265,9 +265,8 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
 
         num_classes = self.get_num_classes()
         print("dataset means:")
-        print(mean.shape)
         utility.make_grid(self.to_image_plt(mean),
-                          self.classes, "label: {}")
+                          self.classes, "{}")
 
     def plot_history(self, invert, labels):
         print("inverted:")

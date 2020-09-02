@@ -19,10 +19,8 @@ def inversion_loss_weights(weights, factor):
     elif factor == np.inf:
         return [0 for w in weights] + [1]
     else:
-        weights = [w / factor for w in weights] + [factor]
-        s = sum(weights)
-        weights = [w / s for w in weights]
-        return weights
+
+        return [w / (1 + factor) for w in weights] + [factor / (1 + factor)]
 
 
 # def inversion_weights(N, slope=0, power=1, factor=1):
@@ -43,6 +41,9 @@ def inversion_loss(data, stats_net, weights, criterion):
 def deep_inversion(stats_net, criterion, labels,
                    steps=5, lr=0.1,
                    weights=None,
+                   perturbation=None,
+                   regularization=None,
+                   projection=None,
                    track_history=False, track_history_every=1):
 
     # tb = shared.get_summary_writer()
@@ -69,11 +70,22 @@ def deep_inversion(stats_net, criterion, labels,
 
         optimizer.zero_grad()
 
+        if perturbation is not None:
+            inputs = perturbation(inputs)
+
         loss = stats_net.inversion_loss(
-            inputs, labels, weights, criterion, reduction='none')
+            inputs, labels, weights, criterion, reduction='mean')
+
+        if regularization is not None:
+            loss = loss + regularization(inputs)
+
         loss.backward()
 
         optimizer.step()
+
+        if projection is not None:
+            with torch.no_grad():
+                inputs = projection(inputs)
 
         if track_history and (step % track_history_every == 0 or step == steps):
             history.append(inputs.detach().clone())

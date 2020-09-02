@@ -285,6 +285,7 @@ def plot_contourf(x_min, x_max, y_min, y_max, func, n_grid=400, cmap='Spectral',
     mesh = torch.from_numpy(mesh.astype('float32'))
     Z = func(mesh)
     Z = Z.T.reshape(xx.shape)
+    print(Z.shape)
     cf = plt.contourf(xx, yy, Z, levels=levels, cmap=cmap, alpha=alpha)
     if contour:
         plt.contour(xx, yy, Z, colors='k')

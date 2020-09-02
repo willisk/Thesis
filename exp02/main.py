@@ -28,9 +28,9 @@ importlib.reload(utility)
 importlib.reload(deepinversion)
 importlib.reload(shared)
 
-LOGDIR = os.path.join(PWD, "runs/exp02")
+LOGDIR = os.path.join(PWD, "exp02/runs")
 shared.init_summary_writer(LOGDIR)
-tb = shared.get_summary_writer("")
+tb = shared.get_summary_writer("main")
 
 
 def splot(nrows, ncols, i):

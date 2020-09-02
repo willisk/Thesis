@@ -1,0 +1,3 @@
+- Could try to use sum of feature statistics, considering sparse network activations.
+Might be true for later layers only. Then again.. why should the statistics 
+of earlier layers (i.e. edges) be necessarily matched?

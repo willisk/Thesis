@@ -27,9 +27,9 @@ importlib.reload(utility)
 importlib.reload(deepinversion)
 importlib.reload(shared)
 
-LOGDIR = os.path.join(PWD, "runs/exp01")
+LOGDIR = os.path.join(PWD, "exp01/runs")
 shared.init_summary_writer(log_dir=LOGDIR)
-tb = shared.get_summary_writer("")
+tb = shared.get_summary_writer("main")
 
 dataset = datasets.Dataset2D(type=3)
 
