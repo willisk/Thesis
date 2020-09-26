@@ -4,23 +4,14 @@ import torch
 import torch.optim as optim
 
 import shared
+from utility import timing
 
 from scipy.stats import betabinom
 
 
-def inversion_layer_weights(N, a=1, b=1):
+def betabinom_distr(N, a=1, b=1):
     rv = betabinom(N - 1, a, b)
     return [rv.pmf(k) for k in range(N)]
-
-
-def inversion_loss_weights(weights, factor):
-    if factor == 0:
-        return weights + [0]
-    elif factor == np.inf:
-        return [0 for w in weights] + [1]
-    else:
-
-        return [w / (1 + factor) for w in weights] + [factor / (1 + factor)]
 
 
 # def inversion_weights(N, slope=0, power=1, factor=1):
@@ -30,19 +21,14 @@ def inversion_loss_weights(weights, factor):
 #     out = [factor * e / s for e in exponential]
 #     return out
 
-def inversion_loss(data, stats_net, weights, criterion):
-    outputs = stats_net(data)
-    loss = criterion(outputs, data['labels'])
-    components = [h.regularization for h in stats_net.hooks.values()]
-    reg_loss = sum([w * c for w, c in zip(weights[:-1], components)])
-    return weights[-1] * loss + reg_loss
 
-
-def deep_inversion(stats_net, criterion, labels,
-                   steps=5, lr=0.1,
-                   weights=None,
+@timing
+def deep_inversion(inputs,
+                   stats_net,
+                   loss_fn,
+                   optimizer,
+                   steps=5,
                    perturbation=None,
-                   regularization=None,
                    projection=None,
                    track_history=False, track_history_every=1):
 
@@ -50,10 +36,7 @@ def deep_inversion(stats_net, criterion, labels,
 
     stats_net.stop_tracking_stats()
 
-    shape = [len(labels)] + list(stats_net.input_shape)
-    inputs = torch.randn(shape, requires_grad=True)
-
-    optimizer = optim.Adam([inputs], lr=lr)
+    inputs.requires_grad = True
 
     # tb.add_scalar('DI/slope', slope)
     # tb.add_scalar('DI/', accuracy, epoch)
@@ -62,10 +45,6 @@ def deep_inversion(stats_net, criterion, labels,
         history = []
         history.append(inputs.detach().clone())
 
-    if weights is None:
-        weights = inversion_layer_weights(N=len(stats_net.hooks))
-        weights = inversion_loss_weights(weights, 1)
-
     for step in range(1, steps + 1):
 
         optimizer.zero_grad()
@@ -73,19 +52,14 @@ def deep_inversion(stats_net, criterion, labels,
         if perturbation is not None:
             inputs = perturbation(inputs)
 
-        loss = stats_net.inversion_loss(
-            inputs, labels, weights, criterion, reduction='mean')
-
-        if regularization is not None:
-            loss = loss + regularization(inputs)
+        loss = loss_fn(inputs)
 
         loss.backward()
 
         optimizer.step()
 
         if projection is not None:
-            with torch.no_grad():
-                inputs = projection(inputs)
+            inputs = projection(inputs)
 
         if track_history and (step % track_history_every == 0 or step == steps):
             history.append(inputs.detach().clone())

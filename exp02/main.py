@@ -32,6 +32,8 @@ LOGDIR = os.path.join(PWD, "exp02/runs")
 shared.init_summary_writer(LOGDIR)
 tb = shared.get_summary_writer("main")
 
+plt.rcParams['figure.figsize'] = (6, 6)
+
 
 def splot(nrows, ncols, i):
     ax = plt.subplot(nrows, ncols, i)
@@ -55,6 +57,8 @@ ncols = len(weight_params['b'])
 w_param_product = utility.dict_product(weight_params)
 w_param_filtered = []
 
+# plt.figure(figsize=(7, 5))
+
 for i, w_param in enumerate(w_param_product):
 
     ax = splot(nrows, ncols, i + 1)
@@ -65,7 +69,7 @@ for i, w_param in enumerate(w_param_product):
             spine.set_edgecolor('white')
         continue
     N = 11
-    weights = deepinversion.inversion_layer_weights(N=N, **w_param)
+    weights = deepinversion.betabinom_distr(N=N, **w_param)
     plt.bar(list(range(N)), weights)
     w_param_filtered.append(w_param)
 
@@ -97,7 +101,7 @@ factor_params = [np.inf, 0, 0.5]
 # w_param_filtered = [dict(a=0.001, b=1000)]
 # factor_params = [0]
 ###
-plt.figure(figsize=(7, 7))
+# plt.figure(figsize=(7, 7))
 dataset.plot(stats_net)
 dataset.plot_stats(stats_net)
 plt.show()
@@ -118,26 +122,25 @@ for w_param in w_param_filtered:
         weights = deepinversion.inversion_layer_weights(N=n_hooks, **w_param)
         w = deepinversion.inversion_loss_weights(weights, factor)
 
-        ncols = num_classes + 1
+        # ncols = num_classes + 1
+        ncols = num_classes
 
         for c in range(num_classes):
             splot(1, ncols, c + 1)
             dataset.plot_uq(stats_net, c, w, cmap=colors[c])
 
-        splot(1, ncols, ncols)
-        x = list(range(n_hooks))
-        plt.gca().set_ylim([0, 1])
-        plt.bar(x, w[:-1])
-        plt.bar(n_hooks, w[-1], color='red')
-        plt.xticks(x)
+        # splot(1, ncols, ncols)
+        # x = list(range(n_hooks))
+        # plt.gca().set_ylim([0, 1])
+        # plt.bar(x, w[:-1])
+        # plt.bar(n_hooks, w[-1], color='red')
+        # plt.xticks(x)
 
         tb.add_figure("Loss Landscape", plt.gcf(), close=False)
         plt.show()
-    break
 
-w_param_selected = w_param_filtered[0]
-weights = deepinversion.inversion_layer_weights(N=n_hooks, **w_param_selected)
-w = deepinversion.inversion_loss_weights(weights, 0.5)
+    w_selected = w
+    break
 
 target_labels = torch.arange(num_classes) % num_classes
 criterion = nn.CrossEntropyLoss(reduction='sum')
@@ -145,15 +148,15 @@ criterion = nn.CrossEntropyLoss(reduction='sum')
 history = deepinversion.deep_inversion(stats_net,
                                        criterion,
                                        target_labels,
-                                       steps=100,
+                                       steps=200,
                                        lr=0.1,
-                                       weights=weights,
+                                       weights=w_selected,
                                        #    track_history=False,
                                        track_history=True,
                                        track_history_every=10
                                        )
 
-plt.figure(figsize=(7, 7))
+# plt.figure(figsize=(7, 7))
 dataset.plot(stats_net)
 dataset.plot_history(history, target_labels)
 

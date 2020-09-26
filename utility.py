@@ -6,9 +6,35 @@ import matplotlib.pyplot as plt
 import torch
 
 import itertools
-from functools import reduce
+from functools import reduce, wraps
 from itertools import product
 from collections.abc import Iterable
+import time
+
+
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        start = time.perf_counter()
+        result = f(*args, **kwargs)
+        run_time = time.perf_counter() - start
+        print("{} took {}".format(f.__name__ + "()", prettify_time(run_time)))
+        return result
+    return wrap
+
+
+def prettify_time(seconds):
+    hours = int(seconds / 3600)
+    mins = int((seconds % 3600) / 60)
+    sec = int((seconds % 60))
+    if hours > 0:
+        return "{}h {}m {}s".format(hours, mins, sec)
+    elif mins > 0:
+        return "{}m {}s".format(mins, sec)
+    elif sec > 0:
+        return "{:.2f}s".format(seconds)
+    else:
+        return "{}ms".format(int(seconds * 1000))
 
 
 def is_iterable(x):
@@ -285,10 +311,13 @@ def plot_contourf(x_min, x_max, y_min, y_max, func, n_grid=400, cmap='Spectral',
     mesh = torch.from_numpy(mesh.astype('float32'))
     Z = func(mesh)
     Z = Z.T.reshape(xx.shape)
-    print(Z.shape)
-    cf = plt.contourf(xx, yy, Z, levels=levels, cmap=cmap, alpha=alpha)
+    cf = plt.contourf(xx, yy, Z, levels=levels, cmap=cmap,
+                      alpha=alpha, linewidths=5, linestyles='solid')
     if contour:
-        plt.contour(xx, yy, Z, colors='k')
+        if levels is not None:
+            plt.contour(xx, yy, Z, cmap=cmap, levels=levels, linewidths=0.3)
+        else:
+            plt.contour(xx, yy, Z, colors='k', linewidths=0.5)
     if colorbar:
         plt.colorbar(cf)
 
@@ -298,7 +327,7 @@ def make_grid(X, labels, title_fmt, cmap='gray', ncols=3, colors=None):
     nrows = -(-L // ncols)
     for i in range(L):
         plt.subplot(nrows, ncols, i + 1)
-        plt.tight_layout()
+        # plt.tight_layout()
         plt.imshow(X[i].squeeze(),
                    cmap=cmap, interpolation='none')
         if colors is None:

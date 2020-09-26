@@ -77,9 +77,7 @@ class Dataset(torch.utils.data.Dataset):
     def get_criterion(self):
         return nn.CrossEntropyLoss()
 
-    def pretrained_statsnet(self, net, name, hook_before_bn=False, resume_training=False, use_drive=False):
-
-        data_loader = self.train_loader()
+    def pretrained_statsnet(self, net, name, hook_before_bn=False, resume_training=False, use_drive=False, input_shape=None):
 
         criterion = self.get_criterion()
         optimizer = optim.SGD(net.parameters(), lr=0.01)
@@ -88,7 +86,12 @@ class Dataset(torch.utils.data.Dataset):
 
         stats_net = statsnet.CStatsNet(
             net, num_classes, hook_before_bn=hook_before_bn, class_conditional=True)
-        stats_net.init_hooks(data_loader)
+
+        if input_shape is not None:
+            init_sample = torch.zeros(input_shape)
+        else:
+            init_sample = next(iter(self.train_loader()))[0]
+        stats_net.init_hooks(init_sample)
 
         net_path = os.path.join(MODELDIR, "net_" + name + ".pt")
         csnet_path = os.path.join(MODELDIR, "csnet_" + name + ".pt")
@@ -99,11 +102,12 @@ class Dataset(torch.utils.data.Dataset):
         pretrained = False
         if os.path.exists(csnet_load_path):
             checkpoint = torch.load(csnet_load_path)
-            stats_net.load_state_dict(checkpoint, strict=False)
+            stats_net.load_state_dict(checkpoint, strict=True)
             print("CSNet loaded: " + csnet_load_path)
             pretrained = True
 
         if resume_training or not pretrained:
+            data_loader = self.train_loader()
             utility.train(net, data_loader, criterion, optimizer,
                           model_path=net_path, resume_training=resume_training,
                           use_drive=use_drive,
@@ -199,17 +203,17 @@ import torchvision.transforms as transforms
 
 
 class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
-    def __init__(self):
+    def __init__(self, load_dataset=True):
 
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-        super().__init__(root=DATADIR, train=True,
-                         download=True, transform=transform)
-
-        self.test_set = torchvision.datasets.CIFAR10(root=DATADIR, train=True,
-                                                     download=True, transform=transform)
+        if load_dataset:
+            super().__init__(root=DATADIR, train=True,
+                             download=True, transform=transform)
+            self.test_set = torchvision.datasets.CIFAR10(root=DATADIR, train=True,
+                                                         download=True, transform=transform)
 
         Dataset.__init__(self)
 
@@ -225,8 +229,9 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
 
     def load_statsnet(self, resume_training=False, use_drive=False):
         net = nets.ResNet20(10)
+        input_shape = [64, 3, 32, 32]
         stats_net = self.pretrained_statsnet(
-            net, "cifar10-resnet20", hook_before_bn=True, resume_training=resume_training, use_drive=use_drive)
+            net, "cifar10-resnet20", input_shape=input_shape, hook_before_bn=True, resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
     def print_accuracy(self, net):
@@ -318,24 +323,38 @@ class Dataset2D(Dataset):
             net, name, resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
-    def plot_uq(self, stats_net, target_class, weights, cmap='bone'):
+    def plot_uq(self, stats_net, target_class, layer_weights, criterion_factor, cmap='bone'):
 
         criterion = nn.CrossEntropyLoss(reduction='none')
 
         def uq_loss(inputs):
+            target_labels = torch.LongTensor([target_class] * len(inputs))
+            stats_net.set_reg_reduction_type('none')
+            outputs = stats_net({'inputs': inputs, 'labels': target_labels})
+            criterion_loss = criterion(outputs, target_labels)
+
+            components = stats_net.get_hook_regularizations()
+            input_reg = components.pop(0)
+            layer_reg = sum([w * c for w, c in zip(layer_weights, components)])
+            total_loss = (input_reg_factor * input_reg
+                          + layer_reg_factor * layer_reg
+                          + criterion_factor * criterion_loss
+                          + reg_factor * regularization(x))
             return stats_net.inversion_loss(
-                inputs, target_class, weights, criterion, reduction='none').detach()
+                inputs, target_class, layer_weights, criterion, reduction='none').detach()
 
         X, Y = self.X, self.Y
         with torch.no_grad():
             utility.plot_contourf_data(
-                X, uq_loss, n_grid=100, scale_grid=1.5, cmap=cmap, levels=30, colorbar=True)
+                X, uq_loss, n_grid=100, scale_grid=1.5, cmap=cmap, levels=30,
+                contour=True, colorbar=True)
         plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap='Spectral', alpha=.4)
 
-    def plot(self, net):
+    def plot(self, net=None):
         X, Y = self.X, self.Y
-        with torch.no_grad():
-            utility.plot_contourf_data(X, net.predict, contour=True)
+        if net is not None:
+            with torch.no_grad():
+                utility.plot_contourf_data(X, net.predict, contour=True)
         plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap='Spectral', alpha=.4)
 
     def plot_stats(self, stats_net):
@@ -361,7 +380,10 @@ class Dataset2D(Dataset):
                         marker='^')
 
     def plot_history(self, history, labels):
-        data = torch.stack(history, dim=-1)
+        if isinstance(history, list):
+            data = torch.stack(history, dim=-1)
+        else:
+            data = [history]
         cmap = matplotlib.cm.get_cmap('Spectral')
         labels_max = max(labels).float().item()
         for i, d in enumerate(data):

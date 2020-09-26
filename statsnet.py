@@ -64,6 +64,7 @@ class StatsHook(nn.Module):
                 means, vars = self.total_mean, self.total_var
             self.regularization = utility.sum_all_but(
                 (x - means)**2 / vars, dim=0)
+            # print("reg is fin: ", torch.isfinite(self.regularization).all())
             if self.reg_reduction == "mean":    # should use mean over batches
                 self.regularization = self.regularization.mean()
             if self.reg_reduction == "sum":
@@ -97,7 +98,9 @@ class CStatsNet(nn.Module):
         self.hooks = nn.ModuleDict()
 
         for i, (name, m) in enumerate(net.named_modules()):
-            if i == 0 and not track_inputs:
+            if not hook_before_bn and i == 0:
+                continue    # going through all layers anyway, ignore input
+            if not track_inputs and i == 0:
                 continue
             if (i != 0 and
                 (isinstance(m, nn.ModuleList)
@@ -125,10 +128,13 @@ class CStatsNet(nn.Module):
         else:
             return self.net(data)
 
-    def init_hooks(self, data_loader):
-        inputs = next(iter(data_loader))[0]
-        self.net(inputs)
-        self.input_shape = inputs.shape[1:]
+    def init_hooks(self, init_sample):
+        self.net(init_sample)
+        self.input_shape = init_sample.shape[1:]
+
+    def get_hook_regularizations(self):
+        components = [h.regularization for h in self.hooks.values()]
+        return components
 
     def predict(self, inputs):
         self.disable_hooks()
@@ -136,17 +142,6 @@ class CStatsNet(nn.Module):
             outputs = self.net.predict(inputs)
         self.enable_hooks()
         return outputs
-
-    def inversion_loss(self, inputs, target, weights, criterion, reduction='mean'):
-        if utility.is_iterable(target):
-            labels = target
-        else:
-            labels = torch.LongTensor([target] * len(inputs))
-        data = {'inputs': inputs, 'labels': labels}
-        self.set_reg_reduction_type(reduction)
-        loss = deepinversion.inversion_loss(data, self, weights, criterion)
-        self.set_reg_reduction_type('mean')
-        return loss
 
     def stop_tracking_stats(self):
         self.eval()
