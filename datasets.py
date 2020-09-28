@@ -3,6 +3,8 @@ import sys
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib import animation
+from IPython.display import display
 
 from sklearn.datasets import make_blobs, make_circles, make_moons, load_iris, load_digits
 
@@ -274,9 +276,17 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
                           self.classes, "{}")
 
     def plot_history(self, invert, labels):
-        print("inverted:")
-        utility.make_grid(self.to_image_plt(invert),
-                          self.classes[labels], "target: {}")
+        frames = []
+        for X in invert:
+            frame_plot = utility.make_grid(self.to_image_plt(X),
+                                           self.classes[labels], "target: {}")
+            frames.append(frame_plot)
+        if len(frames) > 1:
+            anim = animation.ArtistAnimation(plt.gcf(), frames,
+                                             interval=300, repeat_delay=8000, blit=True)
+            plt.close()
+            display(anim)
+            return anim
 
 
 class Dataset2D(Dataset):

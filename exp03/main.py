@@ -26,16 +26,21 @@ importlib.reload(utility)
 importlib.reload(deepinversion)
 importlib.reload(shared)
 
+FIGDIR_LOCAL = os.path.join(PWD, "figures/cifar10-inversion")
+FIGDIR, _ = utility.search_drive(FIGDIR_LOCAL)
+if not os.path.exists(FIGDIR):
+    os.makedirs(FIGDIR)
+
 LOGDIR = os.path.join(PWD, "exp03/runs")
 shared.init_summary_writer(log_dir=LOGDIR)
 tb = shared.get_summary_writer("main")
 
 plt.rcParams['figure.figsize'] = (6, 6)
+plt.rcParams['animation.html'] = 'jshtml'
 
 dataset = datasets.DatasetCifar10(load_dataset=False)
 # dataset = datasets.Dataset2D(type=3)
 
-# stats_net = dataset.load_statsnet(resume_training=True, use_drive=True)
 stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
 # dataset.print_accuracy(stats_net)
 
@@ -50,15 +55,25 @@ stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
 learning_rate = 0.05
 
 hyperparameters = dict(
-    n_steps=[400],
-    learning_rate=[0.05],
-    criterion=[0, 1],
+    n_steps=[100],
+    learning_rate=[0.025],
+    criterion=[1, 0],
     input=[0, 0.0001, 0.01],
     regularization=[0, 0.0001, 0.01],
     layer=[0, 0.0001, 0.01],
     a=[1],
     b=[1],
 )
+# hyperparameters = dict(
+#     n_steps=[5],
+#     learning_rate=[0.05],
+#     criterion=[0],
+#     input=[0],
+#     regularization=[0.000001],
+#     layer=[0],
+#     a=[1],
+#     b=[1],
+# )
 
 # input_reg_factor = 0  # 1  # 0.0001
 # layer_reg_factor = 0  # 1
@@ -145,20 +160,27 @@ for hp in utility.dict_product(hyperparameters):
                                           inversion_loss,
                                           optimizer,
                                           steps=n_steps,
-                                          #   track_history=True,
-                                          perturbation=jitter,
+                                          #   perturbation=jitter,
                                           projection=projection,
+                                          track_history=True,
                                           track_history_every=10
                                           )
 
     # # dataset.plot(stats_net)
-    dataset.plot_history(invert, target_labels)
+    print("inverted:")
+    anim = dataset.plot_history(invert, target_labels)
 
-    if not os.path.exists("figures"):
-        os.mkdir("figures")
-    tb.add_figure("DeepInversion", plt.gcf(), close=False)
-    plt.savefig("figures/inversion " + comment + ".png")
-    plt.show()
+    path = os.path.join(FIGDIR, comment)
+    if anim is not None:
+        anim.save(path + ".gif")
+        dataset.plot_history([invert[-1]], target_labels)
+        tb.add_figure("DeepInversion", plt.gcf())
+        plt.savefig(path + ".png")
+        plt.close()
+    else:
+        tb.add_figure("DeepInversion", plt.gcf(), close=False)
+        plt.savefig(path + ".png")
+        plt.show()
 
 # tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
 # plt.show()

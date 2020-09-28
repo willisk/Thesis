@@ -36,6 +36,9 @@ def deep_inversion(inputs,
 
     stats_net.stop_tracking_stats()
 
+    if projection is not None:
+        inputs = projection(inputs)
+
     inputs.requires_grad = True
 
     # tb.add_scalar('DI/slope', slope)
@@ -68,4 +71,5 @@ def deep_inversion(inputs,
 
     if track_history:
         return history
-    return inputs.detach()
+    else:
+        return [inputs.detach()]

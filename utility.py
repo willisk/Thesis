@@ -322,21 +322,29 @@ def plot_contourf(x_min, x_max, y_min, y_max, func, n_grid=400, cmap='Spectral',
         plt.colorbar(cf)
 
 
-def make_grid(X, labels, title_fmt, cmap='gray', ncols=3, colors=None):
+def make_grid(X, labels=None, title_fmt="label: {}", cmap='gray', ncols=3, colors=None):
     L = len(X)
     nrows = -(-L // ncols)
+    frame_plot = []
     for i in range(L):
         plt.subplot(nrows, ncols, i + 1)
         # plt.tight_layout()
-        plt.imshow(X[i].squeeze(),
-                   cmap=cmap, interpolation='none')
-        if colors is None:
-            color = 'k'
-        else:
-            color = colors[i]
-        plt.title(title_fmt.format(labels[i]), color=color)
+        im = plt.imshow(X[i].squeeze(), cmap=cmap, interpolation='none')
+        if labels is not None:
+            color = 'k' if colors is None else colors[i]
+            plt.title(title_fmt.format(labels[i]), color=color)
         plt.xticks([])
         plt.yticks([])
+        frame_plot.append(im)
+    return frame_plot
+
+
+def make_grid_ani(frames, **kwargs):
+    ani_frames = []
+    for X in frames:
+        frame_plot = make_grid(X, **kwargs)
+        ani_frames.append(frame_plot)
+    return ani_frames
 
 
 def in_product_outer(nrows, ncols, i):
