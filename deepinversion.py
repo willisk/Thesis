@@ -50,10 +50,11 @@ def deep_inversion(inputs,
 
     for step in range(1, steps + 1):
 
-        optimizer.zero_grad()
-
         if perturbation is not None:
             inputs = perturbation(inputs)
+
+        optimizer.zero_grad()
+        stats_net.net.zero_grad()
 
         loss = loss_fn(inputs)
 

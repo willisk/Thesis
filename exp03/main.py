@@ -2,7 +2,7 @@ import os
 import sys
 import matplotlib.pyplot as plt
 from matplotlib.animation import ArtistAnimation, PillowWriter
-from IPython.display import display
+from IPython.display import display, FileLink
 
 import numpy as np
 import torch
@@ -59,9 +59,9 @@ hyperparameters = dict(
     n_steps=[1000],
     learning_rate=[0.02],
     criterion=[1, 0],
-    input=[0, 0.0001, 0.01],
-    regularization=[0, 0.0001, 0.01],
-    layer=[0, 0.0001, 0.01, 0.1],
+    input=[0.01, 0.0001, 0],
+    regularization=[0.01, 0.0001, 0],
+    layer=[0.01, 0.001, 0.0001, 0],
     a=[1],
     b=[1],
 )
@@ -114,6 +114,11 @@ for hp in utility.dict_product(hyperparameters):
     a = hp['a']
     b = hp['b']
 
+    input_reg_factor = 0.0001
+    layer_reg_factor = 0.001
+    criterion_factor = 1
+    reg_factor = 0.01
+
     if not any([input_reg_factor, layer_reg_factor, criterion_factor, reg_factor]):
         continue
 
@@ -143,7 +148,7 @@ for hp in utility.dict_product(hyperparameters):
                                           inversion_loss,
                                           optimizer,
                                           steps=n_steps,
-                                          perturbation=jitter,
+                                          #   perturbation=jitter,
                                           projection=projection,
                                           track_history=True,
                                           track_history_every=100
@@ -161,6 +166,7 @@ for hp in utility.dict_product(hyperparameters):
         plt.close()
         anim.save(path + ".gif", writer=PillowWriter())
         display(anim)
+        FileLink(path + ".gif")
         dataset.plot_history([invert[-1]], target_labels)
         tb.add_figure("DeepInversion", plt.gcf(), close=False)
         plt.savefig(path + ".png")
