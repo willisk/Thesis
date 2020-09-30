@@ -342,7 +342,7 @@ def make_grid(X, description=None, labels=None, title_fmt="label: {}", cmap='gra
         plt.yticks([])
         frame_plot.append(im)
         if i == int((nrows - 0.5) * ncols):
-            title = ax.text(0.25, -.3, description,
+            title = ax.text(0.22, -.3, description,
                             size=plt.rcParams["axes.titlesize"],
                             # ha="center",
                             transform=ax.transAxes

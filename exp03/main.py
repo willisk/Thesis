@@ -56,7 +56,7 @@ stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
 # hyperparameters
 
 hyperparameters = dict(
-    n_steps=[800],
+    n_steps=[1000],
     learning_rate=[0.02],
     criterion=[1, 0],
     input=[0, 0.0001, 0.01],
@@ -143,10 +143,10 @@ for hp in utility.dict_product(hyperparameters):
                                           inversion_loss,
                                           optimizer,
                                           steps=n_steps,
-                                          #   perturbation=jitter,
+                                          perturbation=jitter,
                                           projection=projection,
                                           track_history=True,
-                                          track_history_every=10
+                                          track_history_every=100
                                           )
 
     # # dataset.plot(stats_net)
@@ -159,8 +159,8 @@ for hp in utility.dict_product(hyperparameters):
         anim = ArtistAnimation(plt.gcf(), frames,
                                interval=300, repeat_delay=8000, blit=True)
         plt.close()
-        display(anim)
         anim.save(path + ".gif", writer=PillowWriter())
+        display(anim)
         dataset.plot_history([invert[-1]], target_labels)
         tb.add_figure("DeepInversion", plt.gcf(), close=False)
         plt.savefig(path + ".png")
