@@ -46,7 +46,7 @@ def deep_inversion(inputs,
 
     if track_history:
         history = []
-        history.append(inputs.detach().clone())
+        history.append((inputs.detach().clone(), 0))
 
     for step in range(1, steps + 1):
 
@@ -65,11 +65,10 @@ def deep_inversion(inputs,
             inputs = projection(inputs)
 
         if track_history and (step % track_history_every == 0 or step == steps):
-            history.append(inputs.detach().clone())
+            history.append((inputs.detach().clone(), step))
 
     print("Finished Inverting")
 
     if track_history:
         return history
-    else:
-        return [inputs.detach()]
+    return [(inputs.detach(), step)]

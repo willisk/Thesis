@@ -3,8 +3,6 @@ import sys
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib import animation
-from IPython.display import display
 
 from sklearn.datasets import make_blobs, make_circles, make_moons, load_iris, load_digits
 
@@ -18,9 +16,6 @@ import importlib
 PWD = os.path.dirname(os.path.abspath(__file__))
 MODELDIR = os.path.join(PWD, "models")
 DATADIR = os.path.join(PWD, "data")
-
-if not os.path.exists(MODELDIR):
-    os.mkdir(MODELDIR)
 
 sys.path.append(PWD)
 
@@ -277,16 +272,13 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
 
     def plot_history(self, invert, labels):
         frames = []
-        for X in invert:
-            frame_plot = utility.make_grid(self.to_image_plt(X),
-                                           self.classes[labels], "target: {}")
-            frames.append(frame_plot)
-        if len(frames) > 1:
-            anim = animation.ArtistAnimation(plt.gcf(), frames,
-                                             interval=300, repeat_delay=8000, blit=True)
-            plt.close()
-            display(anim)
-            return anim
+        for X, step in invert:
+            frame = utility.make_grid(self.to_image_plt(X),
+                                      description="step={}".format(step),
+                                      labels=self.classes[labels],
+                                      title_fmt="target: {}")
+            frames.append(frame)
+        return frames
 
 
 class Dataset2D(Dataset):

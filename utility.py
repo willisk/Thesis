@@ -137,10 +137,15 @@ def search_drive(path):
 
     save_path, load_path = path, path
 
-    if os.path.exists(drive_root):
+    if os.path.exists(drive_root):  # drive connected
         save_path = drive_path
         if os.path.exists(drive_path):
             load_path = drive_path
+
+    for path in [save_path, load_path]:  # make sure directories exist
+        _dir = os.path.dirname(path)
+        if not os.path.exists(_dir):
+            os.makedirs(_dir)
 
     return save_path, load_path
 
@@ -322,12 +327,12 @@ def plot_contourf(x_min, x_max, y_min, y_max, func, n_grid=400, cmap='Spectral',
         plt.colorbar(cf)
 
 
-def make_grid(X, labels=None, title_fmt="label: {}", cmap='gray', ncols=3, colors=None):
+def make_grid(X, description=None, labels=None, title_fmt="label: {}", cmap='gray', ncols=3, colors=None):
     L = len(X)
     nrows = -(-L // ncols)
     frame_plot = []
     for i in range(L):
-        plt.subplot(nrows, ncols, i + 1)
+        ax = plt.subplot(nrows, ncols, i + 1)
         # plt.tight_layout()
         im = plt.imshow(X[i].squeeze(), cmap=cmap, interpolation='none')
         if labels is not None:
@@ -336,6 +341,14 @@ def make_grid(X, labels=None, title_fmt="label: {}", cmap='gray', ncols=3, color
         plt.xticks([])
         plt.yticks([])
         frame_plot.append(im)
+        if i == int((nrows - 0.5) * ncols):
+            title = ax.text(0.25, -.3, description,
+                            size=plt.rcParams["axes.titlesize"],
+                            # ha="center",
+                            transform=ax.transAxes
+                            )
+            frame_plot.append(title)
+
     return frame_plot
 
 

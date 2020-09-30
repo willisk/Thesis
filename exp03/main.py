@@ -1,6 +1,8 @@
 import os
 import sys
 import matplotlib.pyplot as plt
+from matplotlib.animation import ArtistAnimation, PillowWriter
+from IPython.display import display
 
 import numpy as np
 import torch
@@ -26,12 +28,12 @@ importlib.reload(utility)
 importlib.reload(deepinversion)
 importlib.reload(shared)
 
-FIGDIR_LOCAL = os.path.join(PWD, "figures/cifar10-inversion")
-FIGDIR, _ = utility.search_drive(FIGDIR_LOCAL)
+FIGDIR, _ = utility.search_drive(
+    os.path.join(PWD, "figures/cifar10-inversion"))
 if not os.path.exists(FIGDIR):
     os.makedirs(FIGDIR)
 
-LOGDIR = os.path.join(PWD, "exp03/runs")
+LOGDIR, _ = utility.search_drive(os.path.join(PWD, "exp03/runs"))
 shared.init_summary_writer(log_dir=LOGDIR)
 tb = shared.get_summary_writer("main")
 
@@ -52,36 +54,17 @@ stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
 # set up deep inversion
 
 # hyperparameters
-learning_rate = 0.05
 
 hyperparameters = dict(
-    n_steps=[100],
-    learning_rate=[0.025],
+    n_steps=[800],
+    learning_rate=[0.02],
     criterion=[1, 0],
     input=[0, 0.0001, 0.01],
     regularization=[0, 0.0001, 0.01],
-    layer=[0, 0.0001, 0.01],
+    layer=[0, 0.0001, 0.01, 0.1],
     a=[1],
     b=[1],
 )
-# hyperparameters = dict(
-#     n_steps=[5],
-#     learning_rate=[0.05],
-#     criterion=[0],
-#     input=[0],
-#     regularization=[0.000001],
-#     layer=[0],
-#     a=[1],
-#     b=[1],
-# )
-
-# input_reg_factor = 0  # 1  # 0.0001
-# layer_reg_factor = 0  # 1
-# criterion_factor = 0
-# reg_factor = 1  # 2.5e-5
-
-# alpha = 1
-# beta = 1
 
 
 def projection(x):
@@ -168,19 +151,25 @@ for hp in utility.dict_product(hyperparameters):
 
     # # dataset.plot(stats_net)
     print("inverted:")
-    anim = dataset.plot_history(invert, target_labels)
+    frames = dataset.plot_history(invert, target_labels)
 
     path = os.path.join(FIGDIR, comment)
-    if anim is not None:
-        anim.save(path + ".gif")
+
+    if len(frames) > 1:  # animated gif
+        anim = ArtistAnimation(plt.gcf(), frames,
+                               interval=300, repeat_delay=8000, blit=True)
+        plt.close()
+        display(anim)
+        anim.save(path + ".gif", writer=PillowWriter())
         dataset.plot_history([invert[-1]], target_labels)
-        tb.add_figure("DeepInversion", plt.gcf())
+        tb.add_figure("DeepInversion", plt.gcf(), close=False)
         plt.savefig(path + ".png")
         plt.close()
     else:
         tb.add_figure("DeepInversion", plt.gcf(), close=False)
         plt.savefig(path + ".png")
         plt.show()
+    break
 
 # tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
 # plt.show()
