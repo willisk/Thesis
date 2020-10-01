@@ -7,13 +7,10 @@ from IPython.display import display, FileLink
 import numpy as np
 import torch
 import torch.optim as optim
+import argparse
 
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
-
-np.random.seed(0)
-torch.manual_seed(0)
-
 
 import datasets
 import statsnet
@@ -28,17 +25,45 @@ importlib.reload(utility)
 importlib.reload(deepinversion)
 importlib.reload(shared)
 
+# Folder setup
 FIGDIR, _ = utility.search_drive(
     os.path.join(PWD, "figures/cifar10-inversion"))
 if not os.path.exists(FIGDIR):
     os.makedirs(FIGDIR)
 
 LOGDIR, _ = utility.search_drive(os.path.join(PWD, "exp03/runs"))
+# Tensorboard summary writer
 shared.init_summary_writer(log_dir=LOGDIR)
 tb = shared.get_summary_writer("main")
 
+# matplotlib params
 plt.rcParams['figure.figsize'] = (6, 6)
 plt.rcParams['animation.html'] = 'jshtml'
+
+# argparse
+parser = argparse.ArgumentParser(description="DeepInversion on cifar-10")
+parser.add_argument("-steps", "--n_steps", type=int, default=100)
+parser.add_argument("-lr", "--learning_rate", type=float, default=0.01)
+parser.add_argument("-fc", "--factor_criterion", type=float, default=1)
+parser.add_argument("-fr", "--factor_reg", type=float, default=0.0001)
+parser.add_argument("-fi", "--factor_input", type=float, default=0.0001)
+parser.add_argument("-fl", "--factor_layer", type=float, default=0.001)
+parser.add_argument("-da", "--distr_a", type=float, default=1)
+parser.add_argument("-db", "--distr_b", type=float, default=1)
+parser.add_argument("--perturb", action="store_true")
+parser.add_argument("--hp_sweep", action="store_true")
+parser.add_argument("--track_history", action="store_true")
+parser.add_argument("--track_history_every", type=int, default=10)
+
+if sys.argv[0] == 'ipykernel_launcher':
+    args = parser.parse_args([])
+else:
+    args = parser.parse_args()
+
+# set seed
+np.random.seed(0)
+torch.manual_seed(0)
+
 
 dataset = datasets.DatasetCifar10(load_dataset=False)
 # dataset = datasets.Dataset2D(type=3)
@@ -55,16 +80,28 @@ stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
 
 # hyperparameters
 
-hyperparameters = dict(
-    n_steps=[1000],
-    learning_rate=[0.02],
-    criterion=[1, 0],
-    input=[0.01, 0.0001, 0],
-    regularization=[0.01, 0.0001, 0],
-    layer=[0.01, 0.001, 0.0001, 0],
-    a=[1],
-    b=[1],
-)
+if args.hp_sweep:
+    hyperparameters = dict(
+        n_steps=[1000],
+        learning_rate=[0.02],
+        factor_criterion=[1, 0],
+        factor_reg=[0.01, 0.0001, 0],
+        factor_input=[0.01, 0.0001, 0],
+        factor_layer=[0.01, 0.001, 0.0001, 0],
+        distr_a=[1],
+        distr_b=[1],
+    )
+else:
+    hyperparameters = dict(
+        n_steps=[args.n_steps],
+        learning_rate=[args.learning_rate],
+        factor_reg=[args.factor_reg],
+        factor_input=[args.factor_input],
+        factor_layer=[args.factor_layer],
+        factor_criterion=[args.factor_criterion],
+        distr_a=[args.distr_a],
+        distr_b=[args.distr_b],
+    )
 
 
 def projection(x):
@@ -74,7 +111,8 @@ def projection(x):
 
 def jitter(x):
     off1, off2 = torch.randint(low=-2, high=2, size=(2, 1))
-    return torch.roll(x, shifts=(off1, off2), dims=(2, 3))
+    x.data = torch.roll(x.data, shifts=(off1, off2), dims=(2, 3))
+    return x
 
 
 def regularization(x):
@@ -104,29 +142,14 @@ for hp in utility.dict_product(hyperparameters):
     print(comment)
     tb = shared.get_summary_writer(comment)
 
-    # hyperparameters
-    n_steps = hp['n_steps']
-    learning_rate = hp['learning_rate']
-    input_reg_factor = hp['input']
-    layer_reg_factor = hp['layer']
-    criterion_factor = hp['criterion']
-    reg_factor = hp['regularization']
-    a = hp['a']
-    b = hp['b']
-
-    input_reg_factor = 0.0001
-    layer_reg_factor = 0.001
-    criterion_factor = 1
-    reg_factor = 0.01
-
-    if not any([input_reg_factor, layer_reg_factor, criterion_factor, reg_factor]):
+    if not any([hp['factor_input'], hp['factor_layer'], hp['factor_criterion'], hp['factor_reg']]):
         continue
 
-    layer_weights = deepinversion.betabinom_distr(
-        len(stats_net.hooks) - 1, a, b)
-
     inputs = torch.randn(shape)
-    optimizer = optim.Adam([inputs], lr=learning_rate)
+    optimizer = optim.Adam([inputs], lr=hp['learning_rate'])
+
+    layer_weights = deepinversion.betabinom_distr(
+        len(stats_net.hooks) - 1, hp['distr_a'], hp['distr_b'])
 
     # set up loss
     def inversion_loss(x):
@@ -137,21 +160,26 @@ for hp in utility.dict_product(hyperparameters):
         components = stats_net.get_hook_regularizations()
         input_reg = components.pop(0)
         layer_reg = sum([w * c for w, c in zip(layer_weights, components)])
-        total_loss = (input_reg_factor * input_reg
-                      + layer_reg_factor * layer_reg
-                      + criterion_factor * criterion_loss
-                      + reg_factor * regularization(x))
+        total_loss = (hp['factor_input'] * input_reg
+                      + hp['factor_layer'] * layer_reg
+                      + hp['factor_criterion'] * criterion_loss
+                      + hp['factor_reg'] * regularization(x))
         return total_loss
+
+    if args.perturb:
+        perturbation = jitter
+    else:
+        perturbation = None
 
     invert = deepinversion.deep_inversion(inputs,
                                           stats_net,
                                           inversion_loss,
                                           optimizer,
-                                          steps=n_steps,
-                                          #   perturbation=jitter,
+                                          steps=hp['n_steps'],
+                                          perturbation=perturbation,
                                           projection=projection,
-                                          track_history=True,
-                                          track_history_every=100
+                                          track_history=args.track_history,
+                                          track_history_every=args.track_history_every
                                           )
 
     # # dataset.plot(stats_net)
@@ -175,7 +203,6 @@ for hp in utility.dict_product(hyperparameters):
         tb.add_figure("DeepInversion", plt.gcf(), close=False)
         plt.savefig(path + ".png")
         plt.show()
-    break
 
 # tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
 # plt.show()

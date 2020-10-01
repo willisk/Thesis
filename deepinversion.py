@@ -1,9 +1,3 @@
-import numpy as np
-
-import torch
-import torch.optim as optim
-
-import shared
 from utility import timing
 
 from scipy.stats import betabinom
