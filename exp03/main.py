@@ -139,10 +139,14 @@ criterion = dataset.get_criterion()
 for hp in utility.dict_product(hyperparameters):
 
     comment = utility.dict_to_str(hp)
+    fig_path = os.path.join(FIGDIR, comment)
     print(comment)
     tb = shared.get_summary_writer(comment)
 
     if not any([hp['factor_input'], hp['factor_layer'], hp['factor_criterion'], hp['factor_reg']]):
+        continue
+
+    if os.path.exists(fig_path + ".png"):
         continue
 
     inputs = torch.randn(shape)
@@ -186,22 +190,20 @@ for hp in utility.dict_product(hyperparameters):
     print("inverted:")
     frames = dataset.plot_history(invert, target_labels)
 
-    path = os.path.join(FIGDIR, comment)
-
     if len(frames) > 1:  # animated gif
         anim = ArtistAnimation(plt.gcf(), frames,
                                interval=300, repeat_delay=8000, blit=True)
         plt.close()
-        anim.save(path + ".gif", writer=PillowWriter())
+        anim.save(fig_path + ".gif", writer=PillowWriter())
         display(anim)
-        FileLink(path + ".gif")
+        FileLink(fig_path + ".gif")
         dataset.plot_history([invert[-1]], target_labels)
         tb.add_figure("DeepInversion", plt.gcf(), close=False)
-        plt.savefig(path + ".png")
+        plt.savefig(fig_path + ".png")
         plt.close()
     else:
         tb.add_figure("DeepInversion", plt.gcf(), close=False)
-        plt.savefig(path + ".png")
+        plt.savefig(fig_path + ".png")
         plt.show()
 
 # tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
