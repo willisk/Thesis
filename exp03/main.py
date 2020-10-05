@@ -83,10 +83,10 @@ stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
 if args.hp_sweep:
     hyperparameters = dict(
         n_steps=[args.n_steps],
-        learning_rate=[0.02],
+        learning_rate=[0.01],
         factor_criterion=[1, 0],
-        factor_reg=[0.01, 0.0001, 0],
-        factor_input=[0.01, 0.0001, 0],
+        factor_reg=[0.001, 0.0001, 0],
+        factor_input=[0.001, 0.0001, 0],
         factor_layer=[0.01, 0.001, 0.0001, 0],
         distr_a=[1],
         distr_b=[1],
@@ -139,8 +139,9 @@ criterion = dataset.get_criterion()
 for hp in utility.dict_product(hyperparameters):
 
     comment = utility.dict_to_str(hp)
-    fig_path = os.path.join(FIGDIR, comment)
     print(comment)
+
+    fig_path = os.path.join(FIGDIR, comment)
     tb = shared.get_summary_writer(comment)
 
     if not any([hp['factor_input'], hp['factor_layer'], hp['factor_criterion'], hp['factor_reg']]):
