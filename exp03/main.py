@@ -82,7 +82,7 @@ stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
 
 if args.hp_sweep:
     hyperparameters = dict(
-        n_steps=[1000],
+        n_steps=[args.n_steps],
         learning_rate=[0.02],
         factor_criterion=[1, 0],
         factor_reg=[0.01, 0.0001, 0],
