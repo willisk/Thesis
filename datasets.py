@@ -93,6 +93,8 @@ class Dataset(torch.utils.data.Dataset):
         net_path = os.path.join(MODELDIR, "net_" + name + ".pt")
         csnet_path = os.path.join(MODELDIR, "csnet_" + name + ".pt")
 
+        csnet_save_path, csnet_load_path = csnet_path, csnet_path
+
         if use_drive:
             csnet_save_path, csnet_load_path = utility.search_drive(csnet_path)
 
@@ -105,10 +107,12 @@ class Dataset(torch.utils.data.Dataset):
 
         if resume_training or not pretrained:
             data_loader = self.train_loader()
+            stats_net.disable_hooks()
             utility.train(net, data_loader, criterion, optimizer,
                           model_path=net_path, resume_training=resume_training,
                           use_drive=use_drive,
                           ** self.training_params)
+            stats_net.enable_hooks()
 
             if not pretrained:
                 utility.learn_stats(stats_net, data_loader)
@@ -217,18 +221,20 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         self.classes = np.array(['plane', 'car', 'bird', 'cat',
                                  'deer', 'dog', 'frog', 'horse', 'ship', 'truck'])
 
-        self.training_params['num_epochs'] = 10
+        self.training_params['num_epochs'] = 50
         self.training_params['print_every'] = 1
         self.training_params['save_every'] = 1
 
     def get_num_classes(self):
         return 10
 
-    def load_statsnet(self, resume_training=False, use_drive=False):
-        net = nets.ResNet20(10)
+    def load_statsnet(self, net=None, name="cifar10-resnet", resume_training=False, use_drive=False):
+        if net is None:
+            net = nets.ResNet20(10)
+            name = "cifar10-resnet20"
         input_shape = [64, 3, 32, 32]
         stats_net = self.pretrained_statsnet(
-            net, "cifar10-resnet20", input_shape=input_shape, hook_before_bn=True, resume_training=resume_training, use_drive=use_drive)
+            net, name, input_shape=input_shape, hook_before_bn=True, resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
     def print_accuracy(self, net):
@@ -325,32 +331,14 @@ class Dataset2D(Dataset):
             net, name, resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
-    def plot_uq(self, stats_net, target_class, layer_weights, criterion_factor, cmap='bone'):
+    # def plot_uq(self, stats_net, loss_fn, cmap='bone'):
 
-        criterion = nn.CrossEntropyLoss(reduction='none')
-
-        def uq_loss(inputs):
-            target_labels = torch.LongTensor([target_class] * len(inputs))
-            stats_net.set_reg_reduction_type('none')
-            outputs = stats_net({'inputs': inputs, 'labels': target_labels})
-            criterion_loss = criterion(outputs, target_labels)
-
-            components = stats_net.get_hook_regularizations()
-            input_reg = components.pop(0)
-            layer_reg = sum([w * c for w, c in zip(layer_weights, components)])
-            total_loss = (input_reg_factor * input_reg
-                          + layer_reg_factor * layer_reg
-                          + criterion_factor * criterion_loss
-                          + reg_factor * regularization(x))
-            return stats_net.inversion_loss(
-                inputs, target_class, layer_weights, criterion, reduction='none').detach()
-
-        X, Y = self.X, self.Y
-        with torch.no_grad():
-            utility.plot_contourf_data(
-                X, uq_loss, n_grid=100, scale_grid=1.5, cmap=cmap, levels=30,
-                contour=True, colorbar=True)
-        plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap='Spectral', alpha=.4)
+    #     X, Y = self.X, self.Y
+    #     with torch.no_grad():
+    #         utility.plot_contourf_data(
+    #             X, loss_fn, n_grid=100, scale_grid=1.5, cmap=cmap, levels=30,
+    #             contour=True, colorbar=True)
+    #     plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap='Spectral', alpha=.4)
 
     def plot(self, net=None):
         X, Y = self.X, self.Y
@@ -382,17 +370,15 @@ class Dataset2D(Dataset):
                         marker='^')
 
     def plot_history(self, history, labels):
-        if isinstance(history, list):
-            data = torch.stack(history, dim=-1)
-        else:
-            data = [history]
+        data_list = [d for d, i in history]
+        data = torch.stack(data_list, dim=-1)
         cmap = matplotlib.cm.get_cmap('Spectral')
         labels_max = max(labels).float().item()
         for i, d in enumerate(data):
             c = cmap(labels[i].item() / labels_max)
             plt.plot(d[0], d[1], '--', c=c, linewidth=0.7, alpha=1)
             plt.plot(d[0], d[1], '.', c='k', markersize=2, alpha=1)
-        x = history[-1].detach().T
+        x = data_list[-1].detach().T
         plt.scatter(x[0], x[1], c='k', alpha=1, marker='x')
         plt.scatter(x[0], x[1],
                     c=labels, cmap=cmap, alpha=0.9, marker='x')

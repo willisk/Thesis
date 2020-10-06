@@ -3,8 +3,9 @@
 
 .vscode
 
-**runs
-data/**
-models/**
+data
+models
 
+**runs
 **drive_figures
+**cifar10-inversion

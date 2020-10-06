@@ -25,17 +25,6 @@ importlib.reload(utility)
 importlib.reload(deepinversion)
 importlib.reload(shared)
 
-# Folder setup
-FIGDIR, _ = utility.search_drive(
-    os.path.join(PWD, "figures/cifar10-inversion"))
-if not os.path.exists(FIGDIR):
-    os.makedirs(FIGDIR)
-
-LOGDIR, _ = utility.search_drive(os.path.join(PWD, "exp03/runs"))
-# Tensorboard summary writer
-shared.init_summary_writer(log_dir=LOGDIR)
-tb = shared.get_summary_writer("main")
-
 # matplotlib params
 plt.rcParams['figure.figsize'] = (6, 6)
 plt.rcParams['animation.html'] = 'jshtml'
@@ -54,11 +43,35 @@ parser.add_argument("--perturb", action="store_true")
 parser.add_argument("--hp_sweep", action="store_true")
 parser.add_argument("--track_history", action="store_true")
 parser.add_argument("--track_history_every", type=int, default=10)
+parser.add_argument("--use_drive", action="store_true")
+parser.add_argument("--save_images", action="store_true")
+parser.add_argument("-f, --force", action="store_true")
+
 
 if sys.argv[0] == 'ipykernel_launcher':
     args = parser.parse_args([])
+    args.force = True
+    args.n_steps = 100
+    args.track_history = True
+    args.save_images = True
 else:
     args = parser.parse_args()
+
+
+# Folder setup
+FIGDIR = os.path.join(PWD, "figures/cifar10-inversion")
+LOGDIR = os.path.join(PWD, "exp03/runs")
+if args.use_drive:
+    FIGDIR, _ = utility.search_drive(FIGDIR)
+    LOGDIR, _ = utility.search_drive(LOGDIR)
+
+if not os.path.exists(FIGDIR):
+    os.makedirs(FIGDIR)
+
+# Tensorboard summary writer
+shared.init_summary_writer(log_dir=LOGDIR)
+tb = shared.get_summary_writer("main")
+
 
 # set seed
 np.random.seed(0)
@@ -139,46 +152,31 @@ criterion = dataset.get_criterion()
 for hp in utility.dict_product(hyperparameters):
 
     comment = utility.dict_to_str(hp)
+    print("Hyperparameters:")
     print(comment)
 
     fig_path = os.path.join(FIGDIR, comment)
     tb = shared.get_summary_writer(comment)
 
-    if not any([hp['factor_input'], hp['factor_layer'], hp['factor_criterion'], hp['factor_reg']]):
+    if args.hp_sweep and not any([hp['factor_input'], hp['factor_layer'], hp['factor_criterion'], hp['factor_reg']]):
         continue
 
-    if os.path.exists(fig_path + ".png"):
+    if not args.force and args.save_images and os.path.exists(fig_path + ".png"):
         continue
 
     inputs = torch.randn(shape)
     optimizer = optim.Adam([inputs], lr=hp['learning_rate'])
 
-    layer_weights = deepinversion.betabinom_distr(
-        len(stats_net.hooks) - 1, hp['distr_a'], hp['distr_b'])
-
     # set up loss
-    def inversion_loss(x):
-        stats_net.set_reg_reduction_type('mean')
-        outputs = stats_net({'inputs': x, 'labels': target_labels})
-        criterion_loss = criterion(outputs, target_labels)
+    loss_fn = deepinversion.inversion_loss(stats_net, criterion, target_labels,
+                                           #    layer_weights=None, regularization=None,
+                                           reg_reduction_type='mean', **hp)
 
-        components = stats_net.get_hook_regularizations()
-        input_reg = components.pop(0)
-        layer_reg = sum([w * c for w, c in zip(layer_weights, components)])
-        total_loss = (hp['factor_input'] * input_reg
-                      + hp['factor_layer'] * layer_reg
-                      + hp['factor_criterion'] * criterion_loss
-                      + hp['factor_reg'] * regularization(x))
-        return total_loss
-
-    if args.perturb:
-        perturbation = jitter
-    else:
-        perturbation = None
+    perturbation = jitter if args.perturb else None
 
     invert = deepinversion.deep_inversion(inputs,
                                           stats_net,
-                                          inversion_loss,
+                                          loss_fn,
                                           optimizer,
                                           steps=hp['n_steps'],
                                           perturbation=perturbation,
@@ -188,23 +186,26 @@ for hp in utility.dict_product(hyperparameters):
                                           )
 
     # # dataset.plot(stats_net)
-    print("inverted:")
     frames = dataset.plot_history(invert, target_labels)
 
     if len(frames) > 1:  # animated gif
+        for _ in range(10):  # make last frame stick
+            frames.append(frames[-1])
         anim = ArtistAnimation(plt.gcf(), frames,
-                               interval=300, repeat_delay=8000, blit=True)
+                               interval=300, blit=True)
         plt.close()
-        anim.save(fig_path + ".gif", writer=PillowWriter())
+        if args.save_images:
+            anim.save(fig_path + ".gif", writer=PillowWriter())
+            FileLink(fig_path + ".gif")
+            dataset.plot_history([invert[-1]], target_labels)
+            tb.add_figure("DeepInversion", plt.gcf(), close=False)
+            plt.savefig(fig_path + ".png")
+            plt.close()
         display(anim)
-        FileLink(fig_path + ".gif")
-        dataset.plot_history([invert[-1]], target_labels)
-        tb.add_figure("DeepInversion", plt.gcf(), close=False)
-        plt.savefig(fig_path + ".png")
-        plt.close()
     else:
-        tb.add_figure("DeepInversion", plt.gcf(), close=False)
-        plt.savefig(fig_path + ".png")
+        if args.save_images:
+            tb.add_figure("DeepInversion", plt.gcf(), close=False)
+            plt.savefig(fig_path + ".png")
         plt.show()
 
 # tb.add_figure("Data Reconstruction", plt.gcf(), close=False)

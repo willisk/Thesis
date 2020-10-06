@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
@@ -37,12 +38,12 @@ plt.rcParams['figure.figsize'] = (6, 6)
 plt.rcParams['animation.html'] = 'jshtml'
 
 
-# def splot(nrows, ncols, i):
-#     ax = plt.subplot(nrows, ncols, i)
-#     plt.tight_layout()
-#     plt.xticks([])
-#     plt.yticks([])
-#     return ax
+def splot(nrows, ncols, i):
+    ax = plt.subplot(nrows, ncols, i)
+    plt.tight_layout()
+    plt.xticks([])
+    plt.yticks([])
+    return ax
 
 
 # # weight params
@@ -85,8 +86,13 @@ plt.rcParams['animation.html'] = 'jshtml'
 # tb.add_figure("Reconstruction Weights", plt.gcf(), close=False)
 # plt.show()
 
-# UQ plots
 
+# dataset.plot(stats_net)
+# dataset.plot_stats(stats_net)
+# plt.show()
+
+
+# UQ plots
 dataset = datasets.Dataset2D(type=3)
 stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
 n_hooks = len(stats_net.hooks)
@@ -97,30 +103,30 @@ num_classes = dataset.get_num_classes()
 
 
 colors = ['Reds_r', 'Blues_r']
-factor_params = [np.inf, 0, 0.5]
 
-###
-# w_param_filtered = [dict(a=0.001, b=1000)]
-# factor_params = [0]
-###
+
 hyperparameters = dict(
     n_steps=[200],
     learning_rate=[0.1],
-    factor_reg=[args.factor_reg],
-    factor_input=[args.factor_input],
-    factor_layer=[args.factor_layer],
-    factor_criterion=[args.factor_criterion],
-    distr_a=[args.distr_a],
-    distr_b=[args.distr_b],
+    factor_reg=[1],
+    factor_input=[0.5],
+    factor_layer=[0.5],
+    factor_criterion=[1],
+    distr_a=[1],
+    distr_b=[1],
 )
-# plt.figure(figsize=(7, 7))
-dataset.plot(stats_net)
-dataset.plot_stats(stats_net)
-plt.show()
-
-first = True
-# for w_param in w_param_filtered:
 criterion = nn.CrossEntropyLoss(reduction='none')
+
+regularization = None
+
+
+def perturbation(x):
+    x.data += torch.randn_like(x) * 0.001
+    return x
+
+
+X, Y = dataset.X, dataset.Y
+
 for hp in utility.dict_product(hyperparameters):
 
     comment = utility.dict_to_str(hp)
@@ -129,32 +135,53 @@ for hp in utility.dict_product(hyperparameters):
     tb = shared.get_summary_writer(comment)
     plt.figure(figsize=(6, 3))
 
-    inputs = torch.randn(shape)
-    optimizer = optim.Adam([inputs], lr=hp['learning_rate'])
-
     layer_weights = deepinversion.betabinom_distr(
         len(stats_net.hooks) - 1, hp['distr_a'], hp['distr_b'])
 
-    # ncols = num_classes + 1
-    ncols = num_classes
-    # # set up loss
-    # def inversion_loss(x):
-    #     stats_net.set_reg_reduction_type('mean')
-    #     outputs = stats_net({'inputs': x, 'labels': target_labels})
-    #     criterion_loss = criterion(outputs, target_labels)
+    # # ncols = num_classes + 1
+    # ncols = num_classes
 
-    #     components = stats_net.get_hook_regularizations()
-    #     input_reg = components.pop(0)
-    #     layer_reg = sum([w * c for w, c in zip(layer_weights, components)])
-    #     total_loss = (hp['factor_input'] * input_reg
-    #                   + hp['factor_layer'] * layer_reg
-    #                   + hp['factor_criterion'] * criterion_loss
-    #                   + hp['factor_reg'] * regularization(x))
-    #     return total_loss
+    # for c in range(num_classes):
 
-    def uq_loss(inputs):
-        stats_net.set_reg_reduction_type('none')
-        target_labels = torch.LongTensor([target_class] * len(inputs))
+    #     # set up loss
+    #     def loss_fn(inputs):
+    #         stats_net.set_reg_reduction_type('none')
+    #         target_labels = torch.longtensor([c] * len(inputs))
+    #         outputs = stats_net({'inputs': inputs, 'labels': target_labels})
+    #         criterion_loss = criterion(outputs, target_labels)
+
+    #         components = stats_net.get_hook_regularizations()
+    #         input_reg = components.pop(0)
+    #         layer_reg = sum([w * c for w, c in zip(layer_weights, components)])
+
+    #         total_loss = hp['factor_input'] * input_reg
+    #         total_loss += hp['factor_layer'] * layer_reg
+    #         total_loss += hp['factor_criterion'] * criterion_loss
+    #         if regularization is not None:
+    #             total_loss += hp['factor_reg'] * regularization(inputs)
+    #         return total_loss
+
+    #     splot(1, ncols, c + 1)
+
+    #     with torch.no_grad():
+    #         utility.plot_contourf_data(
+    #             x, loss_fn, n_grid=100, scale_grid=1.5, cmap=colors[c], levels=30,
+    #             contour=true, colorbar=true)
+    #     plt.scatter(x[:, 0], x[:, 1], c=y.squeeze(), cmap='spectral', alpha=.4)
+
+    # tb.add_figure("loss landscape", plt.gcf(), close=false)
+    # plt.show()
+
+    target_labels = (torch.arange(4)) % num_classes
+    shape = [len(target_labels)] + list(stats_net.input_shape)
+    criterion = dataset.get_criterion()
+
+    inputs = torch.randn(shape)
+    optimizer = optim.Adam([inputs], lr=hp['learning_rate'])
+
+    # set up loss
+    def inversion_loss(inputs):
+        stats_net.set_reg_reduction_type('mean')
         outputs = stats_net({'inputs': inputs, 'labels': target_labels})
         criterion_loss = criterion(outputs, target_labels)
 
@@ -163,24 +190,32 @@ for hp in utility.dict_product(hyperparameters):
         layer_reg = sum([w * c for w, c in zip(layer_weights, components)])
         total_loss = (hp['factor_input'] * input_reg
                       + hp['factor_layer'] * layer_reg
-                      + hp['factor_criterion'] * criterion_loss
-                      + hp['factor_reg'] * regularization(inputs))
+                      + hp['factor_criterion'] * criterion_loss)
+        if regularization is not None:
+            total_loss += hp['factor_reg'] * regularization(inputs)
         return total_loss
-        # return stats_net.inversion_loss(
-        #     inputs, target_class, layer_weights, criterion, reduction='none').detach()
 
-    for c in range(num_classes):
-        splot(1, ncols, c + 1)
-        dataset.plot_uq(stats_net, c, layer_weights, cmap=colors[c])
+    # with torch.no_grad():
+    #     utility.plot_contourf_data(
+    #         x, loss_fn, n_grid=100, scale_grid=1.5, cmap=colors[c], levels=30,
+    #         contour=true, colorbar=true)
+    invert = deepinversion.deep_inversion(inputs,
+                                          stats_net,
+                                          inversion_loss,
+                                          optimizer,
+                                          steps=hp['n_steps'],
+                                          perturbation=perturbation,
+                                          # projection=projection,
+                                          track_history=True,
+                                          track_history_every=20
+                                          )
 
-    # splot(1, ncols, ncols)
-    # x = list(range(n_hooks))
-    # plt.gca().set_ylim([0, 1])
-    # plt.bar(x, w[:-1])
-    # plt.bar(n_hooks, w[-1], color='red')
-    # plt.xticks(x)
+    print("inverted:")
+    plt.figure(figsize=(6, 6))
+    dataset.plot(stats_net)
+    dataset.plot_history(invert, target_labels)
 
-    tb.add_figure("Loss Landscape", plt.gcf(), close=False)
+    tb.add_figure("loss landscape", plt.gcf(), close=False)
     plt.show()
 
 
