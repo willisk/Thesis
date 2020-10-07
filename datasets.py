@@ -224,6 +224,7 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         self.training_params['num_epochs'] = 50
         self.training_params['print_every'] = 1
         self.training_params['save_every'] = 1
+        self.training_params['verbose'] = 1
 
     def get_num_classes(self):
         return 10

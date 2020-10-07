@@ -151,9 +151,9 @@ def search_drive(path):
 
 
 def train(net, data_loader, criterion, optimizer,
-          num_epochs=1, print_every=10, save_every=None,
+          num_epochs=1, print_every=1, save_every=1,
           model_path=None, use_drive=False,
-          resume_training=False):
+          resume_training=False, verbose=0):
     "Training Loop"
 
     net.train()
@@ -179,6 +179,11 @@ def train(net, data_loader, criterion, optimizer,
 
     print("Beginning training.")
 
+    print("model_path", model_path)
+    print("save_path", save_path)
+    print("load_path", load_path)
+    print("use_drive", use_drive)
+
     for epoch in range(init_epoch, init_epoch + num_epochs):
 
         saved_epoch = False
@@ -201,6 +206,10 @@ def train(net, data_loader, criterion, optimizer,
             total_count += batch_size
             total_loss += loss.item() * batch_size
             total_correct += count_correct(outputs, labels)
+
+            if verbose == 1:
+                print("{batch %d} avg-loss: %.3f, avg-accuracy: %.3f" %
+                      (total_count / batch_size, total_loss / total_count, total_correct / total_count))
 
         accuracy = total_correct / total_count
         # tb.add_scalar('Loss/train', total_loss, epoch)
