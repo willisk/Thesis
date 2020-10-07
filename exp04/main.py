@@ -2,7 +2,7 @@
 import os
 import sys
 
-PWD = os.path.dirname(os.path.abspath(__file__))
+PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
 
 import datasets
