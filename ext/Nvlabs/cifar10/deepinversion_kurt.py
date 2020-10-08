@@ -132,10 +132,10 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
     # target outputs to generate
     if random_labels:
         targets = torch.LongTensor([random.randint(0, 9)
-                                    for _ in range(bs)], device='device')
+                                    for _ in range(bs)], device=device)
     else:
         targets = torch.LongTensor(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] * 25 + [0, 1, 2, 3, 4, 5], device='device')
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] * 25 + [0, 1, 2, 3, 4, 5], device=device)
 
     # Create hooks for feature statistics catching
     loss_r_feature_layers = []
@@ -371,7 +371,7 @@ if __name__ == "__main__":
             loss_scale=loss_scale)
 
     checkpoint = torch.load(args.teacher_weights)
-    net_teacher.load_state_dict(checkpoint)
+    # net_teacher.load_state_dict(checkpoint)
     net_teacher.eval()  # important, otherwise generated images will be non natural
     if args.amp:
         # need to do this trick for FP16 support of batchnorms
