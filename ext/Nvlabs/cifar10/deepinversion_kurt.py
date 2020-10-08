@@ -117,9 +117,10 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
 
     best_cost = 1e6
 
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # initialize gaussian inputs
     inputs.data = torch.randn(
-        (bs, 3, 32, 32), requires_grad=True, device='cuda')
+        (bs, 3, 32, 32), requires_grad=True, device=device)
     # if use_amp:
     #     inputs.data = inputs.data.half()
 
@@ -131,10 +132,10 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
     # target outputs to generate
     if random_labels:
         targets = torch.LongTensor([random.randint(0, 9)
-                                    for _ in range(bs)]).to('cuda')
+                                    for _ in range(bs)], device='device')
     else:
         targets = torch.LongTensor(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] * 25 + [0, 1, 2, 3, 4, 5]).to('cuda')
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] * 25 + [0, 1, 2, 3, 4, 5], device='device')
 
     # Create hooks for feature statistics catching
     loss_r_feature_layers = []
@@ -212,6 +213,7 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
         components = stats_net.get_hook_regularizations()
         input_reg = components.pop(0)
         layer_reg = sum([c for c in components])
+        loss_distr = layer_reg
         loss = loss + bn_reg_scale * layer_reg  # best for noise before BN
 
         # l2 loss
@@ -219,7 +221,7 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
             loss = loss + l2_coeff * torch.norm(inputs_jit, 2)
 
         if debug_output and epoch % 200 == 0:
-            print(f"It {epoch}\t Losses: total: {loss.item():3.3f},\ttarget: {loss_target:3.3f} \tR_feature_loss unscaled:\t {loss_distr.item():3.3f}")
+            # print(f"It {epoch}\t Losses: total: {loss.item():3.3f},\ttarget: {loss_target:3.3f} \tR_feature_loss unscaled:\t {loss_distr.item():3.3f}")
             vutils.save_image(inputs.data.clone(),
                               './{}/output_{}.png'.format(prefix,
                                                           epoch // 200),
@@ -355,7 +357,7 @@ if __name__ == "__main__":
     # place holder for inputs
     data_type = torch.half if args.amp else torch.float
     inputs = torch.randn((args.bs, 3, 32, 32),
-                         requires_grad=True, device='cuda', dtype=data_type)
+                         requires_grad=True, device=device, dtype=data_type)
 
     optimizer_di = optim.Adam([inputs], lr=args.di_lr)
 
