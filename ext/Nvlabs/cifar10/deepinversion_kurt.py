@@ -332,14 +332,6 @@ if __name__ == "__main__":
 
     print("loading resnet34")
 
-    net_teacher = ResNet34()
-    net_student = ResNet18()
-
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-    net_student = net_student.to(device)
-    net_teacher = net_teacher.to(device)
-
     # KURT
     import datasets
     dataset = datasets.DatasetCifar10()
@@ -351,6 +343,14 @@ if __name__ == "__main__":
     # stats_net.class_conditional
     stats_net.mask_bn_layer()
     net_teacher = stats_net
+
+    # net_teacher = ResNet34()
+    net_student = ResNet18()
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    net_student = net_student.to(device)
+    net_teacher = net_teacher.to(device)
 
     criterion = nn.CrossEntropyLoss()
 
