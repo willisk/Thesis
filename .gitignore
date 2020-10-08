@@ -4,8 +4,10 @@
 .vscode
 
 data
-models
+models/*
 
 **runs
 **drive_figures
 **cifar10-inversion
+
+**example_logs

@@ -179,11 +179,6 @@ def train(net, data_loader, criterion, optimizer,
 
     print("Beginning training.")
 
-    print("model_path", model_path)
-    print("save_path", save_path)
-    print("load_path", load_path)
-    print("use_drive", use_drive)
-
     for epoch in range(init_epoch, init_epoch + num_epochs):
 
         saved_epoch = False
