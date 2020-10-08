@@ -37,7 +37,7 @@ PWD = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))
 sys.path.append(PWD)
 
-from cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
+from ext.cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
 
 try:
     from apex.parallel import DistributedDataParallel as DDP

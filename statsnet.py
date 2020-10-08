@@ -196,6 +196,5 @@ class CStatsNet(nn.Module):
             h.enabled = False
 
     def mask_bn_layer(self):
-        for module in self.net.modules():
-            if isinstance(module, nn.BatchNorm2d):
-                loss_r_feature_layers.append(DeepInversionFeatureHook(module))
+        for h in self.hooks.values():
+            h.bn_masked = True
