@@ -10,7 +10,7 @@ import statsnet
 import utility
 import deepinversion
 import shared
-import resnet_cifar10_nvlab
+from ext.cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
 
 import importlib
 importlib.reload(datasets)
@@ -18,11 +18,10 @@ importlib.reload(statsnet)
 importlib.reload(utility)
 importlib.reload(deepinversion)
 importlib.reload(shared)
-importlib.reload(resnet_cifar10_nvlab)
 
 dataset = datasets.DatasetCifar10()
-stats_net = dataset.load_statsnet(net=resnet_cifar10_nvlab.ResNet34(),
-                                  name="cifar10-resnet34-nvlab",
-                                  resume_training=True,
+stats_net = dataset.load_statsnet(net=ResNet34(),
+                                  name="resnet34-pretrained",
+                                  resume_training=False,
                                   use_drive=True
                                   )
