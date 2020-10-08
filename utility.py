@@ -168,7 +168,10 @@ def train(net, data_loader, criterion, optimizer,
 
     if load_path is not None and os.path.exists(load_path):
         checkpoint = torch.load(load_path)
-        net.load_state_dict(checkpoint['net_state_dict'])
+        if 'net_state_dict' in checkpoint:
+            net.load_state_dict(checkpoint['net_state_dict'])
+        else:
+            net.load_state_dict(checkpoint)
         init_epoch = checkpoint['epoch'] + 1
         print("Training Checkpoint restored: " + load_path)
         if not resume_training:
