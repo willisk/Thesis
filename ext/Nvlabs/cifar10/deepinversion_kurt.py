@@ -157,6 +157,7 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
         distr_a=1,
         distr_b=1,
     )
+    stats_net = net
 
     for epoch in range(epochs):
         # apply random jitter offsets
@@ -168,7 +169,7 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
         optimizer.zero_grad()
         net.zero_grad()
         # outputs = net(inputs_jit)
-        outputs = stats_net({'inputs': inputs_jit, 'labels': targets})
+        outputs = net({'inputs': inputs_jit, 'labels': targets})
         loss = criterion(outputs, targets)
         loss_target = loss.item()
 
@@ -209,7 +210,6 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
         loss = loss + var_scale * loss_var
 
         # R_feature loss
-        stats_net = net
         components = stats_net.get_hook_regularizations()
         input_reg = components.pop(0)
         layer_reg = sum([c for c in components])
