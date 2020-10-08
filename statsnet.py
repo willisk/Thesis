@@ -44,10 +44,6 @@ class StatsHook(nn.Module):
         if not self.enabled:
             return
 
-        if self.bn_masked and not isinstance(module, nn.BatchNorm2d):
-            self.regularization.fill_(0)
-            return
-
         labels = self.stats_net[0].current_labels
         if self.tracking_stats:
             # pylint: disable=access-member-before-definition
@@ -59,7 +55,11 @@ class StatsHook(nn.Module):
                 new_mean, new_var, m)
         else:   # inverting
             assert self.initialized, "Statistics Parameters not initialized"
+            if self.bn_masked and not isinstance(module, nn.BatchNorm2d):
+                self.regularization = torch.Tensor([0])
+                return
             if True:
+
                 nch = x.shape[1]
 
                 mean = x.mean([0, 2, 3])
