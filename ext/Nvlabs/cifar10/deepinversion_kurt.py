@@ -135,7 +135,7 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
                                     for _ in range(bs)], device=device)
     else:
         targets = torch.LongTensor(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] * 25 + [0, 1, 2, 3, 4, 5], device=device)
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] * 25 + [0, 1, 2, 3, 4, 5]).to(device)
 
     # Create hooks for feature statistics catching
     loss_r_feature_layers = []
