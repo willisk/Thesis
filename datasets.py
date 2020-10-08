@@ -116,8 +116,8 @@ class Dataset(torch.utils.data.Dataset):
                           ** self.training_params)
             stats_net.enable_hooks()
 
-            if not pretrained:
-                utility.learn_stats(stats_net, data_loader)
+            # if not pretrained:
+            #     utility.learn_stats(stats_net, data_loader)
             torch.save(stats_net.state_dict(), csnet_save_path)
             print("CSNet saved: " + csnet_save_path)
 

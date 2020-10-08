@@ -31,6 +31,7 @@ class StatsHook(nn.Module):
         self.tracking_stats = True
         self.initialized = False
         self.enabled = True
+        self.bn_masked = False
 
     def hook_fn(self, module, inputs, outputs):
 
@@ -41,6 +42,10 @@ class StatsHook(nn.Module):
             return
 
         if not self.enabled:
+            return
+
+        if self.bn_masked and not isinstance(module, nn.BatchNorm2d):
+            self.regularization.fill_(0)
             return
 
         labels = self.stats_net[0].current_labels
@@ -54,6 +59,18 @@ class StatsHook(nn.Module):
                 new_mean, new_var, m)
         else:   # inverting
             assert self.initialized, "Statistics Parameters not initialized"
+            if True:
+                nch = x.shape[1]
+
+                mean = x.mean([0, 2, 3])
+                var = x.permute(1, 0, 2, 3).contiguous().view(
+                    [nch, -1]).var(1, unbiased=False)
+
+                r_feature = torch.norm(module.running_var.data.type(var.type()) - var, 2) + torch.norm(
+                    module.running_mean.data.type(var.type()) - mean, 2)
+
+                self.regularization = r_feature
+                return
 
             means = self.running_mean[labels]
             vars = self.running_var[labels]
@@ -177,3 +194,8 @@ class CStatsNet(nn.Module):
     def disable_hooks(self):
         for h in self.hooks.values():
             h.enabled = False
+
+    def mask_bn_layer(self):
+        for module in self.net.modules():
+            if isinstance(module, nn.BatchNorm2d):
+                loss_r_feature_layers.append(DeepInversionFeatureHook(module))
