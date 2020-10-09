@@ -85,9 +85,9 @@ def deep_inversion(inputs,
             inputs = projection(inputs)
 
         if track_history and (step % track_history_every == 0 or step == steps):
-            history.append((inputs.detach().clone(), step))
+            history.append((inputs.detach().cpu(), step))
             print(f"It {step}\t Losses: total: {loss.item():3.3f}")
 
     if track_history:
         return history
-    return [(inputs.detach(), step)]
+    return [(inputs.detach().cpu(), step)]
