@@ -48,7 +48,8 @@ def deep_inversion(inputs,
                    steps=5,
                    perturbation=None,
                    projection=None,
-                   track_history=False, track_history_every=1):
+                   track_history=False,
+                   track_history_every=1):
 
     # tb = shared.get_summary_writer()
 
@@ -85,6 +86,7 @@ def deep_inversion(inputs,
 
         if track_history and (step % track_history_every == 0 or step == steps):
             history.append((inputs.detach().clone(), step))
+            print(f"It {step}\t Losses: total: {loss.item():3.3f}")
 
     if track_history:
         return history
