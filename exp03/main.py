@@ -9,10 +9,10 @@ import torch
 import torch.optim as optim
 import argparse
 
-from ext.cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
-
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
+
+from ext.cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
 
 import datasets
 import statsnet
@@ -49,7 +49,7 @@ parser.add_argument("--track_history", action="store_true")
 parser.add_argument("--track_history_every", type=int, default=10)
 parser.add_argument("--use_drive", action="store_true")
 parser.add_argument("--save_images", action="store_true")
-parser.add_argument("-f, --force", action="store_true")
+parser.add_argument("-f", "--force", action="store_true")
 
 
 if sys.argv[0] == 'ipykernel_launcher':
@@ -93,6 +93,7 @@ stats_net = dataset.load_statsnet(net=ResNet34(),
 stats_net.mask_bn_layer()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+stats_net.to(device)
 # dataset.print_accuracy(stats_net)
 
 # plot means

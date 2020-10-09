@@ -105,8 +105,6 @@ class Dataset(torch.utils.data.Dataset):
             print("CSNet loaded: " + csnet_load_path)
             pretrained = True
 
-        print("resume_training", resume_training)
-        print("pretrained", pretrained)
         if resume_training or not pretrained:
             data_loader = self.train_loader()
             stats_net.disable_hooks()
