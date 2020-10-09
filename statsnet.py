@@ -56,7 +56,7 @@ class StatsHook(nn.Module):
         else:   # inverting
             assert self.initialized, "Statistics Parameters not initialized"
             if self.bn_masked and not isinstance(module, nn.BatchNorm2d):
-                self.regularization = torch.Tensor([0])
+                self.regularization = torch.Tensor([0]).to(inputs.device)
                 return
             if True:
 
