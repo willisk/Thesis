@@ -9,6 +9,8 @@ import torch
 import torch.optim as optim
 import argparse
 
+from ext.cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
+
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
 
@@ -31,14 +33,16 @@ plt.rcParams['animation.html'] = 'jshtml'
 
 # argparse
 parser = argparse.ArgumentParser(description="DeepInversion on cifar-10")
-parser.add_argument("-steps", "--n_steps", type=int, default=100)
-parser.add_argument("-lr", "--learning_rate", type=float, default=0.01)
+parser.add_argument("-steps", "--n_steps", type=int, default=1000)
+parser.add_argument("-bs", "--batch_size", type=int, default=32)
+parser.add_argument("-lr", "--learning_rate", type=float, default=0.05)
 parser.add_argument("-fc", "--factor_criterion", type=float, default=1)
-parser.add_argument("-fr", "--factor_reg", type=float, default=0.0001)
-parser.add_argument("-fi", "--factor_input", type=float, default=0.0001)
-parser.add_argument("-fl", "--factor_layer", type=float, default=0.001)
+parser.add_argument("-fr", "--factor_reg", type=float, default=2.5e-5)
+parser.add_argument("-fi", "--factor_input", type=float, default=0.0)
+parser.add_argument("-fl", "--factor_layer", type=float, default=10)
 parser.add_argument("-da", "--distr_a", type=float, default=1)
 parser.add_argument("-db", "--distr_b", type=float, default=1)
+parser.add_argument("--random_labels", action="store_true")
 parser.add_argument("--perturb", action="store_true")
 parser.add_argument("--hp_sweep", action="store_true")
 parser.add_argument("--track_history", action="store_true")
@@ -81,7 +85,14 @@ torch.manual_seed(0)
 dataset = datasets.DatasetCifar10(load_dataset=False)
 # dataset = datasets.Dataset2D(type=3)
 
-stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
+stats_net = dataset.load_statsnet(net=ResNet34(),
+                                  name="resnet34-pretrained",
+                                  resume_training=False,
+                                  use_drive=args.use_drive
+                                  )
+stats_net.mask_bn_layer()
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # dataset.print_accuracy(stats_net)
 
 # plot means
@@ -96,6 +107,7 @@ stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
 if args.hp_sweep:
     hyperparameters = dict(
         n_steps=[args.n_steps],
+        batch_size=[32],
         learning_rate=[0.01],
         factor_criterion=[1, 0],
         factor_reg=[0.001, 0.0001, 0],
@@ -107,6 +119,7 @@ if args.hp_sweep:
 else:
     hyperparameters = dict(
         n_steps=[args.n_steps],
+        batch_size=[args.batch_size],
         learning_rate=[args.learning_rate],
         factor_reg=[args.factor_reg],
         factor_input=[args.factor_input],
@@ -143,9 +156,6 @@ def regularization(x):
 
 
 # set up targets
-num_classes = dataset.get_num_classes()
-target_labels = (torch.arange(6)) % num_classes
-shape = [len(target_labels)] + list(stats_net.input_shape)
 criterion = dataset.get_criterion()
 
 
@@ -164,12 +174,15 @@ for hp in utility.dict_product(hyperparameters):
     if not args.force and args.save_images and os.path.exists(fig_path + ".png"):
         continue
 
-    inputs = torch.randn(shape)
+    target_labels = (torch.arange(hp['batch_size']) %
+                     dataset.get_num_classes()).to(device)
+    inputs = torch.randn([hp['batch_size']] +
+                         list(stats_net.input_shape), device=device)
     optimizer = optim.Adam([inputs], lr=hp['learning_rate'])
 
     # set up loss
     loss_fn = deepinversion.inversion_loss(stats_net, criterion, target_labels,
-                                           #    layer_weights=None, regularization=None,
+                                           regularization=regularization,
                                            reg_reduction_type='mean', **hp)
 
     perturbation = jitter if args.perturb else None

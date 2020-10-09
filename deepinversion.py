@@ -72,7 +72,7 @@ def deep_inversion(inputs,
             inputs = perturbation(inputs)
 
         optimizer.zero_grad()
-        stats_net.net.zero_grad()
+        stats_net.zero_grad()
 
         loss = loss_fn(inputs)
 
