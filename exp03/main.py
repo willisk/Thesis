@@ -201,12 +201,12 @@ for hp in utility.dict_product(hyperparameters):
 
     # # dataset.plot(stats_net)
     target_labels = target_labels.cpu()
-    frames = dataset.plot_history(invert, target_labels
+    frames = dataset.plot_history(invert, target_labels)
 
     if len(frames) > 1:  # animated gif
         for _ in range(10):  # make last frame stick
             frames.append(frames[-1])
-        anim=ArtistAnimation(plt.gcf(), frames,
+        anim = ArtistAnimation(plt.gcf(), frames,
                                interval=300, blit=True)
         plt.close()
         if args.save_images:
