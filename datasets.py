@@ -279,11 +279,11 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
 
     def plot_history(self, invert, labels):
         frames = []
-        classes = self.classes.to(labels.device)
+
         for X, step in invert:
             frame = utility.make_grid(self.to_image_plt(X),
                                       description="step={}".format(step),
-                                      labels=self.classes[labels],
+                                      labels=self.classes[labels.to('cpu')],
                                       title_fmt="target: {}")
             frames.append(frame)
         return frames
