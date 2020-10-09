@@ -283,7 +283,7 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         for X, step in invert:
             frame = utility.make_grid(self.to_image_plt(X),
                                       description="step={}".format(step),
-                                      labels=self.classes[labels.to('cpu')],
+                                      labels=self.classes[labels],
                                       title_fmt="target: {}")
             frames.append(frame)
         return frames

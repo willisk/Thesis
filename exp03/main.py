@@ -200,6 +200,7 @@ for hp in utility.dict_product(hyperparameters):
                                           )
 
     # # dataset.plot(stats_net)
+    invert, target_labels = invert.cpu(), target_labels.cpu()
     frames = dataset.plot_history(invert, target_labels)
 
     if len(frames) > 1:  # animated gif
