@@ -196,7 +196,7 @@ for hp in utility.dict_product(hyperparameters):
     if USE_AMP:
         stats_net, optimizer = amp.initialize(
             stats_net, optimizer, opt_level='O1')
-        # stats_net.eval()  # important, otherwise generated images will be non natural
+        stats_net.eval()  # important, otherwise generated images will be non natural
         # need to do this trick for FP16 support of batchnorms
         stats_net.train()
         for module in stats_net.modules():
