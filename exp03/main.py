@@ -168,6 +168,10 @@ def regularization(x):
 # set up targets
 criterion = dataset.get_criterion()
 
+if USE_AMP:
+    data_type = torch.half
+else:
+    data_type = torch.float
 
 for hp in utility.dict_product(hyperparameters):
 
@@ -195,12 +199,9 @@ for hp in utility.dict_product(hyperparameters):
         # stats_net.eval()  # important, otherwise generated images will be non natural
         # need to do this trick for FP16 support of batchnorms
         stats_net.train()
-    for module in stats_net.modules():
-        if isinstance(module, torch.nn.BatchNorm2d):
-            module.eval().half()
-    data_type = torch.half
-else:
-    data_type = torch.float
+        for module in stats_net.modules():
+            if isinstance(module, torch.nn.BatchNorm2d):
+                module.eval().half()
 
     # set up loss
     loss_fn = deepinversion.inversion_loss(stats_net, criterion, target_labels,
