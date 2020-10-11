@@ -14,6 +14,13 @@ sys.path.append(PWD)
 
 from ext.cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
 
+try:
+    from apex import amp
+    USE_AMP = True
+except ImportError:
+    print("Running without APEX.")
+    USE_AMP = False
+
 import datasets
 import statsnet
 import utility
@@ -54,10 +61,12 @@ parser.add_argument("-f", "--force", action="store_true")
 
 if sys.argv[0] == 'ipykernel_launcher':
     args = parser.parse_args([])
-    args.force = True
     args.n_steps = 100
+    args.perturb = True
     args.track_history = True
     args.save_images = True
+    args.use_drive = True
+    args.force = True
 else:
     args = parser.parse_args()
 
@@ -159,6 +168,18 @@ def regularization(x):
 # set up targets
 criterion = dataset.get_criterion()
 
+if USE_AMP:
+    stats_net = amp.initialize(stats_net, opt_level='01')
+    # stats_net.eval()  # important, otherwise generated images will be non natural
+    # need to do this trick for FP16 support of batchnorms
+    stats_net.train()
+    for module in stats_net.modules():
+        if isinstance(module, torch.nn.BatchNorm2d):
+            module.eval().half()
+    data_type = torch.half
+else:
+    data_type = torch.float
+
 
 for hp in utility.dict_product(hyperparameters):
 
@@ -177,14 +198,17 @@ for hp in utility.dict_product(hyperparameters):
 
     target_labels = (torch.arange(hp['batch_size']) %
                      dataset.get_num_classes()).to(device)
-    inputs = torch.randn([hp['batch_size']] +
-                         list(stats_net.input_shape), device=device)
+    inputs = torch.randn([hp['batch_size']] + list(stats_net.input_shape),
+                         requires_grad=True, device=device, dtype=data_type)
     optimizer = optim.Adam([inputs], lr=hp['learning_rate'])
+    if USE_AMP:
+        optimizer = amp.initialize(optimizer, opt_level='01')
 
     # set up loss
     loss_fn = deepinversion.inversion_loss(stats_net, criterion, target_labels,
                                            regularization=regularization,
-                                           reg_reduction_type='mean', **hp)
+                                           reg_reduction_type='mean',
+                                           **hp)
 
     perturbation = jitter if args.perturb else None
 
@@ -196,7 +220,7 @@ for hp in utility.dict_product(hyperparameters):
                                           perturbation=perturbation,
                                           projection=projection,
                                           track_history=args.track_history,
-                                          track_history_every=args.track_history_every
+                                          track_history_every=args.track_history_every,
                                           )
 
     # # dataset.plot(stats_net)

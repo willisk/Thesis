@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
 
 import torch
 
@@ -335,27 +336,47 @@ def plot_contourf(x_min, x_max, y_min, y_max, func, n_grid=400, cmap='Spectral',
         plt.colorbar(cf)
 
 
-def make_grid(X, description=None, labels=None, title_fmt="label: {}", cmap='gray', ncols=3, colors=None):
+def make_grid(X, labels=None, description=None, title_fmt="label: {}", ncols=3, colors=None):
     L = len(X)
     nrows = -(-L // ncols)
+    plt.figure(figsize=(ncols, nrows))
+
+    if title_fmt is not None and title_fmt != "" and labels is not None:
+        hspace = 1.0
+    else:
+        hspace = 0.0
+
+    gs = gridspec.GridSpec(nrows, ncols,
+                           wspace=0.0,
+                           hspace=hspace,
+                           #    top=1. - 0.5 / (nrows + 1), bottom=0.5 / (nrows + 1),
+                           #    left=0.5 / (ncols + 1), right=1 - 0.5 / (ncols + 1)
+                           )
     frame_plot = []
-    for i in range(L):
-        ax = plt.subplot(nrows, ncols, i + 1)
-        # plt.tight_layout()
-        im = plt.imshow(X[i].squeeze(), cmap=cmap, interpolation='none')
-        if labels is not None:
-            color = 'k' if colors is None else colors[i]
-            plt.title(title_fmt.format(labels[i]), color=color)
-        plt.xticks([])
-        plt.yticks([])
-        frame_plot.append(im)
-        if i == int((nrows - 0.5) * ncols):
-            title = ax.text(0.22, -.3, description,
-                            size=plt.rcParams["axes.titlesize"],
-                            # ha="center",
-                            transform=ax.transAxes
-                            )
-            frame_plot.append(title)
+    for n in range(nrows):
+        for m in range(ncols):
+            i = n * ncols + m
+            if i >= L:
+                break
+            ax = plt.subplot(gs[n, m])
+            # plt.tight_layout()
+            im = ax.imshow(X[i].squeeze(), interpolation='none')
+            if labels is not None:
+                color = 'k' if colors is None else colors[i]
+                plt.title(title_fmt.format(labels[i]), color=color)
+            plt.xticks([])
+            plt.yticks([])
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            frame_plot.append(im)
+            if description is not None and n == nrows - 1 and m == ncols // 2:
+                title = ax.text(0.22, -.3, description,
+                                size=plt.rcParams["axes.titlesize"],
+                                # ha="center",
+                                transform=ax.transAxes
+                                )
+                frame_plot.append(title)
+    # plt.subplots_adjust(wspace=0, hspace=0)
 
     return frame_plot
 

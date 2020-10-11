@@ -2,6 +2,12 @@ from utility import timing
 
 from scipy.stats import betabinom
 
+try:
+    from apex import amp
+    USE_AMP = True
+except ImportError:
+    USE_AMP = False
+
 
 def betabinom_distr(N, a=1, b=1):
     rv = betabinom(N - 1, a, b)
@@ -49,7 +55,8 @@ def deep_inversion(inputs,
                    perturbation=None,
                    projection=None,
                    track_history=False,
-                   track_history_every=1):
+                   track_history_every=1,
+                   ):
 
     # tb = shared.get_summary_writer()
 
@@ -65,7 +72,7 @@ def deep_inversion(inputs,
 
     if track_history:
         history = []
-        history.append((inputs.detach().clone(), 0))
+        history.append((inputs.detach().cpu().clone(), 0))
 
     for step in range(1, steps + 1):
 
@@ -77,7 +84,11 @@ def deep_inversion(inputs,
 
         loss = loss_fn(inputs)
 
-        loss.backward()
+        if USE_AMP:
+            with amp.scale_loss(loss, optimizer) as scaled_loss:
+                scaled_loss.backward()
+        else:
+            loss.backward()
 
         optimizer.step()
 
@@ -85,9 +96,9 @@ def deep_inversion(inputs,
             inputs = projection(inputs)
 
         if track_history and (step % track_history_every == 0 or step == steps):
-            history.append((inputs.detach().cpu(), step))
+            history.append((inputs.detach().cpu().clone(), step))
             print(f"It {step}\t Losses: total: {loss.item():3.3f}")
 
     if track_history:
         return history
-    return [(inputs.detach().cpu(), step)]
+    return [(inputs.detach().cpu().clone(), step)]
