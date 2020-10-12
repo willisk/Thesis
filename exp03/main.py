@@ -123,9 +123,6 @@ else:
 # set up deep inversion
 criterion = dataset.get_criterion()
 
-target_labels = (torch.arange(hp['batch_size']) %
-                 dataset.get_num_classes()).to(DEVICE)
-
 # hyperparameters
 
 if args.hp_sweep:
@@ -194,6 +191,8 @@ for hp in utility.dict_product(hyperparameters):
     if not args.force and args.save_images and os.path.exists(fig_path + ".png"):
         continue
 
+    target_labels = (torch.arange(hp['batch_size']) %
+                     dataset.get_num_classes()).to(DEVICE)
     inputs = torch.randn([hp['batch_size']] + list(stats_net.input_shape),
                          requires_grad=True, device=DEVICE,
                          #   dtype=data_type
