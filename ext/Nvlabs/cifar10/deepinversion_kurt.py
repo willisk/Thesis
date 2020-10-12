@@ -110,11 +110,6 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
         A tensor on GPU with shape (bs, 3, 32, 32) for CIFAR
     '''
 
-    kl_loss = nn.KLDivLoss(reduction='batchmean').cuda()
-
-    # preventing backpropagation through student for Adaptive DeepInversion
-    net_student.eval()
-
     best_cost = 1e6
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -137,26 +132,8 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
         targets = torch.LongTensor(
             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] * 25 + [0, 1, 2, 3, 4, 5]).to(device)
 
-    # Create hooks for feature statistics catching
-    loss_r_feature_layers = []
-    for module in net.modules():
-        if isinstance(module, nn.BatchNorm2d):
-            loss_r_feature_layers.append(DeepInversionFeatureHook(module))
-
     # setting up the range for jitter
     lim_0, lim_1 = 2, 2
-
-    # KURT
-    hp = dict(
-        n_steps=epochs,
-        learning_rate=0.05,
-        factor_criterion=1,
-        factor_reg=2.5e-5,  # var_scale
-        factor_input=0,
-        factor_layer=10,    # bn_reg_scale
-        distr_a=1,
-        distr_b=1,
-    )
     stats_net = net
 
     for epoch in range(epochs):
@@ -173,33 +150,6 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
         loss = criterion(outputs, targets)
         loss_target = loss.item()
 
-        # competition loss, Adaptive DeepInvesrion
-        if competitive_scale != 0.0:
-            net_student.zero_grad()
-            outputs_student = net_student(inputs_jit)
-            T = 3.0
-
-            if 1:
-                # jensen shanon divergence:
-                # another way to force KL between negative probabilities
-                P = F.softmax(outputs_student / T, dim=1)
-                Q = F.softmax(outputs / T, dim=1)
-                M = 0.5 * (P + Q)
-
-                P = torch.clamp(P, 0.01, 0.99)
-                Q = torch.clamp(Q, 0.01, 0.99)
-                M = torch.clamp(M, 0.01, 0.99)
-                eps = 0.0
-                # loss_verifier_cig = 0.5 * kl_loss(F.log_softmax(outputs_verifier / T, dim=1), M) +  0.5 * kl_loss(F.log_softmax(outputs/T, dim=1), M)
-                loss_verifier_cig = 0.5 * \
-                    kl_loss(torch.log(P + eps), M) + 0.5 * \
-                    kl_loss(torch.log(Q + eps), M)
-                # JS criteria - 0 means full correlation, 1 - means completely different
-                loss_verifier_cig = 1.0 - \
-                    torch.clamp(loss_verifier_cig, 0.0, 1.0)
-
-                loss = loss + competitive_scale * loss_verifier_cig
-
         # apply total variation regularization
         diff1 = inputs_jit[:, :, :, :-1] - inputs_jit[:, :, :, 1:]
         diff2 = inputs_jit[:, :, :-1, :] - inputs_jit[:, :, 1:, :]
@@ -215,10 +165,6 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
         layer_reg = sum([c for c in components])
         loss_distr = layer_reg
         loss = loss + bn_reg_scale * layer_reg  # best for noise before BN
-
-        # l2 loss
-        if 1:
-            loss = loss + l2_coeff * torch.norm(inputs_jit, 2)
 
         if debug_output and epoch % 200 == 0:
             # print(f"It {epoch}\t Losses: total: {loss.item():3.3f},\ttarget: {loss_target:3.3f} \tR_feature_loss unscaled:\t {loss_distr.item():3.3f}")
@@ -243,14 +189,9 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
     outputs = net(best_inputs)
     _, predicted_teach = outputs.max(1)
 
-    outputs_student = net_student(best_inputs)
-    _, predicted_std = outputs_student.max(1)
-
     if idx == 0:
         print('Teacher correct out of {}: {}, loss at {}'.format(
             bs, predicted_teach.eq(targets).sum().item(), criterion(outputs, targets).item()))
-        print('Student correct out of {}: {}, loss at {}'.format(bs, predicted_std.eq(
-            targets).sum().item(), criterion(outputs_student, targets).item()))
 
     name_use = "best_images"
     if prefix is not None:
@@ -260,24 +201,6 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
     vutils.save_image(best_inputs[:20].clone(),
                       './{}/output_{}.png'.format(name_use, next_batch),
                       normalize=True, scale_each=True, nrow=10)
-
-    if train_writer is not None:
-        train_writer.add_scalar('gener_teacher_criteria', criterion(
-            outputs, targets), global_iteration)
-        train_writer.add_scalar('gener_student_criteria', criterion(
-            outputs_student, targets), global_iteration)
-
-        train_writer.add_scalar('gener_teacher_acc', predicted_teach.eq(
-            targets).sum().item() / bs, global_iteration)
-        train_writer.add_scalar('gener_student_acc', predicted_std.eq(
-            targets).sum().item() / bs, global_iteration)
-
-        train_writer.add_scalar(
-            'gener_loss_total', loss.item(), global_iteration)
-        train_writer.add_scalar(
-            'gener_loss_var', (var_scale * loss_var).item(), global_iteration)
-
-    net_student.train()
 
     return best_inputs
 
@@ -370,7 +293,7 @@ if __name__ == "__main__":
             opt_level=opt_level,
             loss_scale=loss_scale)
 
-    checkpoint = torch.load(args.teacher_weights)
+    # checkpoint = torch.load(args.teacher_weights)
     # net_teacher.load_state_dict(checkpoint)
     net_teacher.eval()  # important, otherwise generated images will be non natural
     if args.amp:

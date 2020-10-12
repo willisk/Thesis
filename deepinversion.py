@@ -77,12 +77,12 @@ def deep_inversion(inputs,
     for step in range(1, steps + 1):
 
         if perturbation is not None:
-            inputs = perturbation(inputs)
+            inputs_jit = perturbation(inputs)
 
         optimizer.zero_grad()
         stats_net.zero_grad()
 
-        loss = loss_fn(inputs)
+        loss = loss_fn(inputs_jit)
 
         if USE_AMP:
             with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -93,10 +93,10 @@ def deep_inversion(inputs,
         optimizer.step()
 
         if projection is not None:
-            inputs = projection(inputs)
+            inputs_jit = projection(inputs_jit)
 
         if track_history and (step % track_history_every == 0 or step == steps):
-            history.append((inputs.detach().cpu().clone(), step))
+            history.append((inputs_jit.detach().cpu().clone(), step))
             print(f"It {step}\t Losses: total: {loss.item():3.3f}")
 
     if track_history:

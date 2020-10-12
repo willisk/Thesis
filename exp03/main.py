@@ -101,8 +101,14 @@ stats_net = dataset.load_statsnet(net=ResNet34(),
                                   )
 stats_net.mask_bn_layer()
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-stats_net.to(device)
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+stats_net.to(DEVICE)
+
+if USE_AMP:
+    data_type = torch.half
+else:
+    data_type = torch.float
+
 # dataset.print_accuracy(stats_net)
 
 # plot means
@@ -111,6 +117,9 @@ stats_net.to(device)
 
 
 # set up deep inversion
+# set up targets
+criterion = dataset.get_criterion()
+
 
 # hyperparameters
 
@@ -165,14 +174,6 @@ def regularization(x):
     return loss_var
 
 
-# set up targets
-criterion = dataset.get_criterion()
-
-if USE_AMP:
-    data_type = torch.half
-else:
-    data_type = torch.float
-
 for hp in utility.dict_product(hyperparameters):
 
     comment = utility.dict_to_str(hp)
@@ -188,15 +189,22 @@ for hp in utility.dict_product(hyperparameters):
     if not args.force and args.save_images and os.path.exists(fig_path + ".png"):
         continue
 
-    target_labels = (torch.arange(hp['batch_size']) %
-                     dataset.get_num_classes()).to(device)
+    # target_labels = (torch.arange(hp['batch_size']) %
+    #                  dataset.get_num_classes()).to(DEVICE)
+    target_labels = torch.LongTensor(
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] * 25 + [0, 1, 2, 3, 4, 5]).to(DEVICE)
     inputs = torch.randn([hp['batch_size']] + list(stats_net.input_shape),
-                         requires_grad=True, device=device, dtype=data_type)
+                         requires_grad=True, device=DEVICE,
+                         #  dtype=data_type
+                         )
     optimizer = optim.Adam([inputs], lr=hp['learning_rate'])
+
     if USE_AMP:
         stats_net, optimizer = amp.initialize(
-            stats_net, optimizer, opt_level='O1')
-        stats_net.eval()  # important, otherwise generated images will be non natural
+            stats_net, optimizer, opt_level='O1', loss_scale='dynamic')
+
+    stats_net.eval()  # important, otherwise generated images will be non natural
+    if USE_AMP:
         # need to do this trick for FP16 support of batchnorms
         stats_net.train()
         for module in stats_net.modules():
@@ -217,7 +225,7 @@ for hp in utility.dict_product(hyperparameters):
                                           optimizer,
                                           steps=hp['n_steps'],
                                           perturbation=perturbation,
-                                          projection=projection,
+                                          #   projection=projection,
                                           track_history=args.track_history,
                                           track_history_every=args.track_history_every,
                                           )
