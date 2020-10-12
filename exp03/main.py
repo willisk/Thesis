@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 import torchvision.utils as vutils
+import collections
 
 import argparse
 
@@ -120,9 +121,10 @@ else:
 
 
 # set up deep inversion
-# set up targets
 criterion = dataset.get_criterion()
 
+target_labels = (torch.arange(hp['batch_size']) %
+                 dataset.get_num_classes()).to(DEVICE)
 
 # hyperparameters
 
@@ -157,13 +159,8 @@ def projection(x):
     return x
 
 
-import random
-
-
 def jitter(x):
-    # off1, off2 = torch.randint(low=-2, high=2, size=(2, 1))
-    off1 = random.randint(-2, 2)
-    off2 = random.randint(-2, 2)
+    off1, off2 = torch.randint(low=-2, high=2, size=(2, 1))
     x = torch.roll(x, shifts=(off1, off2), dims=(2, 3))
     return x
 
@@ -197,13 +194,9 @@ for hp in utility.dict_product(hyperparameters):
     if not args.force and args.save_images and os.path.exists(fig_path + ".png"):
         continue
 
-    # target_labels = (torch.arange(hp['batch_size']) %
-    #                  dataset.get_num_classes()).to(DEVICE)
-    target_labels = torch.LongTensor(
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] * 25 + [0, 1, 2, 3, 4, 5]).to(DEVICE)
     inputs = torch.randn([hp['batch_size']] + list(stats_net.input_shape),
                          requires_grad=True, device=DEVICE,
-                         #  dtype=data_type
+                         #   dtype=data_type
                          )
     optimizer = optim.Adam([inputs], lr=hp['learning_rate'])
 
@@ -218,6 +211,8 @@ for hp in utility.dict_product(hyperparameters):
         for module in stats_net.modules():
             if isinstance(module, torch.nn.BatchNorm2d):
                 module.eval().half()
+
+    stats_net.eval()
 
     # set up loss
     loss_fn = deepinversion.inversion_loss(stats_net, criterion, target_labels,
@@ -241,7 +236,7 @@ for hp in utility.dict_product(hyperparameters):
     # # dataset.plot(stats_net)
     target_labels = target_labels.cpu()
     for im, step in invert:
-        vutils.save_image(im.data, fig_path + 'step={}'.format(step) + '.png',
+        vutils.save_image(im.data, fig_path + ' step={}'.format(step) + '.png',
                           normalize=True, scale_each=True, nrow=10)
     # frames = dataset.plot_history(invert, target_labels)
 

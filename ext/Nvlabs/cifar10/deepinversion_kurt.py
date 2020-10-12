@@ -52,6 +52,10 @@ except ImportError:
 debug_output = False
 debug_output = True
 
+# set seed
+np.random.seed(0)
+torch.manual_seed(0)
+
 
 class DeepInversionFeatureHook():
     '''
@@ -257,17 +261,14 @@ if __name__ == "__main__":
 
     # KURT
     import datasets
-    dataset = datasets.DatasetCifar10()
+    dataset = datasets.DatasetCifar10(load_dataset=False)
     stats_net = dataset.load_statsnet(net=ResNet34(),
                                       name="resnet34-pretrained",
                                       resume_training=False,
                                       use_drive=True
                                       )
-    # stats_net.class_conditional
     stats_net.mask_bn_layer()
     net_teacher = stats_net
-
-    # net_teacher = ResNet34()
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
