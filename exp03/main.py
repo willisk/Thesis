@@ -5,8 +5,11 @@ from matplotlib.animation import ArtistAnimation, PillowWriter
 from IPython.display import display, FileLink
 
 import numpy as np
+
 import torch
 import torch.optim as optim
+import torchvision.utils as vutils
+
 import argparse
 
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -232,27 +235,30 @@ for hp in utility.dict_product(hyperparameters):
 
     # # dataset.plot(stats_net)
     target_labels = target_labels.cpu()
-    frames = dataset.plot_history(invert, target_labels)
+    for im, step in invert:
+        vutils.save_image(im.data, fig_path + 'step={}'.format(step) + '.png',
+                          normalize=True, scale_each=True, nrow=10)
+    # frames = dataset.plot_history(invert, target_labels)
 
-    if len(frames) > 1:  # animated gif
-        for _ in range(10):  # make last frame stick
-            frames.append(frames[-1])
-        anim = ArtistAnimation(plt.gcf(), frames,
-                               interval=300, blit=True)
-        plt.close()
-        if args.save_images:
-            anim.save(fig_path + ".gif", writer=PillowWriter())
-            FileLink(fig_path + ".gif")
-            dataset.plot_history([invert[-1]], target_labels)
-            tb.add_figure("DeepInversion", plt.gcf(), close=False)
-            plt.savefig(fig_path + ".png")
-            plt.close()
-        display(anim)
-    else:
-        if args.save_images:
-            tb.add_figure("DeepInversion", plt.gcf(), close=False)
-            plt.savefig(fig_path + ".png")
-        plt.show()
+    # if len(frames) > 1:  # animated gif
+    #     for _ in range(10):  # make last frame stick
+    #         frames.append(frames[-1])
+    #     anim = ArtistAnimation(plt.gcf(), frames,
+    #                            interval=300, blit=True)
+    #     plt.close()
+    #     if args.save_images:
+    #         anim.save(fig_path + ".gif", writer=PillowWriter())
+    #         FileLink(fig_path + ".gif")
+    #         dataset.plot_history([invert[-1]], target_labels)
+    #         tb.add_figure("DeepInversion", plt.gcf(), close=False)
+    #         plt.savefig(fig_path + ".png")
+    #         plt.close()
+    #     display(anim)
+    # else:
+    #     if args.save_images:
+    #         tb.add_figure("DeepInversion", plt.gcf(), close=False)
+    #         plt.savefig(fig_path + ".png")
+    #     plt.show()
 
 # tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
 # plt.show()
