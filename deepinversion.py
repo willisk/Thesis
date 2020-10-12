@@ -25,9 +25,9 @@ def inversion_loss(stats_net, criterion, target_labels,
                    layer_weights=None, regularization=None,
                    reg_reduction_type='mean',
                    **hp):
-    if layer_weights is None:
-        layer_weights = betabinom_distr(
-            len(stats_net.hooks) - 1, hp['distr_a'], hp['distr_b'])
+    # if layer_weights is None:
+    #     layer_weights = betabinom_distr(
+    #         len(stats_net.hooks) - 1, hp['distr_a'], hp['distr_b'])
 
     def loss_fn(x):
         stats_net.set_reg_reduction_type(reg_reduction_type)
@@ -36,7 +36,8 @@ def inversion_loss(stats_net, criterion, target_labels,
 
         components = stats_net.get_hook_regularizations()
         input_reg = components.pop(0)
-        layer_reg = sum([w * c for w, c in zip(layer_weights, components)])
+        # layer_reg = sum([w * c for w, c in zip(layer_weights, components)])
+        layer_reg = sum(components)
         total_loss = (hp['factor_input'] * input_reg
                       + hp['factor_layer'] * layer_reg
                       + hp['factor_criterion'] * criterion_loss)

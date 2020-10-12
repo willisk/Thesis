@@ -312,22 +312,6 @@ if __name__ == "__main__":
         if not os.path.exists(create_folder):
             os.makedirs(create_folder)
 
-    if 0:
-        # loading
-        transform_test = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465),
-                                 (0.2023, 0.1994, 0.2010)),
-        ])
-
-        testset = torchvision.datasets.CIFAR10(
-            root='./data', train=False, download=True, transform=transform_test)
-        testloader = torch.utils.data.DataLoader(testset, batch_size=args.bs, shuffle=True, num_workers=6,
-                                                 drop_last=True)
-        # Checking teacher accuracy
-        print("Checking teacher accuracy")
-        test()
-
     train_writer = None  # tensorboard writter
     global_iteration = 0
 
