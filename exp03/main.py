@@ -197,6 +197,10 @@ for hp in utility.dict_product(hyperparameters):
                          requires_grad=True, device=DEVICE,
                          #   dtype=data_type
                          )
+    inputs = torch.randn([hp['batch_size']] + list(stats_net.input_shape),
+                         requires_grad=True, device=DEVICE,
+                         #   dtype=data_type
+                         )
     optimizer = optim.Adam([inputs], lr=hp['learning_rate'])
 
     if USE_AMP:
