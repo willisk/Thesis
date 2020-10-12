@@ -83,9 +83,9 @@ class DeepInversionFeatureHook():
 
 
 def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
-               net_student=None, prefix=None, competitive_scale=0.01, train_writer=None, global_iteration=None,
+               prefix=None,
                use_amp=False,
-               optimizer=None, inputs=None, bn_reg_scale=0.0, random_labels=False, l2_coeff=0.0):
+               optimizer=None, inputs=None, bn_reg_scale=0.0, random_labels=False):
     '''
     Function returns inverted images from the pretrained model, parameters are tight to CIFAR dataset
     args in:
@@ -268,11 +268,9 @@ if __name__ == "__main__":
     net_teacher = stats_net
 
     # net_teacher = ResNet34()
-    net_student = ResNet18()
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    net_student = net_student.to(device)
     net_teacher = net_teacher.to(device)
 
     criterion = nn.CrossEntropyLoss()
@@ -288,8 +286,8 @@ if __name__ == "__main__":
         opt_level = "O1"
         loss_scale = 'dynamic'
 
-        [net_student, net_teacher], optimizer_di = amp.initialize(
-            [net_student, net_teacher], optimizer_di,
+        net_teacher, optimizer_di = amp.initialize(
+            net_teacher, optimizer_di,
             opt_level=opt_level,
             loss_scale=loss_scale)
 
@@ -312,13 +310,10 @@ if __name__ == "__main__":
         if not os.path.exists(create_folder):
             os.makedirs(create_folder)
 
-    train_writer = None  # tensorboard writter
-    global_iteration = 0
-
     print("Starting model inversion")
 
     inputs = get_images(net=net_teacher, bs=args.bs, epochs=args.iters_mi, idx=batch_idx,
-                        net_student=net_student, prefix=prefix, competitive_scale=args.cig_scale,
-                        train_writer=train_writer, global_iteration=global_iteration, use_amp=args.amp,
+                        prefix=prefix,
+                        use_amp=args.amp,
                         optimizer=optimizer_di, inputs=inputs, bn_reg_scale=args.r_feature_weight,
-                        var_scale=args.di_var_scale, random_labels=False, l2_coeff=args.di_l2_scale)
+                        var_scale=args.di_var_scale, random_labels=False)

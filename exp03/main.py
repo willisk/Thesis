@@ -157,10 +157,13 @@ def projection(x):
     return x
 
 
+import random
+
+
 def jitter(x):
     # off1, off2 = torch.randint(low=-2, high=2, size=(2, 1))
-    off1 = torch.randint(-2, 2)
-    off2 = torch.randint(-2, 2)
+    off1 = random.randint(-2, 2)
+    off2 = random.randint(-2, 2)
     x = torch.roll(x, shifts=(off1, off2), dims=(2, 3))
     return x
 
