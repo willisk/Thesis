@@ -72,6 +72,7 @@ class StatsHook(nn.Module):
 
                 if not self.state().class_conditional:
                     if not hasattr(self, 'total_mean'):
+                        m, v = self.running_mean[labels], self.running_var[labels]
                         self.total_mean, self.total_var = utility.reduce_mean_var(
                             m, v, self.class_count)
                     m, v = self.total_mean, self.total_var
