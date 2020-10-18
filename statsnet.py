@@ -70,8 +70,16 @@ class StatsHook(nn.Module):
                 var = x.permute(1, 0, 2, 3).contiguous().view(
                     [nch, -1]).var(1, unbiased=False)
 
-                r_feature = torch.norm(module.running_var.data.type(var.type()) - var, 2) + torch.norm(
-                    module.running_mean.data.type(var.type()) - mean, 2)
+                if not self.state().class_conditional:
+                    if not hasattr(self, 'total_mean'):
+                        self.total_mean, self.total_var = utility.reduce_mean_var(
+                            m, v, self.class_count)
+                    m, v = self.total_mean, self.total_var
+                    self.regularization = (
+                        (x.mean([2, 3]) - m)**2 / v).sum(dim=1)
+
+                r_feature = torch.norm(v.data.type(var.type()) - var, 2) + torch.norm(
+                    m.data.type(mean.type()) - mean, 2)
 
                 self.regularization = r_feature
             else:
