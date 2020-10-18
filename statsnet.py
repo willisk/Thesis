@@ -62,14 +62,6 @@ class StatsHook(nn.Module):
                 self.regularization = torch.Tensor([0]).to(x.device)
                 return
 
-            m, v = self.running_mean[labels], self.running_var[labels]
-
-            if not self.state().class_conditional:
-                if not hasattr(self, 'total_mean'):
-                    self.total_mean, self.total_var = utility.reduce_mean_var(
-                        m, v, self.class_count)
-                m, v = self.total_mean, self.total_var
-
             if self.state().method == 'paper':
 
                 nch = x.shape[1]
@@ -83,6 +75,19 @@ class StatsHook(nn.Module):
 
                 self.regularization = r_feature
             else:
+                m, v = self.running_mean[labels], self.running_var[labels]
+
+                if not self.state().class_conditional:
+                    if not hasattr(self, 'total_mean'):
+                        self.total_mean, self.total_var = utility.reduce_mean_var(
+                            m, v, self.class_count)
+                    m, v = self.total_mean.unsqueeze(
+                        0), self.total_var.unsqueeze(0)
+                    self.regularization = (
+                        (x.mean([2, 3]) - m)**2 / v).sum(dim=1)
+                else:
+                    self.regularization = (
+                        (x.mean([2, 3]) - m[labels])**2 / v[labels]).sum(dim=1)
                 # print("x shape: ", x.shape)
                 # [64, 3, 32, 32]
                 # print("m shape: ", m.shape)
@@ -91,8 +96,6 @@ class StatsHook(nn.Module):
                 # [64, 3]
                 # m[labels]
                 # [64, 3]
-                self.regularization = (
-                    (x.mean([2, 3]) - m[labels])**2 / v[labels]).sum(dim=1)
                 # [64]
 
                 # print("reg is fin: ", torch.isfinite(self.regularization).all())
