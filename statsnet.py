@@ -83,17 +83,24 @@ class StatsHook(nn.Module):
 
                 self.regularization = r_feature
             else:
-                print("x shape: ", x.shape)
-                print("m shape: ", m.shape)
-                self.regularization = utility.sum_all_but(
-                    (x - m)**2 / v, dim=0)
+                # print("x shape: ", x.shape)
+                # [64, 3, 32, 32]
+                # print("m shape: ", m.shape)
+                # [10, 3]
+                # x.mean([2, 3])
+                # [64, 3]
+                # m[labels]
+                # [64, 3]
+                self.regularization = (
+                    (x.mean([2, 3]) - m[labels])**2 / v[labels]).sum(dim=1)
+                # [64]
 
                 # print("reg is fin: ", torch.isfinite(self.regularization).all())
                 if self.state().reg_reduction == 'mean':    # should use mean over batches
                     self.regularization = self.regularization.mean()
                 if self.state().reg_reduction == 'sum':
                     self.regularization = self.regularization.sum()
-                if self.state().reg_reduction == 'non':
+                if self.state().reg_reduction == 'none':
                     pass
 
     def init_parameters(self, shape):
