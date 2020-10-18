@@ -145,7 +145,7 @@ for hp in utility.dict_product(hyperparameters):
     # criterion = nn.CrossEntropyLoss(reduction='none')
     # def JSLoss(input, target):
 
-    criterion = JSLoss(reduction='none')
+    # criterion = JSLoss(reduction='none')
 
     for c in range(num_classes):
 

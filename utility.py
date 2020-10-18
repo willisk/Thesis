@@ -78,20 +78,22 @@ def combine_mean_var(mean_a, var_a, n_a, mean_b, var_b, n_b):
 
 
 def reduce_mean_var(means, vars, n):
-    return reduce(lambda x, y: combine_mean_var(*x, *y), zip(means, vars, n))
+    mean, var, _ = reduce(lambda x, y: combine_mean_var(
+        *x, *y), zip(means, vars, n))
+    return mean, var
 
 
 def nan_to_zero(x):
     x[x != x] = 0
 
 
-def c_mean_var(data, labels, shape):
+def c_mean_var(data, labels, shape, dim=0):
     S = torch.zeros(shape, requires_grad=False)
     S_2 = torch.zeros(shape, requires_grad=False)
     n = torch.zeros(shape[0], requires_grad=False)
     for d, c in zip(data, labels):
-        S[c] += d
-        S_2[c] += d**2
+        S[c] += sum_all_but(d, dim)
+        S_2[c] += sum_all_but(d**2, dim)
         n[c] += 1
     n = expand_as_r(n, S)
     mean = S / n

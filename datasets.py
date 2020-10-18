@@ -113,8 +113,8 @@ class Dataset(torch.utils.data.Dataset):
                           ** self.training_params)
             stats_net.enable_hooks()
 
-            # if not pretrained:
-            #     utility.learn_stats(stats_net, data_loader)
+            if not pretrained:
+                utility.learn_stats(stats_net, data_loader)
             torch.save(stats_net.state_dict(), csnet_save_path)
             print("CSNet saved: " + csnet_save_path)
 
@@ -212,7 +212,7 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         if load_dataset:
             super().__init__(root=DATADIR, train=True,
                              download=True, transform=transform)
-            self.test_set = torchvision.datasets.CIFAR10(root=DATADIR, train=True,
+            self.test_set = torchvision.datasets.CIFAR10(root=DATADIR, train=False,
                                                          download=True, transform=transform)
 
         Dataset.__init__(self)

@@ -69,6 +69,9 @@ parser.add_argument("-f", "--force", action="store_true")
 if sys.argv[0] == 'ipykernel_launcher':
     args = parser.parse_args([])
     args.n_steps = 100
+    args.method = 'paper'
+    args.class_conditional = True
+    args.mask_bn = True
     args.track_history = True
     args.save_images = True
     args.use_drive = True
@@ -97,7 +100,7 @@ np.random.seed(0)
 torch.manual_seed(0)
 
 
-dataset = datasets.DatasetCifar10(load_dataset=False)
+dataset = datasets.DatasetCifar10(load_dataset=True)
 # dataset = datasets.Dataset2D(type=3)
 
 stats_net = dataset.load_statsnet(net=ResNet34(),

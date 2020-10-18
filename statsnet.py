@@ -18,13 +18,16 @@ importlib.reload(deepinversion)
 
 class StatsHook(nn.Module):
 
-    def __init__(self, stats_net, module):
+    def __init__(self, stats_net, module, name=None):
         super().__init__()
 
         self.hook = module.register_forward_hook(self.hook_fn)
 
         self.stats_net = [stats_net]
         self.initialized = False
+
+        if name is not None:
+            self.name = name
 
     def state(self):    # hack, so that stats_net won't be saved in state_dict recursively
         return self.stats_net[0]
@@ -54,6 +57,7 @@ class StatsHook(nn.Module):
                 old_mean, old_var, n, new_mean, new_var, m)
         else:   # inverting
             assert self.initialized, "Statistics Parameters not initialized"
+
             if self.state().bn_masked and not isinstance(module, nn.BatchNorm2d):
                 self.regularization = torch.Tensor([0]).to(x.device)
                 return
@@ -79,6 +83,8 @@ class StatsHook(nn.Module):
 
                 self.regularization = r_feature
             else:
+                print("x shape: ", x.shape)
+                print("m shape: ", m.shape)
                 self.regularization = utility.sum_all_but(
                     (x - m)**2 / v, dim=0)
 
@@ -94,7 +100,9 @@ class StatsHook(nn.Module):
 
         num_classes = self.state().num_classes
 
-        shape = [num_classes] + list(shape)
+        # CCC
+        n_chan = shape[0]
+        shape = [num_classes, n_chan]
 
         self.register_buffer('running_mean', torch.zeros(
             shape, requires_grad=False))
@@ -121,16 +129,20 @@ class CStatsNet(nn.Module):
                 (isinstance(m, nn.ModuleList)
                  or isinstance(m, nn.ModuleDict)
                  or isinstance(m, nn.Sequential)
-                 or isinstance(m, nn.CrossEntropyLoss))):
+                 or isinstance(m, nn.CrossEntropyLoss)
+                 or isinstance(m, nn.modules.activation.ReLU)
+                 )):
                 continue
             if i == 0:
                 name = "net_input"
                 continue    # input tracked double
+            assert len(m._forward_hooks.values()
+                       ) == 0, "module already has hook"
             if name == "":
                 name = str(i)
             hook_name = name.replace('.', '-')
-            self.hooks[hook_name] = StatsHook(self, m)
-            # print("{} adding hook to module ".format(i) + name)
+            self.hooks[hook_name] = StatsHook(self, m, name=hook_name)
+            # print("{} adding hook to module {} of type {}".format(i, name, type(m)))
 
         self.num_classes = num_classes
         self.class_conditional = class_conditional
