@@ -74,15 +74,14 @@ class Dataset(torch.utils.data.Dataset):
     def get_criterion(self):
         return nn.CrossEntropyLoss()
 
-    def pretrained_statsnet(self, net, name, hook_before_bn=False, resume_training=False, use_drive=False, input_shape=None):
+    def pretrained_statsnet(self, net, name, resume_training=False, use_drive=False, input_shape=None):
 
         criterion = self.get_criterion()
         optimizer = optim.SGD(net.parameters(), lr=0.01)
 
         num_classes = self.get_num_classes()
 
-        stats_net = statsnet.CStatsNet(
-            net, num_classes, hook_before_bn=hook_before_bn, class_conditional=True)
+        stats_net = statsnet.CStatsNet(net, num_classes)
 
         if input_shape is not None:
             init_sample = torch.zeros(input_shape)
@@ -235,7 +234,7 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
             name = "cifar10-resnet20"
         input_shape = [64, 3, 32, 32]
         stats_net = self.pretrained_statsnet(
-            net, name, input_shape=input_shape, hook_before_bn=True, resume_training=resume_training, use_drive=use_drive)
+            net, name, input_shape=input_shape, resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
     def print_accuracy(self, net):

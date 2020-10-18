@@ -31,8 +31,12 @@ def inversion_loss(stats_net, criterion, target_labels,
 
     def loss_fn(x):
         stats_net.set_reg_reduction_type(reg_reduction_type)
-        outputs = stats_net({'inputs': x, 'labels': target_labels})
-        criterion_loss = criterion(outputs, target_labels)
+        if len(target_labels) == 1:
+            targets = target_labels.repeat(len(x))
+        else:
+            targets = target_labels
+        outputs = stats_net({'inputs': x, 'labels': targets})
+        criterion_loss = criterion(outputs, targets)
 
         components = stats_net.get_hook_regularizations()
         input_reg = components.pop(0)

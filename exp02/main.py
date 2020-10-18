@@ -115,7 +115,6 @@ hyperparameters = dict(
     distr_a=[1],
     distr_b=[1],
 )
-criterion = nn.CrossEntropyLoss(reduction='none')
 
 regularization = None
 
@@ -135,77 +134,64 @@ for hp in utility.dict_product(hyperparameters):
     tb = shared.get_summary_writer(comment)
     plt.figure(figsize=(6, 3))
 
-    layer_weights = deepinversion.betabinom_distr(
-        len(stats_net.hooks) - 1, hp['distr_a'], hp['distr_b'])
+    # layer_weights = deepinversion.betabinom_distr(
+    #     len(stats_net.hooks) - 1, hp['distr_a'], hp['distr_b'])
 
-    # # ncols = num_classes + 1
-    # ncols = num_classes
+    # ncols = num_classes + 1
+    ncols = num_classes
 
-    # for c in range(num_classes):
+    # UQ plots
+    # from kornia.losses.divergence import js_div_loss_2d as JSLoss
+    # criterion = nn.CrossEntropyLoss(reduction='none')
+    # def JSLoss(input, target):
 
-    #     # set up loss
-    #     def loss_fn(inputs):
-    #         stats_net.set_reg_reduction_type('none')
-    #         target_labels = torch.longtensor([c] * len(inputs))
-    #         outputs = stats_net({'inputs': inputs, 'labels': target_labels})
-    #         criterion_loss = criterion(outputs, target_labels)
+    criterion = JSLoss(reduction='none')
 
-    #         components = stats_net.get_hook_regularizations()
-    #         input_reg = components.pop(0)
-    #         layer_reg = sum([w * c for w, c in zip(layer_weights, components)])
+    for c in range(num_classes):
 
-    #         total_loss = hp['factor_input'] * input_reg
-    #         total_loss += hp['factor_layer'] * layer_reg
-    #         total_loss += hp['factor_criterion'] * criterion_loss
-    #         if regularization is not None:
-    #             total_loss += hp['factor_reg'] * regularization(inputs)
-    #         return total_loss
+        # set up loss
+        target_labels = torch.LongTensor([c])
+        loss_fn = deepinversion.inversion_loss(stats_net, criterion, target_labels,
+                                               regularization=regularization,
+                                               reg_reduction_type='none',
+                                               **hp)
+        splot(1, ncols, c + 1)
 
-    #     splot(1, ncols, c + 1)
+        with torch.no_grad():
+            utility.plot_contourf_data(
+                X, loss_fn, n_grid=100, scale_grid=1.5, cmap=colors[c], levels=30,
+                contour=True, colorbar=True)
+        plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap='Spectral', alpha=.4)
 
-    #     with torch.no_grad():
-    #         utility.plot_contourf_data(
-    #             x, loss_fn, n_grid=100, scale_grid=1.5, cmap=colors[c], levels=30,
-    #             contour=true, colorbar=true)
-    #     plt.scatter(x[:, 0], x[:, 1], c=y.squeeze(), cmap='spectral', alpha=.4)
+    tb.add_figure("loss landscape", plt.gcf(), close=False)
+    plt.show()
 
-    # tb.add_figure("loss landscape", plt.gcf(), close=false)
-    # plt.show()
+    # DeepInversion plots
+    bs = 4
+    target_labels = (torch.arange(bs)) % num_classes
+    shape = [bs] + list(stats_net.input_shape)
+    inputs = torch.randn(shape)
 
-    target_labels = (torch.arange(4)) % num_classes
-    shape = [len(target_labels)] + list(stats_net.input_shape)
+    optimizer = optim.Adam([inputs], lr=hp['learning_rate'])
     criterion = dataset.get_criterion()
 
-    inputs = torch.randn(shape)
-    optimizer = optim.Adam([inputs], lr=hp['learning_rate'])
-
     # set up loss
-    def inversion_loss(inputs):
-        stats_net.set_reg_reduction_type('mean')
-        outputs = stats_net({'inputs': inputs, 'labels': target_labels})
-        criterion_loss = criterion(outputs, target_labels)
-
-        components = stats_net.get_hook_regularizations()
-        input_reg = components.pop(0)
-        layer_reg = sum([w * c for w, c in zip(layer_weights, components)])
-        total_loss = (hp['factor_input'] * input_reg
-                      + hp['factor_layer'] * layer_reg
-                      + hp['factor_criterion'] * criterion_loss)
-        if regularization is not None:
-            total_loss += hp['factor_reg'] * regularization(inputs)
-        return total_loss
+    loss_fn = deepinversion.inversion_loss(stats_net, criterion, target_labels,
+                                           regularization=regularization,
+                                           reg_reduction_type='mean',
+                                           **hp)
 
     # with torch.no_grad():
     #     utility.plot_contourf_data(
-    #         x, loss_fn, n_grid=100, scale_grid=1.5, cmap=colors[c], levels=30,
-    #         contour=true, colorbar=true)
+    #         X, loss_fn, n_grid=100, scale_grid=1.5, cmap=colors[c], levels=30,
+    #         contour=True, colorbar=True)
     invert = deepinversion.deep_inversion(inputs,
                                           stats_net,
-                                          inversion_loss,
+                                          loss_fn,
                                           optimizer,
                                           steps=hp['n_steps'],
-                                          perturbation=perturbation,
-                                          # projection=projection,
+                                          #   perturbation=perturbation,
+                                          #   projection=projection,
                                           track_history=True,
                                           track_history_every=20
                                           )

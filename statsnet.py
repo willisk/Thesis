@@ -18,20 +18,16 @@ importlib.reload(deepinversion)
 
 class StatsHook(nn.Module):
 
-    def __init__(self, stats_net, module, num_classes,
-                 class_conditional=True):
+    def __init__(self, stats_net, module):
         super().__init__()
 
         self.hook = module.register_forward_hook(self.hook_fn)
 
         self.stats_net = [stats_net]
-        self.num_classes = num_classes
-        self.class_conditional = class_conditional
-        self.reg_reduction = "mean"
-        self.tracking_stats = True
         self.initialized = False
-        self.enabled = True
-        self.bn_masked = False
+
+    def state(self):    # hack, so that stats_net won't be saved in state_dict recursively
+        return self.stats_net[0]
 
     def hook_fn(self, module, inputs, outputs):
 
@@ -41,24 +37,36 @@ class StatsHook(nn.Module):
             self.init_parameters(x.shape[1:])
             return
 
-        if not self.enabled:
+        if not self.state().enabled:
             return
 
-        labels = self.stats_net[0].current_labels
-        if self.tracking_stats:
+        labels = self.state().current_labels
+        if self.state().tracking_stats:
             # pylint: disable=access-member-before-definition
+
+            shape = self.running_mean.shape
             new_mean, new_var, m = utility.c_mean_var(
-                x.detach(), labels, self.shape)
+                x.detach(), labels, shape)
+
             old_mean, old_var, n = self.running_mean, self.running_var, self.class_count
+
             self.running_mean, self.running_var, self.class_count = utility.combine_mean_var(
-                old_mean, old_var, n,
-                new_mean, new_var, m)
+                old_mean, old_var, n, new_mean, new_var, m)
         else:   # inverting
             assert self.initialized, "Statistics Parameters not initialized"
-            if self.bn_masked and not isinstance(module, nn.BatchNorm2d):
+            if self.state().bn_masked and not isinstance(module, nn.BatchNorm2d):
                 self.regularization = torch.Tensor([0]).to(x.device)
                 return
-            if True:
+
+            m, v = self.running_mean[labels], self.running_var[labels]
+
+            if not self.state().class_conditional:
+                if not hasattr(self, 'total_mean'):
+                    self.total_mean, self.total_var = utility.reduce_mean_var(
+                        m, v, self.class_count)
+                m, v = self.total_mean, self.total_var
+
+            if self.state().method == 'paper':
 
                 nch = x.shape[1]
 
@@ -70,34 +78,28 @@ class StatsHook(nn.Module):
                     module.running_mean.data.type(var.type()) - mean, 2)
 
                 self.regularization = r_feature
-                return
+            else:
+                self.regularization = utility.sum_all_but(
+                    (x - m)**2 / v, dim=0)
 
-            means = self.running_mean[labels]
-            vars = self.running_var[labels]
-            if not self.class_conditional:
-                if not hasattr(self, 'total_mean'):
-                    self.total_mean, self.total_var = utility.reduce_mean_var(
-                        means, vars, self.class_count)
-                means, vars = self.total_mean, self.total_var
-            self.regularization = utility.sum_all_but(
-                (x - means)**2 / vars, dim=0)
-            # print("reg is fin: ", torch.isfinite(self.regularization).all())
-            if self.reg_reduction == "mean":    # should use mean over batches
-                self.regularization = self.regularization.mean()
-            if self.reg_reduction == "sum":
-                self.regularization = self.regularization.sum()
-            # self.regularization = ((x - means) / vars.sqrt()).norm(2).sum()
+                # print("reg is fin: ", torch.isfinite(self.regularization).all())
+                if self.state().reg_reduction == 'mean':    # should use mean over batches
+                    self.regularization = self.regularization.mean()
+                if self.state().reg_reduction == 'sum':
+                    self.regularization = self.regularization.sum()
+                if self.state().reg_reduction == 'non':
+                    pass
 
     def init_parameters(self, shape):
 
-        num_classes = self.num_classes
+        num_classes = self.state().num_classes
 
-        self.shape = [num_classes] + list(shape)
+        shape = [num_classes] + list(shape)
 
         self.register_buffer('running_mean', torch.zeros(
-            self.shape, requires_grad=False))
+            shape, requires_grad=False))
         self.register_buffer('running_var', torch.zeros(
-            self.shape, requires_grad=False))
+            shape, requires_grad=False))
         self.register_buffer('class_count',
                              utility.expand_as_r(
                                  torch.zeros(num_classes, requires_grad=False),
@@ -107,7 +109,7 @@ class StatsHook(nn.Module):
 
 class CStatsNet(nn.Module):
 
-    def __init__(self, net, num_classes, hook_before_bn=False, track_inputs=True, class_conditional=True):
+    def __init__(self, net, num_classes, class_conditional=True):
         super().__init__()
 
         self.net = net
@@ -115,28 +117,28 @@ class CStatsNet(nn.Module):
         self.hooks = nn.ModuleDict()
 
         for i, (name, m) in enumerate(net.named_modules()):
-            if not hook_before_bn and i == 0:
-                continue    # going through all layers anyway, ignore input
-            if not track_inputs and i == 0:
-                continue
             if (i != 0 and
                 (isinstance(m, nn.ModuleList)
                  or isinstance(m, nn.ModuleDict)
                  or isinstance(m, nn.Sequential)
                  or isinstance(m, nn.CrossEntropyLoss))):
                 continue
-            if i != 0 and hook_before_bn and not isinstance(m, nn.BatchNorm2d):
-                continue
             if i == 0:
                 name = "net_input"
-            # print("{} adding hook to module ".format(i) + name)
-            hook_name = name.replace('.', '-')
+                continue    # input tracked double
             if name == "":
                 name = str(i)
-            self.hooks[hook_name] = StatsHook(self, m, num_classes,
-                                              class_conditional=class_conditional)
+            hook_name = name.replace('.', '-')
+            self.hooks[hook_name] = StatsHook(self, m)
+            # print("{} adding hook to module ".format(i) + name)
 
-        # self.class_conditional = class_conditional
+        self.num_classes = num_classes
+        self.class_conditional = class_conditional
+        self.reg_reduction = 'mean'
+        self.tracking_stats = True
+        self.enabled = True
+        self.bn_masked = False
+        self.method = 'standard'
 
     def forward(self, data):
         if isinstance(data, dict):
@@ -162,20 +164,14 @@ class CStatsNet(nn.Module):
 
     def stop_tracking_stats(self):
         self.eval()
-        for h in self.hooks.values():
-            h.tracking_stats = False
+        self.tracking_stats = False
 
     def start_tracking_stats(self):
-        '''tracking_stats state is similar to self.training in eval()/train()
-           it is decoupled though, so statistics can be collected while BN stats are frozen
-        '''
         self.eval()
-        for h in self.hooks.values():
-            h.tracking_stats = True
+        self.tracking_stats = True
 
-    def set_reg_reduction_type(self, type):
-        for h in self.hooks.values():
-            h.reg_reduction = type
+    def set_reg_reduction_type(self, reg_type):
+        self.reg_reduction = reg_type
 
     def collect_stats(self):
         stat_vars = ['running_mean', 'running_var', 'class_count']
@@ -188,13 +184,7 @@ class CStatsNet(nn.Module):
         return stats
 
     def enable_hooks(self):
-        for h in self.hooks.values():
-            h.enabled = True
+        self.enabled = True
 
     def disable_hooks(self):
-        for h in self.hooks.values():
-            h.enabled = False
-
-    def mask_bn_layer(self):
-        for h in self.hooks.values():
-            h.bn_masked = True
+        self.enabled = False

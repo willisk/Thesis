@@ -53,8 +53,11 @@ parser.add_argument("-fi", "--factor_input", type=float, default=0.0)
 parser.add_argument("-fl", "--factor_layer", type=float, default=10)
 parser.add_argument("-da", "--distr_a", type=float, default=1)
 parser.add_argument("-db", "--distr_b", type=float, default=1)
+parser.add_argument("-m", "--method", type=str,
+                    choices=['standard', 'paper'], default='standard')
+parser.add_argument("--class_conditional", action="store_true")
+parser.add_argument("--mask_bn", action="store_true")
 parser.add_argument("--random_labels", action="store_true")
-parser.add_argument("--perturb", action="store_true")
 parser.add_argument("--hp_sweep", action="store_true")
 parser.add_argument("--track_history", action="store_true")
 parser.add_argument("--track_history_every", type=int, default=10)
@@ -66,7 +69,6 @@ parser.add_argument("-f", "--force", action="store_true")
 if sys.argv[0] == 'ipykernel_launcher':
     args = parser.parse_args([])
     args.n_steps = 100
-    args.perturb = True
     args.track_history = True
     args.save_images = True
     args.use_drive = True
@@ -103,7 +105,9 @@ stats_net = dataset.load_statsnet(net=ResNet34(),
                                   resume_training=False,
                                   use_drive=args.use_drive
                                   )
-stats_net.mask_bn_layer()
+stats_net.bn_masked = args.mask_bn
+stats_net.class_conditional = args.class_conditional
+stats_net.method = args.method
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 stats_net.to(DEVICE)
@@ -127,6 +131,9 @@ criterion = dataset.get_criterion()
 
 if args.hp_sweep:
     hyperparameters = dict(
+        method=[args.method],
+        mask_bn=[args.mask_bn],
+        cc=[args.class_conditional],
         n_steps=[args.n_steps],
         batch_size=[32],
         learning_rate=[0.01],
@@ -139,6 +146,9 @@ if args.hp_sweep:
     )
 else:
     hyperparameters = dict(
+        method=[args.method],
+        mask_bn=[args.mask_bn],
+        cc=[args.class_conditional],
         n_steps=[args.n_steps],
         batch_size=[args.batch_size],
         learning_rate=[args.learning_rate],
@@ -223,14 +233,12 @@ for hp in utility.dict_product(hyperparameters):
                                            reg_reduction_type='mean',
                                            **hp)
 
-    perturbation = jitter if args.perturb else None
-
     invert = deepinversion.deep_inversion(inputs,
                                           stats_net,
                                           loss_fn,
                                           optimizer,
                                           steps=hp['n_steps'],
-                                          perturbation=perturbation,
+                                          perturbation=jitter,
                                           #   projection=projection,
                                           track_history=args.track_history,
                                           track_history_every=args.track_history_every,
