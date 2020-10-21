@@ -87,6 +87,14 @@ def nan_to_zero(x):
     x[x != x] = 0
 
 
+def batch_feature_mean_var(x, dim=1, unbiased=False):
+    dims_collapse = list(range(len(x.shape)))
+    dims_collapse.remove(dim)
+    mean = x.mean(dims_collapse)
+    var = x.var(dims_collapse, unbiased=unbiased)
+    return mean, var
+
+
 def c_mean_var(data, labels, shape, dim=0):
     S = torch.zeros(shape, requires_grad=False)
     S_2 = torch.zeros(shape, requires_grad=False)

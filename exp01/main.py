@@ -58,31 +58,16 @@ mean = stats['running_mean']
 var = stats['running_var']
 
 
-def batch_feature_mean(x, dim=1):
-    dims_collapse = list(range(len(x.shape)))
-    dims_collapse.pop(dim)
-    mean = x.mean(dims_collapse)
-    var = x.var(dims_collapse, unbiased=False)
-    return mean, var
-
-
 X, Y = dataset.full()
-print("TOTAL true mean ", X.mean([0, 2, 3]))
-print("TOTAL true var ", X.permute(1, 0, 2, 3).contiguous().view(
-    [X.shape[1], -1]).var(1, unbiased=False))
-meanx, varx = batch_feature_mean(X)
-print("SAN true mean ", meanx)
-print("SAN true var ", varx)
+meanx, varx = batch_feature_mean_var(X)
+print("TOTAL true mean ", meanx)
+print("TOTAL true var ", varx)
 
 for c in range(dataset.get_num_classes()):
     data = X[Y == c]
-    class_mean = data.mean([0, 2, 3])
-    class_var = data.permute(1, 0, 2, 3).contiguous().view(
-        [data.shape[1], -1]).var(1, unbiased=False)
+    class_mean, class_var = batch_feature_mean_var(data)
     print("mean true: ", class_mean)
     print("mean stored: ", mean[c])
-    # print("class_mean shape ", class_mean.shape)
-    # print("class_var shape ", class_var.shape)
     assert np.allclose(mean[c], class_mean)
     assert np.allclose(np.sqrt(var[c]), class_var)
     print("class {} asserted.".format(c))
