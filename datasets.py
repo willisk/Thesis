@@ -205,15 +205,15 @@ import torchvision.transforms as transforms
 class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
     def __init__(self, load_dataset=True):
 
-        transform = transforms.Compose([
+        self.transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
         if load_dataset:
             super().__init__(root=DATADIR, train=True,
-                             download=True, transform=transform)
+                             download=True, transform=self.transform)
             self.test_set = torchvision.datasets.CIFAR10(root=DATADIR, train=False,
-                                                         download=True, transform=transform)
+                                                         download=True, transform=self.transform)
 
         Dataset.__init__(self)
 

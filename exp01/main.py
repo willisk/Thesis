@@ -56,17 +56,20 @@ stats_net = dataset.load_statsnet(net=ResNet34(),
 stats = stats_net.collect_stats()[0]
 mean = stats['running_mean']
 var = stats['running_var']
-print("mean shape ", mean.shape)
-print("var shape ", var.shape)
 
 X, Y = dataset.full()
+X = dataset.transform(X)
+print("Transformed")
+print("TOTAL true mean ", X.mean([0, 2, 3]))
+print("TOTAL true var ", X.permute(1, 0, 2, 3).contiguous().view(
+    [X.shape[1], -1]).var(1, unbiased=False))
 for c in range(dataset.get_num_classes()):
     data = X[Y == c]
     class_mean = data.mean([0, 2, 3])
     class_var = data.permute(1, 0, 2, 3).contiguous().view(
         [data.shape[1], -1]).var(1, unbiased=False)
+    print("mean true: ", class_mean)
     print("mean stored: ", mean[c])
-    print("mean true: ", class_mean[c])
     # print("class_mean shape ", class_mean.shape)
     # print("class_var shape ", class_var.shape)
     assert np.allclose(mean[c], class_mean)
