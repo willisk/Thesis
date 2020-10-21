@@ -59,7 +59,8 @@ var = stats['running_var']
 
 
 def batch_feature_mean(x, dim=1):
-    dims_collapse = list(range(len(x.shape))).pop(dim)
+    dims_collapse = list(range(len(x.shape)))
+    dims_collapse.pop(dim)
     mean = x.mean(dims_collapse)
     var = x.var(dims_collapse, unbiased=False)
     return mean, var
