@@ -65,8 +65,10 @@ for c in range(dataset.get_num_classes()):
     class_mean = data.mean([0, 2, 3])
     class_var = data.permute(1, 0, 2, 3).contiguous().view(
         [data.shape[1], -1]).var(1, unbiased=False)
-    print("class_mean shape ", class_mean.shape)
-    print("class_var shape ", class_var.shape)
+    print("mean stored: ", mean[c])
+    print("mean true: ", class_mean[c])
+    # print("class_mean shape ", class_mean.shape)
+    # print("class_var shape ", class_var.shape)
     assert np.allclose(mean[c], class_mean)
     assert np.allclose(np.sqrt(var[c]), class_var)
     print("class {} asserted.".format(c))
