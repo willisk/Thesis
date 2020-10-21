@@ -100,7 +100,7 @@ np.random.seed(0)
 torch.manual_seed(0)
 
 
-dataset = datasets.DatasetCifar10(load_dataset=True)
+dataset = datasets.DatasetCifar10(load_dataset=False)
 # dataset = datasets.Dataset2D(type=3)
 
 stats_net = dataset.load_statsnet(net=ResNet34(),

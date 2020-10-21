@@ -225,6 +225,17 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         self.training_params['save_every'] = 1
         self.training_params['verbose'] = 1
 
+    def full(self):
+        X = Y = None
+        for inputs, labels in self.train_loader():
+            if X is None:
+                X = inputs.clone()
+                Y = labels
+            else:
+                X = torch.cat((X, inputs))
+                Y = torch.cat((Y, labels))
+        return X, Y
+
     def get_num_classes(self):
         return 10
 
