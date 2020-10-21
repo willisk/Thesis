@@ -57,12 +57,22 @@ stats = stats_net.collect_stats()[0]
 mean = stats['running_mean']
 var = stats['running_var']
 
+
+def batch_feature_mean(x, dim=1):
+    dims_collapse = list(torch.arange(len(x.shape))).pop(dim)
+    mean = x.mean(dims_collapse)
+    var = x.var(dims_collapse, unbiased=False)
+    return mean, var
+
+
 X, Y = dataset.full()
-X = dataset.transform(X)
-print("Transformed")
 print("TOTAL true mean ", X.mean([0, 2, 3]))
 print("TOTAL true var ", X.permute(1, 0, 2, 3).contiguous().view(
     [X.shape[1], -1]).var(1, unbiased=False))
+meanx, varx = batch_feature_mean(X)
+print("SAN true mean ", meanx)
+print("SAN true var ", varx)
+
 for c in range(dataset.get_num_classes()):
     data = X[Y == c]
     class_mean = data.mean([0, 2, 3])
