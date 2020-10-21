@@ -95,49 +95,24 @@ def batch_feature_mean_var(x, dim=1, unbiased=False):
     return mean, var
 
 
-def c_mean_var(data, labels, shape, dim=0):
-    S = torch.zeros(shape, requires_grad=False)
-    S_2 = torch.zeros(shape, requires_grad=False)
-    n = torch.zeros(shape[0], requires_grad=False)
+def c_mean_var(data, labels, shape):
+    # used in iteration over batches, skip channels
+    # d.shape: [n_chan, ..]
+    dims_collapse = list(range(len(data.shape)))[1:-1]
+    # calculate size of collapsed dims
+    weight = torch.prod(torch.Tensor(list(data.shape[2:])))
+    S, S_2 = torch.zeros(shape), torch.zeros(shape)
+    n = torch.zeros(shape[0])
     for d, c in zip(data, labels):
-        S[c] += sum_all_but(d, dim)
-        S_2[c] += sum_all_but(d**2, dim)
+        S[c] += d.sum(dims_collapse)
+        S_2[c] += (d**2).sum(dims_collapse)
         n[c] += 1
     n = expand_as_r(n, S)
-    mean = S / n
-    var = (S_2 - S**2 / n) / n
+    mean = S / n / weight
+    var = (S_2 - S**2 / n / weight) / n / weight
     nan_to_zero(mean)
     nan_to_zero(var)
     return mean, var, n
-
-
-# def cat_cond_mean_(inputs, labels, mean, var, cc,
-#                    class_conditional=True):
-
-#     shape = mean.shape
-#     n_classes = shape[0]
-
-#     if class_conditional:
-#         total = torch.zeros(shape)
-#         total.index_add_(0, labels, inputs)
-#         N_class = expand_as_r(torch.bincount(labels, minlength=n_classes), cc)
-#     else:
-#         total = inputs.sum(dim=0)
-#         N_class = len(inputs)
-
-#     cc_f = cc.float()
-#     cc.add_(N_class)
-
-#     mean.mul_(cc_f / cc)
-#     mean.add_((total / cc).expand_as(mean))
-#     ##
-#     total_2 = torch.zeros(shape)
-#     # total_var.index_add_(0, labels, inputs - mean[labels])
-#     for i, x in enumerate(inputs):
-#         total_2[labels[i]] += (inputs[i])**2
-#     var.mul_(cc_f / cc)
-#     # var.add_((total_2 - N_class * mean**2) / cc)
-#     var.add_((total_2 - mean**2) / cc)
 
 
 def search_drive(path):

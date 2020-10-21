@@ -37,7 +37,7 @@ class StatsHook(nn.Module):
         x = inputs[0]
 
         if not self.initialized:
-            self.init_parameters(x.shape[1:])
+            self.init_parameters(x.shape[1])
             return
 
         if not self.state().enabled:
@@ -123,13 +123,11 @@ class StatsHook(nn.Module):
                 if self.state().reg_reduction == 'none':
                     pass
 
-    def init_parameters(self, shape):
+    def init_parameters(self, n_features):
 
         num_classes = self.state().num_classes
 
-        # CCC
-        n_chan = shape[0]
-        shape = [num_classes, n_chan]
+        shape = (num_classes, n_features)
 
         self.register_buffer('running_mean', torch.zeros(
             shape, requires_grad=False))

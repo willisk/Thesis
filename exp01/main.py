@@ -59,16 +59,16 @@ var = stats['running_var']
 
 
 X, Y = dataset.full()
-meanx, varx = batch_feature_mean_var(X)
+meanx, varx = utility.batch_feature_mean_var(X)
 print("TOTAL true mean ", meanx)
 print("TOTAL true var ", varx)
 
 for c in range(dataset.get_num_classes()):
     data = X[Y == c]
-    class_mean, class_var = batch_feature_mean_var(data)
+    class_mean, class_var = utility.batch_feature_mean_var(data)
     print("mean true: ", class_mean)
     print("mean stored: ", mean[c])
     assert np.allclose(mean[c], class_mean)
-    assert np.allclose(np.sqrt(var[c]), class_var)
+    assert np.allclose(var[c], class_var)
     print("class {} asserted.".format(c))
 # tb.close()

@@ -1,53 +1,16 @@
 # import numpy as np
+import os
+import sys
 import torch
-from functools import reduce
 
+PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PWD)
+
+import utility
+import importlib
+importlib.reload(utility)
 
 # https://notmatthancock.github.io/2017/03/23/simple-batch-stat-updates.html
-
-def expand_as_r(a, b):
-    diff = len(b.shape) - len(a.shape)
-    shape = list(a.shape) + diff * [1]
-    return a.reshape(shape)
-
-
-def combine_mean_var(mean_a, var_a, n_a, mean_b, var_b, n_b):
-    n = n_a + n_b
-    mean = (n_a * mean_a + n_b * mean_b) / n
-    var = (n_a * var_a
-           + n_b * var_b
-           + n_a * n_b / n * (mean_a - mean_b)**2) / n
-
-    return mean, var, n
-
-
-def reduce_mean_var(means, vars, n):
-    return reduce(lambda x, y: combine_mean_var(*x, *y), zip(means, vars, n))
-
-
-def nan_to_zero(x):
-    x[x != x] = 0
-
-
-def c_mean_var(data, labels, shape):
-    feature_dim = 1
-    all_dims = list(range(len(data.shape)))
-    # used in iteration over batches, skip channels
-    dims_collapse = all_dims[1:-1]
-    # calculate size of collapsed dims
-    weight = torch.prod(torch.Tensor(list(data.shape[2:])))
-    S, S_2 = torch.zeros(shape), torch.zeros(shape)
-    n = torch.zeros(shape[0])
-    for d, c in zip(data, labels):
-        S[c] += d.sum(dims_collapse)
-        S_2[c] += (d**2).sum(dims_collapse)
-        n[c] += 1
-    n = expand_as_r(n, S)
-    mean = S / n / weight
-    var = (S_2 - S**2 / n / weight) / n / weight
-    nan_to_zero(mean)
-    nan_to_zero(var)
-    return mean, var, n
 
 
 class StatsRecorder:
@@ -61,7 +24,8 @@ class StatsRecorder:
 
             self.mean = torch.zeros(shape)
             self.var = torch.zeros(shape)
-            self.mean, self.var, self.n = c_mean_var(data, labels, shape)
+            self.mean, self.var, self.n = utility.c_mean_var(
+                data, labels, shape)
 
             self.initialized = True
 
@@ -70,32 +34,14 @@ class StatsRecorder:
             self.__init__(self.n_classes, data, labels)
         else:
             shape = self.mean.shape
-            new_mean, new_var, m = c_mean_var(data, labels, shape)
+            new_mean, new_var, m = utility.c_mean_var(data, labels, shape)
             old_mean, old_var, n = self.mean, self.var, self.n
 
-            # assert new_mean[m.squeeze() != 0].isfinite().all(), \
-            #     "new_mean invalid before"
-            # assert old_mean[n.squeeze() != 0].isfinite().all(), \
-            #     "mean invalid before"
-
-            self.mean, self.var, self.n = combine_mean_var(old_mean, old_var, n,
-                                                           new_mean, new_var, m)
-
-            # assert self.mean[self.n.squeeze() != 0].isfinite().all(), \
-            #     "mean invalid after"
-
-
-def batch_feature_mean_var(x, dim=1, unbiased=False):
-    dims_collapse = list(range(len(x.shape)))
-    dims_collapse.remove(dim)
-    # dims_collapse = tuple(dims_collapse)
-    mean = x.mean(dims_collapse)
-    var = x.var(dims_collapse, unbiased=unbiased)
-    return mean, var
+            self.mean, self.var, self.n = utility.combine_mean_var(old_mean, old_var, n,
+                                                                   new_mean, new_var, m)
 
 
 # pylint: disable=no-member
-
 torch.manual_seed(0)
 
 n_classes = 10
@@ -119,7 +65,7 @@ for i in range(300):
     stats.update(new_data, new_labels)
 
     for c in range(n_classes):
-        class_mean, class_var = batch_feature_mean_var(data[c])
+        class_mean, class_var = utility.batch_feature_mean_var(data[c])
 
         assert stats.mean[stats.n.squeeze() != 0].isfinite().all(), \
             "recorded mean has invalid entries"
@@ -144,13 +90,13 @@ for i in range(300):
 
 mean, var = torch.empty_like(stats.mean), torch.empty_like(stats.mean)
 for c in range(n_classes):
-    mean[c], var[c] = batch_feature_mean_var(data[c])
+    mean[c], var[c] = utility.batch_feature_mean_var(data[c])
 
 print("cond mean error: ", torch.norm(stats.mean - mean))
 print("cond var error: ", torch.norm(stats.var - var))
 
-mean, var, _ = reduce_mean_var(stats.mean, stats.var, stats.n)
+mean, var = utility.reduce_mean_var(stats.mean, stats.var, stats.n)
 data = torch.cat(data)
-true_mean, true_var = batch_feature_mean_var(data)
+true_mean, true_var = utility.batch_feature_mean_var(data)
 print("reduced mean error: ", torch.norm(mean - true_mean))
 print("reduced var error: ", torch.norm(var - true_var))
