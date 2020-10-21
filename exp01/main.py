@@ -63,8 +63,8 @@ X, Y = dataset.full()
 for c in range(dataset.get_num_classes()):
     data = X[Y == c]
     class_mean = data.mean([0, 2, 3])
-    class_var = x.permute(1, 0, 2, 3).contiguous().view(
-        [nch, -1]).var(1, unbiased=False)
+    class_var = data.permute(1, 0, 2, 3).contiguous().view(
+        [data.shape[1], -1]).var(1, unbiased=False)
     print("class_mean shape ", class_mean.shape)
     print("class_var shape ", class_var.shape)
     assert np.allclose(mean[c], class_mean)
