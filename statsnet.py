@@ -43,14 +43,14 @@ class StatsHook(nn.Module):
         if not self.state().enabled:
             return
 
-        if isinstance(module, nn.BatchNorm2d):
-            m, v = self.running_mean, self.running_var
-            m, v = utility.reduce_mean_var(
-                m, v, self.class_count)
+        # if isinstance(module, nn.BatchNorm2d):
+        #     m, v = self.running_mean, self.running_var
+        #     m, v = utility.reduce_mean_var(
+        #         m, v, self.class_count)
 
-            print("allclose mean: ", torch.allclose(m, module.running_mean))
-            print("diff : ", torch.norm(m - module.running_mean))
-            # print("allclose var: ", torch.allclose(v, module.running_var))
+        #     print("allclose mean: ", torch.allclose(m, module.running_mean))
+        #     print("diff : ", torch.norm(m - module.running_mean))
+        #     # print("allclose var: ", torch.allclose(v, module.running_var))
         labels = self.state().current_labels
         if self.state().tracking_stats:
             # pylint: disable=access-member-before-definition
