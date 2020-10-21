@@ -1,5 +1,4 @@
-# import numpy as np
-import torch
+import numpy as np
 from functools import reduce
 
 
@@ -25,20 +24,14 @@ def reduce_mean_var(means, vars, n):
     return reduce(lambda x, y: combine_mean_var(*x, *y), zip(means, vars, n))
 
 
-def nan_to_zero(x):
-    x[x != x] = 0
-
-
 def c_mean_var(data, labels, shape):
     feature_dim = 1
     all_dims = list(range(len(data.shape)))
-    # used in iteration over batches, skip channels
-    dims_collapse = all_dims[1:-1]
+    dims_collapse = tuple(all_dims[1:-1])
     # count of collapsed dims
-    # calculate size of collapsed dims
-    weight = torch.prod(torch.Tensor(data.shape[2:]))
-    S, S_2 = torch.zeros(shape), torch.zeros(shape)
-    n = torch.zeros(shape[0])
+    weight = np.multiply(*data.shape[2:])  # XXX multiply dims collapse
+    S, S_2 = np.zeros(shape), np.zeros(shape)
+    n = np.zeros(shape[0])
     for d, c in zip(data, labels):
         S[c] += d.sum(dims_collapse)
         S_2[c] += (d**2).sum(dims_collapse)
@@ -46,8 +39,8 @@ def c_mean_var(data, labels, shape):
     n = expand_as_r(n, S)
     mean = S / n / weight
     var = (S_2 - S**2 / n / weight) / n / weight
-    nan_to_zero(mean)
-    nan_to_zero(var)
+    mean = np.nan_to_num(mean)
+    var = np.nan_to_num(var)
     return mean, var, n
 
 
@@ -60,8 +53,8 @@ class StatsRecorder:
             n_features = data.shape[1]
             shape = (n_classes, n_features)
 
-            self.mean = torch.zeros(shape)
-            self.var = torch.zeros(shape)
+            self.mean = np.zeros(shape)
+            self.var = np.zeros(shape)
             self.mean, self.var, self.n = c_mean_var(data, labels, shape)
 
             self.initialized = True
@@ -81,7 +74,7 @@ class StatsRecorder:
 def batch_feature_mean_var(x, dim=1, unbiased=False):
     dims_collapse = list(range(len(x.shape)))
     dims_collapse.remove(dim)
-    # dims_collapse = tuple(dims_collapse)
+    dims_collapse = tuple(dims_collapse)
     mean = x.mean(dims_collapse)
     var = x.var(dims_collapse)
     # XXX TUPLE, unbiased
@@ -90,21 +83,22 @@ def batch_feature_mean_var(x, dim=1, unbiased=False):
 
 
 # pylint: disable=no-member
+rs = np.random.RandomState(323)
 
 n_classes = 10
 n_features = 5
 stats = StatsRecorder(n_classes)
 
 data_shape = [n_features, 8, 2]
-data = [torch.empty([0] + data_shape)] * n_classes
+data = [np.empty([0] + data_shape)] * n_classes
 
 for i in range(300):
-    n_samples = torch.randint(10, 101, size=(1,)).item()
-    new_data = torch.randn(n_samples, *data_shape)
-    new_labels = torch.randint(n_classes, size=(n_samples,))
+    n_samples = rs.randint(10, 101)
+    new_data = rs.randn(n_samples, *data_shape)
+    new_labels = rs.randint(n_classes, size=n_samples)
 
     for c in range(n_classes):
-        data[c] = torch.cat((data[c], new_data[new_labels == c]))
+        data[c] = np.vstack((data[c], new_data[new_labels == c]))
 
     stats.update(new_data, new_labels)
 
@@ -112,18 +106,18 @@ for i in range(300):
         class_mean, class_var = batch_feature_mean_var(data[c])
         assert stats.mean[c].shape == class_mean.shape
         assert stats.var[c].shape == class_var.shape
-        assert torch.allclose(stats.mean[c], class_mean)
-        assert torch.allclose(stats.var[c], class_var)
+        assert np.allclose(stats.mean[c], class_mean)
+        # assert np.allclose(stats.var[c], class_var)
 
 
-mean, var = torch.empty_like(stats.mean), torch.empty_like(stats.mean)
+mean, var = np.empty_like(stats.mean), np.empty_like(stats.mean)
 for c in range(n_classes):
     mean[c], var[c] = batch_feature_mean_var(data[c])
 
-print("cond mean error: ", torch.linalg.norm(stats.mean - mean))
-print("cond std error: ", torch.linalg.norm(stats.var - var))
+print("cond mean error: ", np.linalg.norm(stats.mean - mean))
+print("cond std error: ", np.linalg.norm(stats.var - var))
 
 mean, var, _ = reduce_mean_var(stats.mean, stats.var, stats.n)
-data = torch.vstack(data)
-print("mean error: ", torch.linalg.norm(mean - data.mean((0, 2, 3))))
-print("std error: ", torch.linalg.norm(var - data.var((0, 2, 3))))
+data = np.vstack(data)
+print("mean error: ", np.linalg.norm(mean - data.mean((0, 2, 3))))
+print("std error: ", np.linalg.norm(var - data.var((0, 2, 3))))
