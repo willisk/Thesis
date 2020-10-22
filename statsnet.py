@@ -49,7 +49,7 @@ class StatsHook(nn.Module):
         if not self.state().enabled:
             return
 
-        x = outputs
+        # x = outputs
 
         # if isinstance(module, nn.BatchNorm2d):
         #     m, v = self.running_mean, self.running_var
