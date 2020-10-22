@@ -207,9 +207,6 @@ class ResNet(nn.Module):
         print("verifying with batch size {}".format(len(x)))
         x = self.conv1(x)
 
-        h = next(iter(self.bn1._forward_hooks.values())).__self__
-
-        h.reset()
 
         # labels = h.state().current_labels
         # shape = h.running_mean.shape

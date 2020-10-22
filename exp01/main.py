@@ -84,6 +84,8 @@ print("================ INITED =======================")
 X, Y = dataset.full()
 # X, Y = next(iter(dataset.train_loader()))
 stats_net.start_tracking_stats()
+h = next(iter(stats_net.net.bn1._forward_hooks.values())).__self__
+h.reset()
 # stats_net.reset()
 for inputs, labels in dataset.train_loader():
     stats_net.current_labels = labels
