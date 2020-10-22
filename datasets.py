@@ -30,7 +30,7 @@ importlib.reload(deepinversion)
 
 training_params = {'num_epochs': 200,
                    'print_every': 20}
-dataset_gen_params = {'batch_size': 64,
+dataset_gen_params = {'batch_size': 1000,
                       'shuffle': True}
 
 
