@@ -24,6 +24,7 @@ class StatsHook(nn.Module):
         self.hook = module.register_forward_hook(self.hook_fn)
 
         self.stats_net = [stats_net]
+        self.modulex = [module]
         self.initialized = False
 
         if name is not None:
@@ -35,13 +36,20 @@ class StatsHook(nn.Module):
     def hook_fn(self, module, inputs, outputs):
 
         x = inputs[0]
+        # print("outputs shape", x.shape)
+        # if isinstance(module, nn.BatchNorm2d):
+        #     print("hook {} input :\n\t".format(
+        #         self.name), x[0, 0, 0, 0].item())
 
         if not self.initialized:
             self.init_parameters(x.shape[1])
+            # print(self.name, "input shape: ", x.shape)
             return
 
         if not self.state().enabled:
             return
+
+        x = outputs
 
         # if isinstance(module, nn.BatchNorm2d):
         #     m, v = self.running_mean, self.running_var
@@ -81,7 +89,7 @@ class StatsHook(nn.Module):
                 if not self.state().class_conditional:
                     if not hasattr(self, 'total_mean'):
                         m, v = self.running_mean[labels], self.running_var[labels]
-                        self.total_mean, self.total_var = utility.reduce_mean_var(
+                        self.total_mean, self.total_var, _ = utility.reduce_mean_var(
                             m, v, self.class_count)
                     m, v = self.total_mean, self.total_var
                     self.regularization = (
@@ -96,7 +104,7 @@ class StatsHook(nn.Module):
 
                 if not self.state().class_conditional:
                     if not hasattr(self, 'total_mean'):
-                        self.total_mean, self.total_var = utility.reduce_mean_var(
+                        self.total_mean, self.total_var, _ = utility.reduce_mean_var(
                             m, v, self.class_count)
                     m, v = self.total_mean.unsqueeze(
                         0), self.total_var.unsqueeze(0)
@@ -138,6 +146,11 @@ class StatsHook(nn.Module):
                                  torch.zeros(num_classes, requires_grad=False),
                                  self.running_mean))
         self.initialized = True
+
+    def reset(self):
+        self.running_mean.fill_(0)
+        self.running_var.fill_(0)
+        self.class_count.fill_(0)
 
 
 class CStatsNet(nn.Module):

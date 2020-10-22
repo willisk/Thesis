@@ -1,9 +1,26 @@
+import os
 import torch
 import torch.nn as nn
-import os
+import sys
+
+sys.path.append(
+    os.path.dirname(
+        os.path.dirname(
+            os.path.dirname(
+                os.path.dirname(
+                    os.path.abspath(__file__)
+                )
+            )
+        )
+    )
+)
+import utility
+import importlib
+importlib.reload(utility)
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d']
+
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
     """3x3 convolution with padding"""
@@ -25,9 +42,11 @@ class BasicBlock(nn.Module):
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         if groups != 1 or base_width != 64:
-            raise ValueError('BasicBlock only supports groups=1 and base_width=64')
+            raise ValueError(
+                'BasicBlock only supports groups=1 and base_width=64')
         if dilation > 1:
-            raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
+            raise NotImplementedError(
+                "Dilation > 1 not supported in BasicBlock")
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = norm_layer(planes)
@@ -41,10 +60,12 @@ class BasicBlock(nn.Module):
         identity = x
 
         out = self.conv1(x)
+        # print("bn1 input: \n\t", out[0, 0, 0, 0].item())
         out = self.bn1(out)
         out = self.relu(out)
 
         out = self.conv2(out)
+        # print("bn2 input: \n\t", out[0, 0, 0, 0].item())
         out = self.bn2(out)
 
         if self.downsample is not None:
@@ -120,11 +141,12 @@ class ResNet(nn.Module):
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
         self.groups = groups
         self.base_width = width_per_group
-        
-        ## CIFAR10: kernel_size 7 -> 3, stride 2 -> 1, padding 3->1
-        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False)
-        ## END
-        
+
+        # CIFAR10: kernel_size 7 -> 3, stride 2 -> 1, padding 3->1
+        self.conv1 = nn.Conv2d(
+            3, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False)
+        # END
+
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
@@ -140,7 +162,8 @@ class ResNet(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                nn.init.kaiming_normal_(
+                    m.weight, mode='fan_out', nonlinearity='relu')
             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -179,6 +202,44 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
+    def forward_verify(self, x):
+        self.conv1._forward_hooks.clear()
+        print("verifying with batch size {}".format(len(x)))
+        x = self.conv1(x)
+
+        h = next(iter(self.bn1._forward_hooks.values())).__self__
+
+        h.reset()
+
+        # labels = h.state().current_labels
+        # shape = h.running_mean.shape
+        # new_mean, new_var, m = utility.c_mean_var(x.detach(), labels, shape)
+
+        x = self.bn1(x)
+
+        bn_mean, bn_var = self.bn1.running_mean, self.bn1.running_var
+
+        # print("new_mean [1] calculated again, ", new_mean[1])
+        # print("bn_mean  ", bn_mean)
+
+        h_mean, h_var, h_cc = utility.reduce_mean_var(
+            h.running_mean, h.running_var, h.class_count)
+
+        # batch_mean, batch_var = utility.batch_feature_mean_var(x)
+
+        # print("Assert true batch mean close to stats recorded mean")
+        # utility.assert_mean_var(
+        #     batch_mean, batch_var,
+        #     h_mean, h_var, h_cc)
+
+        print("Assert bn.running_mean close to tracked and reduced mean")
+        utility.assert_mean_var(
+            bn_mean, bn_var,
+            h_mean, h_var
+        )
+        print("layer {} asserted.".format(h.name))
+        return x
+
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
@@ -201,7 +262,8 @@ def _resnet(arch, block, layers, pretrained, progress, device, **kwargs):
     model = ResNet(block, layers, **kwargs)
     if pretrained:
         script_dir = os.path.dirname(__file__)
-        state_dict = torch.load(script_dir + '/state_dicts/'+arch+'.pt', map_location=device)
+        state_dict = torch.load(
+            script_dir + '/state_dicts/' + arch + '.pt', map_location=device)
         model.load_state_dict(state_dict)
     return model
 

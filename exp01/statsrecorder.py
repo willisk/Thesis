@@ -48,12 +48,12 @@ n_classes = 10
 n_features = 5
 stats = StatsRecorder(n_classes)
 
-data_shape = [n_features, 8, 2]
+data_shape = [n_features, 32, 32]
 data = [torch.empty([0] + data_shape)] * n_classes
 
 for i in range(300):
     n_samples = torch.randint(10, 101, size=(1,)).item()
-    new_data = torch.randn(n_samples, *data_shape)
+    new_data = torch.randn(n_samples, *data_shape) * 100
     new_labels = torch.randint(n_classes, size=(n_samples,))
 
     # print("incoming data shape: ", new_data.shape)
@@ -65,7 +65,12 @@ for i in range(300):
     stats.update(new_data, new_labels)
 
     for c in range(n_classes):
+        # data: [n_class] * [n_cc_batch, n_feature, 32, 32]
+        print(data[0].shape)
         class_mean, class_var = utility.batch_feature_mean_var(data[c])
+
+        # utility.assert_mean_var(class_mean, class_var,
+        #                         stats.mean[c], stats.var[c], stats.n)
 
         assert stats.mean[stats.n.squeeze() != 0].isfinite().all(), \
             "recorded mean has invalid entries"
@@ -85,7 +90,7 @@ for i in range(300):
             + "\nrecorded var: {}".format(stats.var[c]) \
             + "\nerror: {}".format(torch.norm(stats.var[c] - class_var))
 
-    # print("assert {} passed".format(i))
+    print("assert {} passed".format(i))
 
 
 mean, var = torch.empty_like(stats.mean), torch.empty_like(stats.mean)
@@ -95,7 +100,7 @@ for c in range(n_classes):
 print("cond mean error: ", torch.norm(stats.mean - mean))
 print("cond var error: ", torch.norm(stats.var - var))
 
-mean, var = utility.reduce_mean_var(stats.mean, stats.var, stats.n)
+mean, var, _ = utility.reduce_mean_var(stats.mean, stats.var, stats.n)
 data = torch.cat(data)
 true_mean, true_var = utility.batch_feature_mean_var(data)
 print("reduced mean error: ", torch.norm(mean - true_mean))

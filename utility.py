@@ -69,7 +69,13 @@ def expand_as_r(a, b):
 
 def combine_mean_var(mean_a, var_a, n_a, mean_b, var_b, n_b):
     n = n_a + n_b
+    mean_a = nan_to_zero(mean_a)
+    mean_b = nan_to_zero(mean_b)
+    var_a = nan_to_zero(var_a)
+    var_b = nan_to_zero(var_b)
     mean = (n_a * mean_a + n_b * mean_b) / n
+    assert mean[n.squeeze() != 0].isfinite().all(), \
+        "mean not finite \n{}".format(mean)
     var = (n_a * var_a
            + n_b * var_b
            + n_a * n_b / n * (mean_a - mean_b)**2) / n
@@ -78,13 +84,21 @@ def combine_mean_var(mean_a, var_a, n_a, mean_b, var_b, n_b):
 
 
 def reduce_mean_var(means, vars, n):
-    mean, var, _ = reduce(lambda x, y: combine_mean_var(
+    mean, var, n = reduce(lambda x, y: combine_mean_var(
         *x, *y), zip(means, vars, n))
-    return mean, var
+    return mean, var, n
+
+
+def nan_to_zero_(x):
+    x[x != x] = 0
 
 
 def nan_to_zero(x):
-    x[x != x] = 0
+    nans = x != x
+    if nans.any():
+        x = x.clone()
+        x[nans] = 0
+    return x
 
 
 def batch_feature_mean_var(x, dim=1, unbiased=False):
@@ -109,9 +123,11 @@ def c_mean_var(data, labels, shape):
         n[c] += 1
     n = expand_as_r(n, S)
     mean = S / n / weight
+    # print("weight, ", weight)
+    # print("c_mean : ", mean)
     var = (S_2 - S**2 / n / weight) / n / weight
-    nan_to_zero(mean)
-    nan_to_zero(var)
+    # nan_to_zero(mean)
+    # nan_to_zero(var)
     return mean, var, n
 
 
@@ -395,3 +411,28 @@ def subplots_labels(x_labels, y_labels):
                ylabel=y_labels[i // len(y_labels)])
     for ax in plt.gcf().axes:
         ax.label_outer()
+
+
+def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
+    # check for infinites/nans where they shouldn't be
+    if cc_n is not None:
+        assert recorded_mean[cc_n.squeeze() != 0].isfinite().all(), \
+            "recorded mean has invalid entries"
+        assert recorded_var[cc_n.squeeze() != 0].isfinite().all(), \
+            "recorded var has invalid entries"
+
+    assert recorded_mean.shape == calculated_mean.shape, \
+        "\ncalculated mean shape: {}".format(calculated_mean.shape) \
+        + "\nrecorded mean shape: {}".format(recorded_mean.shape)
+    assert recorded_var.shape == calculated_var.shape, \
+        "\ncalculated var shape: {}".format(calculated_var.shape) \
+        + "\nrecorded var shape: {}".format(recorded_var.shape)
+
+    assert torch.allclose(recorded_mean, calculated_mean, atol=1e-7, equal_nan=True), \
+        "\ncalculated mean: \n{}".format(calculated_mean) \
+        + "\nrecorded mean: \n{}".format(recorded_mean) \
+        + "\nerror: {}".format(torch.norm(recorded_mean - calculated_mean))
+    assert torch.allclose(recorded_var, calculated_var, equal_nan=True), \
+        "\ncalculated var: \n{}".format(calculated_var) \
+        + "\nrecorded var: \n{}".format(recorded_var) \
+        + "\nerror: {}".format(torch.norm(recorded_var - calculated_var))
