@@ -85,8 +85,8 @@ X, Y = dataset.full()
 # X, Y = next(iter(dataset.train_loader()))
 stats_net.start_tracking_stats()
 # stats_net.reset()
-stats_net.current_labels = Y[:5000]
-stats_net.net.forward_verify(X[:5000])
+stats_net.current_labels = Y[:50000]
+stats_net.net.forward_verify(X[:50000])
 
 
 # meanx, varx = utility.batch_feature_mean_var(X)
