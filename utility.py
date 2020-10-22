@@ -89,6 +89,10 @@ def reduce_mean_var(means, vars, n):
     return mean, var, n
 
 
+def nan_to_one_(x):
+    x[x != x] = 1
+
+
 def nan_to_zero_(x):
     x[x != x] = 0
 
@@ -101,11 +105,12 @@ def nan_to_zero(x):
     return x
 
 
-def batch_feature_mean_var(x, dim=1, unbiased=False):
+def batch_feature_mean_var(x, dim=1, unbiased=True):
     dims_collapse = list(range(len(x.shape)))
     dims_collapse.remove(dim)
-    mean = x.mean(dims_collapse)
-    var = x.var(dims_collapse, unbiased=unbiased)
+    mean = (x).mean(dims_collapse)
+    # n = input.numel() / input.size(1)
+    var = (x).var(dims_collapse, unbiased=unbiased)
     return mean, var
 
 
@@ -428,11 +433,11 @@ def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var
         "\ncalculated var shape: {}".format(calculated_var.shape) \
         + "\nrecorded var shape: {}".format(recorded_var.shape)
 
-    assert torch.allclose(recorded_mean, calculated_mean, atol=1e-7, equal_nan=True), \
-        "\ncalculated mean: \n{}".format(calculated_mean) \
-        + "\nrecorded mean: \n{}".format(recorded_mean) \
-        + "\nerror: {}".format(torch.norm(recorded_mean - calculated_mean))
-    assert torch.allclose(recorded_var, calculated_var, equal_nan=True), \
-        "\ncalculated var: \n{}".format(calculated_var) \
-        + "\nrecorded var: \n{}".format(recorded_var) \
-        + "\nerror: {}".format(torch.norm(recorded_var - calculated_var))
+    assert torch.allclose(recorded_mean, calculated_mean, atol=1e-7, equal_nan=True), ""\
+        + "\nmean error: {}".format(torch.norm(recorded_mean - calculated_mean))
+    # + "\ncalculated mean: \n{}".format(calculated_mean) \
+    # + "\nrecorded mean: \n{}".format(recorded_mean) \
+    assert torch.allclose(recorded_var, calculated_var, equal_nan=True), ""\
+        + "\nvar error: {}".format(torch.norm(recorded_var - calculated_var))
+    # + "\ncalculated var: \n{}".format(calculated_var) \
+    # + "\nrecorded var: \n{}".format(recorded_var) \

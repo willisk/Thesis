@@ -202,44 +202,6 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward_verify(self, x):
-        self.conv1._forward_hooks.clear()
-        print("verifying with batch size {}".format(len(x)))
-        x = self.conv1(x)
-
-        h = next(iter(self.bn1._forward_hooks.values())).__self__
-
-        # labels = h.state().current_labels
-        # shape = h.running_mean.shape
-        # new_mean, new_var, m = utility.c_mean_var(x.detach(), labels, shape)
-
-        x = self.bn1(x)
-
-        bn_mean, bn_var = self.bn1.running_mean, self.bn1.running_var
-
-        # print("new_mean [1] calculated again, ", new_mean[1])
-        # print("bn_mean  ", bn_mean)
-
-        h_mean, h_var, h_cc = utility.reduce_mean_var(
-            h.running_mean, h.running_var, h.class_count)
-
-        # batch_mean, batch_var = utility.batch_feature_mean_var(x)
-
-        # print("Assert true batch mean close to stats recorded mean")
-        # utility.assert_mean_var(
-        #     batch_mean, batch_var,
-        #     h_mean, h_var, h_cc)
-
-        print("Assert bn.running_mean close to tracked and reduced mean")
-        try:
-            utility.assert_mean_var(
-                bn_mean, bn_var,
-                h_mean, h_var
-            )
-        except Exception as e:
-            print(e)
-        return x
-
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)

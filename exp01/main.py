@@ -42,11 +42,11 @@ dataset = datasets.DatasetCifar10(
 )
 
 # stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
-stats_net = dataset.load_statsnet(net=ResNet34(),
-                                  name="resnet34-pretrained",
-                                  resume_training=False,
-                                  use_drive=True,
-                                  )
+# stats_net = dataset.load_statsnet(net=ResNet34(),
+#                                   name="resnet34-pretrained",
+#                                   resume_training=False,
+#                                   use_drive=True,
+#                                   )
 # dataset.print_accuracy(stats_net)
 
 print("================ INITED =======================")
@@ -80,13 +80,78 @@ print("================ INITED =======================")
 # mean = stats['running_mean']
 # var = stats['running_var']
 
+import torch.nn as nn
 
-X, Y = dataset.full()
+
+class CNet(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(
+            3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(64, momentum=None)
+
+    def forward(self, inputs):
+        x = inputs
+        x = self.conv1(x)
+        x = self.bn1(x)
+        return x
+
+    def forward_verify(self, x):
+        # print("verifying with batch size {}".format(len(x)))
+        x = self.conv1(x)
+
+        # labels = h.state().current_labels
+        # shape = h.running_mean.shape
+        # new_mean, new_var, m = utility.c_mean_var(x.detach(), labels, shape)
+
+        batch_mean, batch_var = utility.batch_feature_mean_var(x)
+        x = self.bn1(x)
+
+        bn_mean, bn_var = self.bn1.running_mean, self.bn1.running_var
+
+        # print("new_mean [1] calculated again, ", new_mean[1])
+        # print("bn_mean  ", bn_mean)
+
+        h = next(iter(self.bn1._forward_hooks.values())).__self__
+
+        h_mean, h_var, h_cc = utility.reduce_mean_var(
+            h.running_mean, h.running_var, h.class_count)
+
+        # print("Assert true batch mean close to stats recorded mean")
+        # utility.assert_mean_var(
+        #     batch_mean, batch_var,
+        #     h_mean, h_var, h_cc)
+
+        utility.nan_to_zero_(h_mean)
+        utility.nan_to_one_(h_var)
+
+        # print("Assert bn.running_mean close to tracked and reduced mean")
+
+        try:
+            utility.assert_mean_var(
+                bn_mean, bn_var,
+                batch_mean, batch_var,
+                # h_mean, h_var
+            )
+        except Exception as e:
+            print(e)
+
+        return x
+
+
+net = CNet()
+stats_net = statsnet.CStatsNet(net, 10)
+# only interested in verifying by bn layer
+net.conv1._forward_hooks.clear()
+# X, Y = dataset.full()
 # X, Y = next(iter(dataset.train_loader()))
 stats_net.start_tracking_stats()
-h = next(iter(stats_net.net.bn1._forward_hooks.values())).__self__
-h.reset()
-# stats_net.reset()
+net.train()
+
+# h = next(iter(stats_net.net.bn1._forward_hooks.values())).__self__
+# h.reset()
+
 for inputs, labels in dataset.train_loader():
     stats_net.current_labels = labels
     stats_net.net.forward_verify(inputs)

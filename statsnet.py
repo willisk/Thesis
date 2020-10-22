@@ -59,6 +59,7 @@ class StatsHook(nn.Module):
         #     print("allclose mean: ", torch.allclose(m, module.running_mean))
         #     print("diff : ", torch.norm(m - module.running_mean))
         #     # print("allclose var: ", torch.allclose(v, module.running_var))
+
         labels = self.state().current_labels
         if self.state().tracking_stats:
             # pylint: disable=access-member-before-definition
@@ -83,14 +84,15 @@ class StatsHook(nn.Module):
                 nch = x.shape[1]
 
                 mean = x.mean([0, 2, 3])
-                var = x.permute(1, 0, 2, 3).contiguous().view(
-                    [nch, -1]).var(1, unbiased=False)
+                var = x.var([0, 2, 3])
+                # permute(1, 0, 2, 3).contiguous().view(
+                #     [nch, -1]).var(1, unbiased=False)
 
                 if not self.state().class_conditional:
                     if not hasattr(self, 'total_mean'):
                         m, v = self.running_mean[labels], self.running_var[labels]
                         self.total_mean, self.total_var, _ = utility.reduce_mean_var(
-                            m, v, self.class_count)
+                            self.running_mean, self.running_var, self.class_count)
                     m, v = self.total_mean, self.total_var
                     self.regularization = (
                         (x.mean([2, 3]) - m)**2 / v).sum(dim=1)
