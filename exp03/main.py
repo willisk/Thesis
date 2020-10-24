@@ -62,8 +62,6 @@ parser.add_argument("--random_labels", action="store_true")
 parser.add_argument("--hp_sweep", action="store_true")
 parser.add_argument("--track_history", action="store_true")
 parser.add_argument("--track_history_every", type=int, default=10)
-parser.add_argument("--use_drive", action="store_true")
-parser.add_argument("--save_images", action="store_true")
 parser.add_argument("-f", "--force", action="store_true")
 
 
@@ -74,8 +72,6 @@ if sys.argv[0] == 'ipykernel_launcher':
     args.class_conditional = True
     args.mask_bn = True
     args.track_history = True
-    args.save_images = True
-    args.use_drive = True
     args.force = True
 else:
     args = parser.parse_args()
@@ -84,7 +80,7 @@ else:
 # Folder setup
 FIGDIR = os.path.join(PWD, "figures/cifar10-inversion")
 LOGDIR = os.path.join(PWD, "exp03/runs")
-if args.use_drive:
+if True:
     FIGDIR, _ = utility.search_drive(FIGDIR)
     LOGDIR, _ = utility.search_drive(LOGDIR)
 
@@ -107,7 +103,7 @@ dataset = datasets.DatasetCifar10(load_dataset=False)
 stats_net = dataset.load_statsnet(net=ResNet34(),
                                   name="resnet34-pretrained",
                                   resume_training=False,
-                                  use_drive=args.use_drive
+                                  use_drive=True
                                   )
 stats_net.bn_masked = args.mask_bn
 stats_net.use_bn_stats = args.use_bn_stats
@@ -204,7 +200,7 @@ for hp in utility.dict_product(hyperparameters):
     if args.hp_sweep and not any([hp['factor_input'], hp['factor_layer'], hp['factor_criterion'], hp['factor_reg']]):
         continue
 
-    if not args.force and args.save_images and os.path.exists(fig_path + ".png"):
+    if not args.force and os.path.exists(fig_path + ".png"):
         continue
 
     target_labels = (torch.arange(hp['batch_size']) %
