@@ -43,14 +43,17 @@ def inversion_loss(stats_net, criterion, target_labels,
         # layer_reg = sum([w * c for w, c in zip(layer_weights, components)])
         layer_reg = sum(components)
 
-        total_loss = hp['factor_criterion'] * criterion_loss
+        criterion_loss = hp['factor_criterion'] * criterion_loss
 
+        total_loss = 0
         if hp['factor_input'] != 0.0:
             total_loss += hp['factor_input'] * input_reg
         if hp['factor_layer'] != 0.0:
             total_loss += hp['factor_layer'] * layer_reg
         if hp['factor_reg'] != 0.0 and regularization is not None:
             total_loss += hp['factor_reg'] * regularization(x)
+
+        total_loss += criterion_loss
 
         return total_loss
     return loss_fn
