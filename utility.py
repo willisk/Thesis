@@ -74,13 +74,33 @@ def combine_mean_var(mean_a, var_a, n_a, mean_b, var_b, n_b):
     var_a = nan_to_zero(var_a)
     var_b = nan_to_zero(var_b)
     mean = (n_a * mean_a + n_b * mean_b) / n
-    assert mean[n.squeeze() != 0].isfinite().all(), \
-        "mean not finite \n{}".format(mean)
+    # assert mean[n.squeeze() != 0].isfinite().all(), \
+    #     "mean not finite \n{}".format(mean)
     var = (n_a * var_a
            + n_b * var_b
            + n_a * n_b / n * (mean_a - mean_b)**2) / n
 
     return mean, var, n
+
+
+# def combine_mean_var_bn(mean_a, var_a, n_a, mean_b, var_b, n_b, momentum=0.1):
+#     n = n_a + n_b
+#     mean = (1 - momentum) * mean_a + (momentum) * mean_b
+#     # assert mean[n.squeeze() != 0].isfinite().all(), \
+#     #     "mean not finite \n{}".format(mean)
+#     # use biased var in train
+#     var = input.var([0, 2, 3], unbiased=False)
+#     n = input.numel() / input.size(1)
+#     with torch.no_grad():
+#         self.running_mean = exponential_average_factor * mean\
+#             + (1 - exponential_average_factor) * self.running_mean
+#         # update running_var with unbiased var
+#         self.running_var = exponential_average_factor * var * n / (n - 1)\
+#             + (1 - exponential_average_factor) * self.running_var
+#     var = (n_a * var_a
+#            + n_b * var_b
+#            + n_a * n_b / n * (mean_a - mean_b)**2) / n
+#     return mean, var, n
 
 
 def reduce_mean_var(means, vars, n):
@@ -108,10 +128,27 @@ def nan_to_zero(x):
 def batch_feature_mean_var(x, dim=1, unbiased=True):
     dims_collapse = list(range(len(x.shape)))
     dims_collapse.remove(dim)
-    mean = (x).mean(dims_collapse)
-    # n = input.numel() / input.size(1)
-    var = (x).var(dims_collapse, unbiased=unbiased)
+    mean = x.mean(dims_collapse)
+    var = x.var(dims_collapse, unbiased=unbiased)
+    # var = x.var(dims_collapse, unbiased=False)
     return mean, var
+
+
+def c_mean_var_bn(data, labels, shape):
+
+    mean = torch.zeros(shape)
+    var = torch.ones(shape)
+    n = torch.zeros(shape[0])
+
+    for c in set(labels):
+        mask = labels == c
+        c_data = data[mask]
+        mean[c], var[c] = batch_feature_mean_var(c_data, unbiased=False)
+        n[c] = mask.sum()
+
+    n = expand_as_r(n, mean)
+
+    return mean, var, n
 
 
 def c_mean_var(data, labels, shape):
@@ -134,6 +171,35 @@ def c_mean_var(data, labels, shape):
     # nan_to_zero(mean)
     # nan_to_zero(var)
     return mean, var, n
+
+
+def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
+    # check for infinites/nans where they shouldn't be
+    if cc_n is not None:
+        assert recorded_mean[cc_n.squeeze() != 0].isfinite().all(), \
+            "recorded mean has invalid entries"
+        assert recorded_var[cc_n.squeeze() != 0].isfinite().all(), \
+            "recorded var has invalid entries"
+
+    assert recorded_mean.shape == calculated_mean.shape, \
+        "\ncalculated mean shape: {}".format(calculated_mean.shape) \
+        + "\nrecorded mean shape: {}".format(recorded_mean.shape)
+    assert recorded_var.shape == calculated_var.shape, \
+        "\ncalculated var shape: {}".format(calculated_var.shape) \
+        + "\nrecorded var shape: {}".format(recorded_var.shape)
+
+    assert torch.allclose(recorded_mean, calculated_mean, atol=1e-7, equal_nan=True), (
+        "\nmean max error: {}".format(
+            (recorded_mean - calculated_mean).abs().max())
+        + "\ncalculated mean: \n{}".format(calculated_mean)
+        + "\nrecorded mean: \n{}".format(recorded_mean)
+    )
+    assert torch.allclose(recorded_var, calculated_var, equal_nan=True), (
+        "\nvar max error: {}".format(
+            (recorded_var - calculated_var).abs().max())
+        + "\ncalculated var: \n{}".format(calculated_var)
+        + "\nrecorded var: \n{}".format(recorded_var)
+    )
 
 
 def search_drive(path):
@@ -416,28 +482,3 @@ def subplots_labels(x_labels, y_labels):
                ylabel=y_labels[i // len(y_labels)])
     for ax in plt.gcf().axes:
         ax.label_outer()
-
-
-def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
-    # check for infinites/nans where they shouldn't be
-    if cc_n is not None:
-        assert recorded_mean[cc_n.squeeze() != 0].isfinite().all(), \
-            "recorded mean has invalid entries"
-        assert recorded_var[cc_n.squeeze() != 0].isfinite().all(), \
-            "recorded var has invalid entries"
-
-    assert recorded_mean.shape == calculated_mean.shape, \
-        "\ncalculated mean shape: {}".format(calculated_mean.shape) \
-        + "\nrecorded mean shape: {}".format(recorded_mean.shape)
-    assert recorded_var.shape == calculated_var.shape, \
-        "\ncalculated var shape: {}".format(calculated_var.shape) \
-        + "\nrecorded var shape: {}".format(recorded_var.shape)
-
-    assert torch.allclose(recorded_mean, calculated_mean, atol=1e-7, equal_nan=True), ""\
-        + "\nmean error: {}".format(torch.norm(recorded_mean - calculated_mean))
-    # + "\ncalculated mean: \n{}".format(calculated_mean) \
-    # + "\nrecorded mean: \n{}".format(recorded_mean) \
-    assert torch.allclose(recorded_var, calculated_var, equal_nan=True), ""\
-        + "\nvar error: {}".format(torch.norm(recorded_var - calculated_var))
-    # + "\ncalculated var: \n{}".format(calculated_var) \
-    # + "\nrecorded var: \n{}".format(recorded_var) \

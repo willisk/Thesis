@@ -38,18 +38,17 @@ shared.init_summary_writer(log_dir=LOGDIR)
 
 # dataset = datasets.Dataset2D(type=3)
 dataset = datasets.DatasetCifar10(
-    load_dataset=True
+    load_dataset=False
 )
 
 # stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
-# stats_net = dataset.load_statsnet(net=ResNet34(),
-#                                   name="resnet34-pretrained",
-#                                   resume_training=False,
-#                                   use_drive=True,
-#                                   )
+stats_net = dataset.load_statsnet(net=ResNet34(),
+                                  name="resnet34-pretrained",
+                                  resume_training=False,
+                                  use_drive=True,
+                                  )
 # dataset.print_accuracy(stats_net)
 
-print("================ INITED =======================")
 # stats_net.disable_hooks()
 # stats_net(torch.randn([5] + list(stats_net.input_shape)))
 # stats_net.enable_hooks()
@@ -64,21 +63,12 @@ print("================ INITED =======================")
 
 # verify stats
 
-# for h in stats_net.hooks.values():
-#     m = h.modulex[0]
-#     if isinstance(m, torch.nn.BatchNorm2d):
-#         print("layer {}".format(h.name))
-#         h_mean, h_var, h_cc = utility.reduce_mean_var(
-#             h.running_mean, h.running_var, h.class_count)
-#         utility.assert_mean_var(
-#             # h.running_mean[0], h.running_var[0],
-#             m.running_mean, m.running_var,
-#             h_mean, h_var, h_cc)
-#         print("layer {} asserted.".format(h.name))
+# print("layer {} asserted.".format(h.name))
 
 # stats = stats_net.collect_stats()[0]
 # mean = stats['running_mean']
 # var = stats['running_var']
+print("================ INITED =======================")
 
 import torch.nn as nn
 
@@ -88,8 +78,8 @@ class CNet(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = nn.Conv2d(
-            3, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(64, momentum=None)
+            3, 16, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(16, momentum=0.1)
 
     def forward(self, inputs):
         x = inputs
@@ -101,41 +91,58 @@ class CNet(nn.Module):
         # print("verifying with batch size {}".format(len(x)))
         x = self.conv1(x)
 
-        # labels = h.state().current_labels
-        # shape = h.running_mean.shape
-        # new_mean, new_var, m = utility.c_mean_var(x.detach(), labels, shape)
+        # calculate true BATCH mean, var
+        # batch_mean, batch_var = utility.batch_feature_mean_var(x.detach())
 
-        batch_mean, batch_var = utility.batch_feature_mean_var(x)
         x = self.bn1(x)
-
         bn_mean, bn_var = self.bn1.running_mean, self.bn1.running_var
 
-        # print("new_mean [1] calculated again, ", new_mean[1])
-        # print("bn_mean  ", bn_mean)
-
         h = next(iter(self.bn1._forward_hooks.values())).__self__
+        # labels = h.state().current_labels
+        # shape = h.running_mean.shape
 
         h_mean, h_var, h_cc = utility.reduce_mean_var(
             h.running_mean, h.running_var, h.class_count)
+
+        # calculated CC_MEAN
+        # cc_mean, cc_var, cc_n = utility.c_mean_var(
+        #     x.detach(), labels, shape)
+        # h_mean, h_var, h_cc = utility.reduce_mean_var(cc_mean, cc_var, cc_n)
+
+        if not h_var.isfinite().all():
+            try:
+                utility.assert_mean_var(
+                    # batch_mean, batch_var,
+                    h_mean, h_var,
+                    bn_mean, bn_var,
+                )
+            except Exception as e:
+                print(e)
+        # print("Assertion passed")
+
+        # # print("new_mean [1] calculated again, ", new_mean[1])
+        # # print("bn_mean  ", bn_mean)
 
         # print("Assert true batch mean close to stats recorded mean")
         # utility.assert_mean_var(
         #     batch_mean, batch_var,
         #     h_mean, h_var, h_cc)
 
-        utility.nan_to_zero_(h_mean)
-        utility.nan_to_one_(h_var)
+        # utility.nan_to_zero_(h_mean)
+        # utility.nan_to_one_(h_var)
 
         # print("Assert bn.running_mean close to tracked and reduced mean")
 
-        try:
-            utility.assert_mean_var(
-                bn_mean, bn_var,
-                batch_mean, batch_var,
-                # h_mean, h_var
-            )
-        except Exception as e:
-            print(e)
+        # print("mean max error: {}".format(
+        #     (bn_mean - h_mean).abs().max()))
+        # print("var max error: {}".format(
+        #     (bn_var - h_var).abs().max()))
+        # print("\tbn_var min {} max {}".format(bn_var.min(), bn_var.max()))
+        # print("\th_var min {} max {}".format(h_var.min(), h_var.max()))
+        # print("\tbn_var min {} max {}".format(
+        #     int(bn_var.min()), int(bn_var.max())))
+        # print("\th_var min {} max {}".format(
+        #     int(h_var.min()), int(h_var.max())))
 
         return x
 
@@ -151,10 +158,25 @@ net.train()
 
 # h = next(iter(stats_net.net.bn1._forward_hooks.values())).__self__
 # h.reset()
+n_classes = 10
+n_features = 3
+data_shape = [n_features, 32, 32]
 
-for inputs, labels in dataset.train_loader():
-    stats_net.current_labels = labels
-    stats_net.net.forward_verify(inputs)
+# stats_net.init_hooks(torch.zeros([1] + data_shape))
+# data = [torch.empty([0] + data_shape)] * n_classes
+
+# for inputs, labels in dataset.train_loader():
+for i in range(1000):
+    n_samples = torch.randint(10, 101, size=(1,)).item()
+    new_data = torch.randn(n_samples, *data_shape) * 10 + 100
+    new_labels = torch.randint(n_classes, size=(n_samples,))
+    # print("incoming data shape: ", new_data.shape)
+    stats_net.current_labels = new_labels
+    stats_net.net.forward_verify(new_data)
+
+    # x = new_data
+    # x = self.bn1(x)
+    # bn_mean, bn_var = self.bn1.running_mean, self.bn1.running_var
 
 
 # meanx, varx = utility.batch_feature_mean_var(X)

@@ -23,7 +23,7 @@ def betabinom_distr(N, a=1, b=1):
 
 def inversion_loss(stats_net, criterion, target_labels,
                    layer_weights=None, regularization=None,
-                   reg_reduction_type='mean',
+                   reg_reduction_type='sum',
                    **hp):
     # if layer_weights is None:
     #     layer_weights = betabinom_distr(

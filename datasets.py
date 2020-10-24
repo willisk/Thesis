@@ -119,6 +119,7 @@ class Dataset(torch.utils.data.Dataset):
             print("CSNet saved: " + csnet_save_path)
 
         stats_net.stop_tracking_stats()
+        stats_net.verify_hooks_finite()
 
         return stats_net
 

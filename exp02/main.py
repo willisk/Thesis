@@ -178,7 +178,7 @@ for hp in utility.dict_product(hyperparameters):
     # set up loss
     loss_fn = deepinversion.inversion_loss(stats_net, criterion, target_labels,
                                            regularization=regularization,
-                                           reg_reduction_type='mean',
+                                           reg_reduction_type='sum',
                                            **hp)
 
     # with torch.no_grad():

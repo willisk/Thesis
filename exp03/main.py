@@ -57,6 +57,7 @@ parser.add_argument("-m", "--method", type=str,
                     choices=['standard', 'paper'], default='standard')
 parser.add_argument("--class_conditional", action="store_true")
 parser.add_argument("--mask_bn", action="store_true")
+parser.add_argument("--use_bn_stats", action="store_true")
 parser.add_argument("--random_labels", action="store_true")
 parser.add_argument("--hp_sweep", action="store_true")
 parser.add_argument("--track_history", action="store_true")
@@ -109,6 +110,7 @@ stats_net = dataset.load_statsnet(net=ResNet34(),
                                   use_drive=args.use_drive
                                   )
 stats_net.bn_masked = args.mask_bn
+stats_net.use_bn_stats = args.use_bn_stats
 stats_net.class_conditional = args.class_conditional
 stats_net.method = args.method
 
@@ -150,8 +152,9 @@ if args.hp_sweep:
 else:
     hyperparameters = dict(
         method=[args.method],
-        mask_bn=[args.mask_bn],
         cc=[args.class_conditional],
+        mask_bn=[args.mask_bn],
+        use_bn_stats=[args.use_bn_stats],
         n_steps=[args.n_steps],
         batch_size=[args.batch_size],
         learning_rate=[args.learning_rate],
@@ -233,7 +236,7 @@ for hp in utility.dict_product(hyperparameters):
     # set up loss
     loss_fn = deepinversion.inversion_loss(stats_net, criterion, target_labels,
                                            regularization=regularization,
-                                           reg_reduction_type='mean',
+                                           reg_reduction_type='sum',
                                            **hp)
 
     invert = deepinversion.deep_inversion(inputs,
