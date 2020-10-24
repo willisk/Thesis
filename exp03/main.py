@@ -200,7 +200,8 @@ for hp in utility.dict_product(hyperparameters):
     if args.hp_sweep and not any([hp['factor_input'], hp['factor_layer'], hp['factor_criterion'], hp['factor_reg']]):
         continue
 
-    if not args.force and os.path.exists(fig_path + ".png"):
+    if not args.force and os.path.exists(fig_path + ' step={}'.format(hp['n_steps']) + ".png"):
+        print("Experiment already run, skipping.")
         continue
 
     target_labels = (torch.arange(hp['batch_size']) %
