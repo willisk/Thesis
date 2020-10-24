@@ -125,8 +125,14 @@ class StatsHook(nn.Module):
 
             if STATE.method == 'paper':
                 # scalar
-                r_feature = (torch.norm(running_mean - batch_mean, 2)
-                             + torch.norm(running_var - batch_var, 2))
+                if STATE.class_conditional:
+                    diff_mean = (running_mean - batch_mean).mean(dim=0)
+                    diff_var = (running_var - batch_var).mean(dim=0)
+                else:
+                    diff_mean = running_mean - batch_mean
+                    diff_var = running_var - batch_var
+                r_feature = (torch.norm(diff_mean, 2)
+                             + torch.norm(diff_var, 2))
                 self.regularization = r_feature
             else:
                 # either [n_chan] or [BS, n_chan]
