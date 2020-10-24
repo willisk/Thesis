@@ -127,6 +127,7 @@ class StatsHook(nn.Module):
                 # scalar
                 r_feature = (torch.norm(running_mean - batch_mean, 2)
                              + torch.norm(running_var - batch_var, 2))
+                self.regularization = r_feature
             else:
                 # either [n_chan] or [BS, n_chan]
                 r_feature = (batch_mean - running_mean)**2 / running_var
