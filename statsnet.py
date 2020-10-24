@@ -102,8 +102,10 @@ class StatsHook(nn.Module):
                 running_mean, running_var = self.running_mean[labels], self.running_var[labels]
 
                 # shape: [BS, n_chan]
-                batch_mean = x.mean([2, 3])
-                batch_var = x.var([2, 3])
+                batch_mean, batch_var = utility.batch_feature_mean_var(x, keep_dims=[
+                                                                       0, 1])
+                # batch_mean = x.mean([2, 3])
+                # batch_var = x.var([2, 3])
             else:
                 if not hasattr(self, 'reduced_mean'):
                     self.reduced_mean, self.reduced_var, _ = utility.reduce_mean_var(
@@ -116,8 +118,9 @@ class StatsHook(nn.Module):
                     running_mean, running_var = module.running_mean, module.running_var
 
                 # shape: [n_chan]
-                batch_mean = x.mean([0, 2, 3])
-                batch_var = x.var([0, 2, 3])
+                batch_mean, batch_var = utility.batch_feature_mean_var(x)
+                # batch_mean = x.mean([0, 2, 3])
+                # batch_var = x.var([0, 2, 3])
 
             # necessary?
             running_mean = running_mean.data.type(batch_mean.type())

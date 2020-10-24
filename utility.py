@@ -125,9 +125,10 @@ def nan_to_zero(x):
     return x
 
 
-def batch_feature_mean_var(x, dim=1, unbiased=True):
+def batch_feature_mean_var(x, keep_dims=[1], unbiased=True):
     dims_collapse = list(range(len(x.shape)))
-    dims_collapse.remove(dim)
+    for dim in keep_dims:
+        dims_collapse.remove(dim)
     mean = x.mean(dims_collapse)
     var = x.var(dims_collapse, unbiased=unbiased)
     # var = x.var(dims_collapse, unbiased=False)
