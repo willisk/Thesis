@@ -257,7 +257,7 @@ class CStatsNet(nn.Module):
     def disable_hooks(self):
         self.enabled = False
 
-    def hooks_verify_finite(self):
+    def verify_hooks_finite(self):
         for h in self.hooks.values():
             assert h.running_mean.isfinite().all(), "{h.name} not finite mean"
             assert h.running_var.isfinite().all(), "{h.name} not finite var"
