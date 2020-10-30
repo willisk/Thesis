@@ -109,7 +109,7 @@ def deep_inversion(inputs,
 
         # scaler.unscale_(optimizer)
         writer.add_scalar('grad_norm',
-                          (inputs_orig.grad * scaler.get_scale()).norm(2), step)
+                          (inputs_orig.grad / scaler.get_scale()).norm(2), step)
 
         scaler.step(optimizer)
         scaler.update()
