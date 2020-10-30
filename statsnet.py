@@ -102,6 +102,7 @@ class StatsHook(nn.Module):
                 running_mean, running_var = self.running_mean[labels], self.running_var[labels]
 
                 # shape: [BS, n_chan]
+                # XXX: Should partition batches by class and match statistics
                 batch_mean, batch_var = utility.batch_feature_mean_var(x, keep_dims=[
                                                                        0, 1])
                 # batch_mean = x.mean([2, 3])

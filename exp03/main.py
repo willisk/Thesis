@@ -55,12 +55,13 @@ parser.add_argument("-da", "--distr_a", type=float, default=1)
 parser.add_argument("-db", "--distr_b", type=float, default=1)
 parser.add_argument("-m", "--method", type=str,
                     choices=['standard', 'paper'], default='standard')
-parser.add_argument("--class_conditional", action="store_true")
+parser.add_argument("-cc", "--class_conditional", action="store_true")
 parser.add_argument("--mask_bn", action="store_true")
 parser.add_argument("--use_bn_stats", action="store_true")
 parser.add_argument("--random_labels", action="store_true")
 parser.add_argument("--hp_sweep", action="store_true")
 parser.add_argument("--track_history", action="store_true")
+parser.add_argument("--no_save", action="store_true")
 parser.add_argument("--track_history_every", type=int, default=10)
 parser.add_argument("-f", "--force", action="store_true")
 
@@ -89,7 +90,7 @@ if not os.path.exists(FIGDIR):
 
 # Tensorboard summary writer
 shared.init_summary_writer(log_dir=LOGDIR)
-tb = shared.get_summary_writer("main")
+writer = shared.get_summary_writer("main")
 
 
 # set seed
@@ -97,7 +98,7 @@ np.random.seed(0)
 torch.manual_seed(0)
 
 
-dataset = datasets.DatasetCifar10(load_dataset=True)
+dataset = datasets.DatasetCifar10(load_dataset=False)
 # dataset = datasets.Dataset2D(type=3)
 
 stats_net = dataset.load_statsnet(net=ResNet34(),
@@ -109,14 +110,15 @@ stats_net.bn_masked = args.mask_bn
 stats_net.use_bn_stats = args.use_bn_stats
 stats_net.class_conditional = args.class_conditional
 stats_net.method = args.method
+stats_net.eval()
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 stats_net.to(DEVICE)
 
-if USE_AMP:
-    data_type = torch.half
-else:
-    data_type = torch.float
+# if USE_AMP:
+#     data_type = torch.half
+# else:
+#     data_type = torch.float
 
 # dataset.print_accuracy(stats_net)
 
@@ -130,37 +132,37 @@ criterion = dataset.get_criterion()
 
 # hyperparameters
 
-if args.hp_sweep:
-    hyperparameters = dict(
-        method=[args.method],
-        mask_bn=[args.mask_bn],
-        cc=[args.class_conditional],
-        n_steps=[args.n_steps],
-        batch_size=[32],
-        learning_rate=[0.01],
-        factor_criterion=[1, 0],
-        factor_reg=[0.001, 0.0001, 0],
-        factor_input=[0.001, 0.0001, 0],
-        factor_layer=[0.01, 0.001, 0.0001, 0],
-        distr_a=[1],
-        distr_b=[1],
-    )
-else:
-    hyperparameters = dict(
-        method=[args.method],
-        cc=[args.class_conditional],
-        mask_bn=[args.mask_bn],
-        use_bn_stats=[args.use_bn_stats],
-        n_steps=[args.n_steps],
-        batch_size=[args.batch_size],
-        learning_rate=[args.learning_rate],
-        factor_reg=[args.factor_reg],
-        factor_input=[args.factor_input],
-        factor_layer=[args.factor_layer],
-        factor_criterion=[args.factor_criterion],
-        distr_a=[args.distr_a],
-        distr_b=[args.distr_b],
-    )
+# if args.hp_sweep:
+#     hyperparameters = dict(
+#         method=[args.method],
+#         mask_bn=[args.mask_bn],
+#         cc=[args.class_conditional],
+#         n_steps=[args.n_steps],
+#         batch_size=[32],
+#         learning_rate=[0.01],
+#         factor_criterion=[1, 0],
+#         factor_reg=[0.001, 0.0001, 0],
+#         factor_input=[0.001, 0.0001, 0],
+#         factor_layer=[0.01, 0.001, 0.0001, 0],
+#         distr_a=[1],
+#         distr_b=[1],
+#     )
+# else:
+hyperparameters = dict(
+    method=[args.method],
+    cc=[args.class_conditional],
+    mask_bn=[args.mask_bn],
+    use_bn_stats=[args.use_bn_stats],
+    n_steps=[args.n_steps],
+    batch_size=[args.batch_size],
+    learning_rate=[args.learning_rate],
+    factor_reg=[args.factor_reg],
+    factor_input=[args.factor_input],
+    factor_layer=[args.factor_layer],
+    factor_criterion=[args.factor_criterion],
+    distr_a=[args.distr_a],
+    distr_b=[args.distr_b],
+)
 
 
 def projection(x):
@@ -195,7 +197,7 @@ for hp in utility.dict_product(hyperparameters):
     print(comment)
 
     fig_path = os.path.join(FIGDIR, comment)
-    tb = shared.get_summary_writer(comment)
+    writer = shared.get_summary_writer(comment)
 
     if args.hp_sweep and not any([hp['factor_input'], hp['factor_layer'], hp['factor_criterion'], hp['factor_reg']]):
         continue
@@ -216,19 +218,19 @@ for hp in utility.dict_product(hyperparameters):
                          )
     optimizer = optim.Adam([inputs], lr=hp['learning_rate'])
 
-    if USE_AMP:
-        stats_net, optimizer = amp.initialize(
-            stats_net, optimizer, opt_level='O1', loss_scale='dynamic')
+    # if USE_AMP:
+    #     stats_net, optimizer = amp.initialize(
+    #         stats_net, optimizer, opt_level='O1', loss_scale='dynamic')
 
-    stats_net.eval()  # important, otherwise generated images will be non natural
-    if USE_AMP:
-        # need to do this trick for FP16 support of batchnorms
-        stats_net.train()
-        for module in stats_net.modules():
-            if isinstance(module, torch.nn.BatchNorm2d):
-                module.eval().half()
+    # stats_net.eval()  # important, otherwise generated images will be non natural
+    # if USE_AMP:
+    #     # need to do this trick for FP16 support of batchnorms
+    #     stats_net.train()
+    #     for module in stats_net.modules():
+    #         if isinstance(module, torch.nn.BatchNorm2d):
+    #             module.eval().half()
 
-    stats_net.eval()
+    # stats_net.eval()
 
     # set up loss
     loss_fn = deepinversion.inversion_loss(stats_net, criterion, target_labels,
@@ -248,10 +250,11 @@ for hp in utility.dict_product(hyperparameters):
                                           )
 
     # # dataset.plot(stats_net)
-    target_labels = target_labels.cpu()
-    for im, step in invert:
-        vutils.save_image(im.data, fig_path + ' step={}'.format(step) + '.png',
-                          normalize=True, scale_each=True, nrow=10)
+    if not args.no_save:
+        target_labels = target_labels.cpu()
+        for im, step in invert:
+            vutils.save_image(im.data, fig_path + ' step={}'.format(step) + '.png',
+                              normalize=True, scale_each=True, nrow=10)
     # frames = dataset.plot_history(invert, target_labels)
 
     # if len(frames) > 1:  # animated gif
@@ -264,17 +267,17 @@ for hp in utility.dict_product(hyperparameters):
     #         anim.save(fig_path + ".gif", writer=PillowWriter())
     #         FileLink(fig_path + ".gif")
     #         dataset.plot_history([invert[-1]], target_labels)
-    #         tb.add_figure("DeepInversion", plt.gcf(), close=False)
+    #         writer.add_figure("DeepInversion", plt.gcf(), close=False)
     #         plt.savefig(fig_path + ".png")
     #         plt.close()
     #     display(anim)
     # else:
     #     if args.save_images:
-    #         tb.add_figure("DeepInversion", plt.gcf(), close=False)
+    #         writer.add_figure("DeepInversion", plt.gcf(), close=False)
     #         plt.savefig(fig_path + ".png")
     #     plt.show()
 
-# tb.add_figure("Data Reconstruction", plt.gcf(), close=False)
+# writer.add_figure("Data Reconstruction", plt.gcf(), close=False)
 # plt.show()
 
-tb.close()
+writer.close()

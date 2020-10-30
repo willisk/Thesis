@@ -13,6 +13,19 @@ from collections.abc import Iterable
 import time
 
 
+class timer():
+    def __init__(self):
+        self.time = time.perf_counter()
+
+    def minutes_passed(self, mins=1):
+        t = time.perf_counter()
+        m = (t - self.time) // 60
+        if m >= mins:
+            self.time = t
+            return True
+        return False
+
+
 def timing(f):
     @wraps(f)
     def wrap(*args, **kwargs):

@@ -1,5 +1,8 @@
+import utility
 from utility import timing
+import shared
 
+from torch.cuda.amp import autocast, GradScaler
 from scipy.stats import betabinom
 
 try:
@@ -69,50 +72,55 @@ def deep_inversion(inputs,
                    projection=None,
                    track_history=False,
                    track_history_every=1,
+                   print_every_n_min=1,
                    ):
 
-    # tb = shared.get_summary_writer()
+    writer = shared.get_summary_writer()
+    timer = utility.timer()
 
     stats_net.stop_tracking_stats()
 
-    if projection is not None:
-        inputs = projection(inputs)
-
-    inputs.requires_grad = True
-
-    # tb.add_scalar('DI/slope', slope)
-    # tb.add_scalar('DI/', accuracy, epoch)
+    scaler = GradScaler()
 
     if track_history:
-        history = []
-        history.append((inputs.detach().cpu().clone(), 0))
+        history = [(inputs.detach().cpu().clone(), 0)]
 
     inputs_orig = inputs
+    inputs.requires_grad = True
 
     for step in range(1, steps + 1):
 
         inputs = inputs_orig
+
         if perturbation is not None:
             inputs = perturbation(inputs)
 
         optimizer.zero_grad()
-        stats_net.zero_grad()
+        stats_net.zero_grad()  # ??? why
 
-        loss = loss_fn(inputs)
+        with autocast():
+            loss = loss_fn(inputs)
 
-        if USE_AMP:
-            with amp.scale_loss(loss, optimizer) as scaled_loss:
-                scaled_loss.backward()
-        else:
-            loss.backward()
+        # if USE_AMP:
+        #     with amp.scale_loss(loss, optimizer) as scaled_loss:
+        #         scaled_loss.backward()
+        # else:
+        scaler.scale(loss).backward()
 
-        optimizer.step()
+        # scaler.unscale_(optimizer)
+        writer.add_scalar('grad_norm',
+                          (inputs_orig.grad * scaler.get_scale()).norm(2), step)
+
+        scaler.step(optimizer)
+        scaler.update()
 
         if projection is not None:
             inputs = projection(inputs)
 
         if track_history and (step % track_history_every == 0 or step == steps):
             history.append((inputs.detach().cpu().clone(), step))
+
+        if timer.minutes_passed(print_every_n_min):
             print(f"It {step}\t Losses: total: {loss.item():3.3f}")
 
     if track_history:
