@@ -25,7 +25,7 @@ class StatsRecorder:
             self.mean = torch.zeros(shape)
             self.var = torch.zeros(shape)
             self.mean, self.var, self.n = utility.c_mean_var(
-                data, labels, shape)
+                data, labels, n_classes)
 
             self.initialized = True
 
@@ -33,8 +33,7 @@ class StatsRecorder:
         if not self.initialized:
             self.__init__(self.n_classes, data, labels)
         else:
-            shape = self.mean.shape
-            new_mean, new_var, m = utility.c_mean_var(data, labels, shape)
+            new_mean, new_var, m = utility.c_mean_var(data, labels, self.n_classes)
             old_mean, old_var, n = self.mean, self.var, self.n
 
             self.mean, self.var, self.n = utility.combine_mean_var(old_mean, old_var, n,

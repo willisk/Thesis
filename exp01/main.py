@@ -44,7 +44,7 @@ dataset = datasets.DatasetCifar10(
 # stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
 stats_net = dataset.load_statsnet(net=ResNet34(),
                                   name="resnet34-pretrained",
-                                  resume_training=False,
+                                  resume_training=True,
                                   use_drive=True,
                                   )
 # dataset.print_accuracy(stats_net)

@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors
 from matplotlib import gridspec
 
 import torch
@@ -11,6 +12,10 @@ from functools import reduce, wraps
 from itertools import product
 from collections.abc import Iterable
 import time
+
+from tqdm.auto import tqdm
+# if sys.argv[0] == 'ipykernel_launcher':
+#     from tqdm import tqdm_notebook as tqdm
 
 
 class timer():
@@ -80,12 +85,24 @@ def expand_as_r(a, b):
     return a.reshape(shape)
 
 
+def print_accuracy(X, Y, net, str_format=None):
+    predictions = net.predict(X)
+    accuracy = (predictions == Y).type(torch.float).mean()
+    accuracy = f"{accuracy * 100:.0f}%"
+    if str_format is None:
+        print(f"Accuracy: {accuracy}")
+    else:
+        print(str_format.format(accuracy=accuracy))
+
+
 def combine_mean_var(mean_a, var_a, n_a, mean_b, var_b, n_b):
-    n = n_a + n_b
+    n_a = expand_as_r(n_a, mean_a)
+    n_b = expand_as_r(n_b, mean_a)
     mean_a = nan_to_zero(mean_a)
     mean_b = nan_to_zero(mean_b)
     var_a = nan_to_zero(var_a)
     var_b = nan_to_zero(var_b)
+    n = n_a + n_b
     mean = (n_a * mean_a + n_b * mean_b) / n
     # assert mean[n.squeeze() != 0].isfinite().all(), \
     #     "mean not finite \n{}".format(mean)
@@ -142,14 +159,15 @@ def batch_feature_mean_var(x, keep_dims=[1], unbiased=True):
     dims_collapse = list(range(len(x.shape)))
     for dim in keep_dims:
         dims_collapse.remove(dim)
+    if dims_collapse == []:
+        return x, torch.zeros_like(x, device=x.device)
     mean = x.mean(dims_collapse)
     var = x.var(dims_collapse, unbiased=unbiased)
-    # var = x.var(dims_collapse, unbiased=False)
     return mean, var
 
 
-def c_mean_var_bn(data, labels, shape):
-
+def c_mean_var(data, labels, num_classes):
+    shape = (num_classes, data.shape[1])
     mean = torch.zeros(shape)
     var = torch.ones(shape)
     n = torch.zeros(shape[0])
@@ -160,12 +178,15 @@ def c_mean_var_bn(data, labels, shape):
         mean[c], var[c] = batch_feature_mean_var(c_data, unbiased=False)
         n[c] = mask.sum()
 
-    n = expand_as_r(n, mean)
-
     return mean, var, n
 
 
-def c_mean_var(data, labels, shape):
+def class_count_(n, labels):
+    for c in set(labels):
+        n[c] += (labels == c).to(n.dtype).sum()
+
+
+def c_mean_var_old(data, labels, shape):
     # used in iteration over batches, skip channels
     # d.shape: [n_chan, ..]
     dims_collapse = list(range(len(data.shape)))[1:-1]
@@ -238,12 +259,10 @@ def search_drive(path):
 
 
 def train(net, data_loader, criterion, optimizer,
-          num_epochs=1, print_every=1, save_every=1,
+          num_epochs=1, save_every=10,
           model_path=None, use_drive=False,
-          resume_training=False, verbose=0):
+          resume_training=False):
     "Training Loop"
-
-    net.train()
 
     if model_path is not None:
         if use_drive:
@@ -268,82 +287,81 @@ def train(net, data_loader, criterion, optimizer,
         print("No Checkpoint found.")
         init_epoch = 1
 
-    print("Beginning training.")
+    # validation = True
+    # if validation:
+    #     len_train = int(len(data_loader) * 0.8)
+    #     len_val = len(data_loader) - len_train
+    #     train_set, val_set = torch.utils.data.random_split(data_loader, [len_train, len_val])
+    #     print("Splitting Dataset.")
+    #     print(f"size_train {len(train_set)}, size_val {len(val_set)}")
+    net.train()
 
-    for epoch in range(init_epoch, init_epoch + num_epochs):
+    print("Beginning training.", flush=True)
 
-        saved_epoch = False
+    with tqdm(range(init_epoch, init_epoch + num_epochs), desc="Epoch") as t_bar:
+        saved_epoch = 0
+        for epoch in t_bar:
+            total_count = 0.0
+            total_loss = 0.0
+            total_correct = 0.0
 
-        total_count = 0.0
-        total_loss = 0.0
-        total_correct = 0.0
+            for data in data_loader:
+                inputs, labels = data
 
-        for data in data_loader:
-            inputs, labels = data
+                optimizer.zero_grad()
 
-            optimizer.zero_grad()
+                outputs = net(inputs)
+                loss = criterion(outputs, labels)
+                loss.backward()
+                optimizer.step()
 
-            outputs = net(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+                batch_size = len(inputs)
+                total_count += batch_size
+                total_loss += loss.item() * batch_size
+                total_correct += count_correct(outputs, labels)
 
-            batch_size = len(inputs)
-            total_count += batch_size
-            total_loss += loss.item() * batch_size
-            total_correct += count_correct(outputs, labels)
+                # if verbose == 1:
+                #     print("{batch %d} avg-loss: %.3f, avg-accuracy: %.3f" %
+                #         (total_count / batch_size, total_loss / total_count, total_correct / total_count))
 
-            if verbose == 1:
-                print("{batch %d} avg-loss: %.3f, avg-accuracy: %.3f" %
-                      (total_count / batch_size, total_loss / total_count, total_correct / total_count))
+            accuracy = (total_correct / total_count).item()
+            # tb.add_scalar('Loss/train', total_loss, epoch)
+            # tb.add_scalar('Accuracy/train', accuracy, epoch)
 
-        accuracy = total_correct / total_count
-        # tb.add_scalar('Loss/train', total_loss, epoch)
-        # tb.add_scalar('Accuracy/train', accuracy, epoch)
+            # if epoch % print_every == 0:
+            #     print("[%d / %d] loss: %.3f, accuracy: %.3f" %
+            #         (epoch, init_epoch + num_epochs - 1, total_loss, accuracy))
 
-        if epoch % print_every == 0:
-            print("[%d / %d] loss: %.3f, accuracy: %.3f" %
-                  (epoch, init_epoch + num_epochs - 1, total_loss, accuracy))
+            if save_path is not None \
+                and (save_every is not None
+                     and epoch % save_every == 0
+                     or epoch == init_epoch + num_epochs - 1):
+                torch.save({
+                    'epoch': epoch,
+                    'net_state_dict': net.state_dict(),
+                }, save_path)
+                saved_epoch = epoch
 
-        if save_every is not None \
-                and epoch % save_every == 0 \
-                and save_path is not None:
-            torch.save({
-                'epoch': epoch,
-                'net_state_dict': net.state_dict(),
-            }, save_path)
-            print("Checkpoint saved: " + save_path)
-            saved_epoch = True
-
-    if save_path is not None and not saved_epoch:
-        torch.save({
-            'epoch': epoch,
-            'net_state_dict': net.state_dict(),
-        }, save_path)
-        print("Checkpoint saved: " + save_path)
+            t_bar.set_postfix(
+                loss=total_loss, accuracy=f"{accuracy*100:.0f}%", saved_epoch=saved_epoch)
 
     print("Finished Training")
 
 
-def learn_stats(stats_net, data_loader, num_epochs=1):
+def learn_stats(stats_net, data_loader):
 
     stats_net.start_tracking_stats()
 
-    batch_total = 1
-
     print("Beginning tracking stats.")
 
-    for epoch in range(1, num_epochs + 1):
-
-        for batch_i, data in enumerate(data_loader, batch_total):
+    with torch.no_grad(), tqdm(data_loader, desc="Batch") as t_bar:
+        for data in t_bar:
             inputs, labels = data
             x = {'inputs': inputs,
                  'labels': labels}
             stats_net(x)
 
-        batch_total = batch_i + 1
-
-    print("Finished Tracking Stats")
+    print("Finished Tracking Stats.")
 
 
 def scatter_matrix(data, labels,
@@ -418,7 +436,7 @@ def plot_contourf(x_min, x_max, y_min, y_max, func, n_grid=400, cmap='Spectral',
             plt.contour(xx, yy, Z, cmap=cmap, levels=levels, linewidths=0.3)
         else:
             plt.contour(xx, yy, Z, colors='k', linewidths=0.5)
-    if colorbar:
+    if levels is not None:
         plt.colorbar(cf)
 
 
@@ -496,3 +514,53 @@ def subplots_labels(x_labels, y_labels):
                ylabel=y_labels[i // len(y_labels)])
     for ax in plt.gcf().axes:
         ax.label_outer()
+
+
+def categorical_colors(num_classes):
+    cmap = matplotlib.cm.get_cmap('Spectral')
+    if num_classes == 1:
+        return ['k']
+    return cmap(np.arange(num_classes) / (num_classes - 1.))
+
+
+# cmaps = ['Reds_r', 'Blues_r']
+def categorical_cmaps(num_classes):
+    return [matplotlib.colors.LinearSegmentedColormap.from_list("", [categorical_colors(num_classes)[c], "white"])
+            for c in range(num_classes)]
+
+
+def DKL(P, Q, n_samples=1e4):
+    X = P.sample(n_samples)
+    return P.score(X) - Q.score(X)
+
+
+def JS(P, Q, n_samples=1e4):
+    M = P + Q
+    return 1 / 2 * (DKL(P, M, n_samples) + DKL(Q, M, n_samples))
+
+
+# stupid matplotlib....
+from matplotlib.axes._axes import _log as matplotlib_axes_logger
+matplotlib_axes_logger.setLevel('ERROR')
+
+
+def plot_stats(X, Y=None):
+    if Y is None:
+        if isinstance(X, list):
+            mean, var = [x.mean(dim=0) for x in X], [x.var(dim=0) for x in X]
+        else:
+            mean, var = [X.mean(dim=0)], [X.var(dim=0)]
+    else:
+        mean, var, _ = c_mean_var(X, Y, Y.max() + 1)
+    plot_stats_mean_var(mean, var)
+
+
+def plot_stats_mean_var(mean, var):
+    num_classes = len(mean)
+    colors = categorical_colors(num_classes)
+    Ellipse = matplotlib.patches.Ellipse
+    for m, v, c in zip(mean, var, colors):
+        s = torch.sqrt(v) * 2
+        ell = Ellipse(m, s[0], s[1], edgecolor=c, lw=1, fill=False)
+        plt.gca().add_artist(ell)
+        plt.scatter(m[0], m[1], color=c, edgecolors='k', marker='^')

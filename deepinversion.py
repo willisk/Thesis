@@ -1,15 +1,10 @@
-import utility
-from utility import timing
 import shared
 
+import torch
 from torch.cuda.amp import autocast, GradScaler
 from scipy.stats import betabinom
 
-try:
-    from apex import amp
-    USE_AMP = True
-except ImportError:
-    USE_AMP = False
+from tqdm.auto import tqdm
 
 
 def betabinom_distr(N, a=1, b=1):
@@ -24,10 +19,9 @@ def betabinom_distr(N, a=1, b=1):
 #     out = [factor * e / s for e in exponential]
 #     return out
 
-def inversion_loss(stats_net, criterion, target_labels,
+def inversion_loss(stats_net, criterion, target_labels, hp,
                    layer_weights=None, regularization=None,
-                   reg_reduction_type='sum',
-                   **hp):
+                   reg_reduction_type='mean'):
     # if layer_weights is None:
     #     layer_weights = betabinom_distr(
     #         len(stats_net.hooks) - 1, hp['distr_a'], hp['distr_b'])
@@ -41,88 +35,112 @@ def inversion_loss(stats_net, criterion, target_labels,
         outputs = stats_net({'inputs': x, 'labels': targets})
         criterion_loss = criterion(outputs, targets)
 
-        components = stats_net.get_hook_regularizations()
-        input_reg = components.pop(0)
-        # layer_reg = sum([w * c for w, c in zip(layer_weights, components)])
-        layer_reg = sum(components)
+        r_input, r_components = stats_net.get_hook_regularizations()
+        if layer_weights is not None:
+            r_layer = sum([w * c for w, c in zip(layer_weights, r_components)])
+        else:
+            r_layer = sum(r_components)
 
-        criterion_loss = hp['factor_criterion'] * criterion_loss
-
-        total_loss = 0
+        info = {}
+        loss = torch.Tensor([0])
         if hp['factor_input'] != 0.0:
-            total_loss += hp['factor_input'] * input_reg
+            loss = loss + hp['factor_input'] * r_input
         if hp['factor_layer'] != 0.0:
-            total_loss += hp['factor_layer'] * layer_reg
+            loss = loss + hp['factor_layer'] * r_layer
         if hp['factor_reg'] != 0.0 and regularization is not None:
-            total_loss += hp['factor_reg'] * regularization(x)
+            loss = loss + hp['factor_reg'] * regularization(x)
+        if hp['factor_criterion'] != 0.0:
+            loss = loss + hp['factor_criterion'] * criterion_loss
 
-        total_loss += criterion_loss
+        if reg_reduction_type != "none":
+            info['accuracy'] = (torch.argmax(outputs, dim=1)
+                                == targets).to(torch.float).mean().item()
+            if hp['factor_input'] != 0.0:
+                info['r_input'] = r_input.item()
+            if hp['factor_layer'] != 0.0:
+                info['r_layer'] = r_layer.item()
+            if hp['factor_reg'] != 0.0 and regularization is not None:
+                info['reg'] = regularization.item()
+            if hp['factor_criterion'] != 0.0:
+                info['criterion'] = criterion_loss.item()
+            return loss, info
 
-        return total_loss
+        return loss
     return loss_fn
 
 
-@timing
+# @timing
 def deep_inversion(inputs,
-                   stats_net,
                    loss_fn,
                    optimizer,
                    steps=5,
-                   perturbation=None,
-                   projection=None,
+                   pre_fn=None,
                    track_history=False,
                    track_history_every=1,
-                   print_every_n_min=1,
                    ):
 
     writer = shared.get_summary_writer()
-    timer = utility.timer()
+    # timer = utility.timer()
+    info = {}
 
-    stats_net.stop_tracking_stats()
-
-    scaler = GradScaler()
+    USE_AMP = inputs.device.type == 'gpu'
+    if USE_AMP:
+        scaler = GradScaler()
 
     if track_history:
         history = [(inputs.detach().cpu().clone(), 0)]
+    else:
+        history = []
 
     inputs_orig = inputs
-    inputs.requires_grad = True
 
-    for step in range(1, steps + 1):
+    print("Beginning Inversion.", flush=True)
 
-        inputs = inputs_orig
+    with tqdm(range(1, steps + 1), desc="Step") as t_bar:
+        for step in t_bar:
 
-        if perturbation is not None:
-            inputs = perturbation(inputs)
+            inputs = inputs_orig
 
-        optimizer.zero_grad()
-        stats_net.zero_grad()  # ??? why
+            if pre_fn is not None:
+                inputs = pre_fn(inputs)
 
-        with autocast():
-            loss = loss_fn(inputs)
+            optimizer.zero_grad()
 
-        # if USE_AMP:
-        #     with amp.scale_loss(loss, optimizer) as scaled_loss:
-        #         scaled_loss.backward()
-        # else:
-        scaler.scale(loss).backward()
+            if USE_AMP:
+                with autocast():
+                    result = loss_fn(inputs)
+                    if isinstance(result, tuple):
+                        loss, info = result
+                    else:
+                        loss = result
+                scaler.scale(loss).backward()
+                grad_scale = scaler.get_scale()
+            else:
+                result = loss_fn(inputs)
+                if isinstance(result, tuple):
+                    loss, info = result
+                else:
+                    loss = result
+                loss.backward()
+                grad_scale = 1
 
-        # scaler.unscale_(optimizer)
-        writer.add_scalar('grad_norm',
-                          (inputs_orig.grad / scaler.get_scale()).norm(2), step)
+            # writer.add_scalar('loss', loss.item(), step)
+            # writer.add_scalar(
+            #     'gradient_norm', (inputs_orig.grad / grad_scale).norm(2), step)
 
-        scaler.step(optimizer)
-        scaler.update()
+            if USE_AMP:
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                optimizer.step()
 
-        if projection is not None:
-            inputs = projection(inputs)
+            if track_history and (step % track_history_every == 0 or step == steps):
+                history.append((inputs.detach().cpu().clone(), step))
 
-        if track_history and (step % track_history_every == 0 or step == steps):
-            history.append((inputs.detach().cpu().clone(), step))
+            # if timer.minutes_passed(print_every_n_min):
+            #     print(f"Step {step}\t loss: {loss.item():3.3f}")
+            t_bar.set_postfix(loss=loss.item(), **info)
 
-        if timer.minutes_passed(print_every_n_min):
-            print(f"It {step}\t Losses: total: {loss.item():3.3f}")
+    print(flush=True)
 
-    if track_history:
-        return history
-    return [(inputs.detach().cpu().clone(), step)]
+    return history

@@ -1,17 +1,19 @@
 import os
 import sys
+
 import numpy as np
+from numpy.linalg import det, inv
+
 import matplotlib
 import matplotlib.pyplot as plt
 
+from scipy.special import logsumexp
+from scipy.stats import multivariate_normal, ortho_group
 from sklearn.datasets import make_blobs, make_circles, make_moons, load_iris, load_digits
-
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
-import importlib
 
 PWD = os.path.dirname(os.path.abspath(__file__))
 MODELDIR = os.path.join(PWD, "models")
@@ -19,17 +21,18 @@ DATADIR = os.path.join(PWD, "data")
 
 sys.path.append(PWD)
 
+import nets
 import utility
 import statsnet
-import nets
 import deepinversion
-importlib.reload(utility)
-importlib.reload(statsnet)
-importlib.reload(nets)
-importlib.reload(deepinversion)
+if sys.argv[0] == 'ipykernel_launcher':
+    import importlib
+    importlib.reload(nets)
+    importlib.reload(utility)
+    importlib.reload(statsnet)
+    importlib.reload(deepinversion)
 
-training_params = {'num_epochs': 200,
-                   'print_every': 20}
+training_params = {'num_epochs': 200}
 dataset_gen_params = {'batch_size': 64,
                       'shuffle': True}
 
@@ -46,21 +49,13 @@ class Dataset(torch.utils.data.Dataset):
         return self.X[index], self.Y[index]
 
     def get_num_classes(self):
-        return max(self.Y).item() + 1
-
-    def mean(self):
-        return [self.X[self.Y == y].mean(axis=0)
-                for y in range(self.get_num_classes())]
-
-    def var(self):
-        return [self.X[self.Y == y].var(axis=0)
-                for y in range(self.get_num_classes())]
+        if not hasattr(self, "num_classes"):
+            self.num_classes = max(self.Y).item() + 1
+        return self.num_classes
 
     def print_accuracy(self, net):
-        inputs, labels = torch.Tensor(self.X), torch.Tensor(self.Y)
-        preds = net(inputs).argmax(dim=-1)
-        acc = (preds == labels).type(torch.FloatTensor).mean()
-        print("Accuracy: {:3f}".format(acc))
+        utility.print_accuracy(torch.Tensor(
+            self.X), torch.Tensor(self.Y), net)
 
     def train_loader(self):
         return torch.utils.data.DataLoader(self, **self.dataset_gen_params)
@@ -71,8 +66,8 @@ class Dataset(torch.utils.data.Dataset):
     def full(self):
         return self.X, self.Y
 
-    def get_criterion(self):
-        return nn.CrossEntropyLoss()
+    def get_criterion(self, reduction='mean'):
+        return nn.CrossEntropyLoss(reduction=reduction)
 
     def pretrained_statsnet(self, net, name, resume_training=False, use_drive=False, input_shape=None):
 
@@ -221,9 +216,7 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
                                  'deer', 'dog', 'frog', 'horse', 'ship', 'truck'])
 
         self.training_params['num_epochs'] = 50
-        self.training_params['print_every'] = 1
         self.training_params['save_every'] = 1
-        self.training_params['verbose'] = 1
 
     def full(self):
         X = Y = None
@@ -311,7 +304,6 @@ class Dataset2D(Dataset):
         super().__init__()
 
         self.training_params['num_epochs'] = 500
-        self.training_params['print_every'] = 100
         # self.training_params['save_every'] = 1
 
         if type == 0:
@@ -344,54 +336,164 @@ class Dataset2D(Dataset):
             net, name, resume_training=resume_training, use_drive=use_drive)
         return stats_net
 
-    # def plot_uq(self, stats_net, loss_fn, cmap='bone'):
-
-    #     X, Y = self.X, self.Y
-    #     with torch.no_grad():
-    #         utility.plot_contourf_data(
-    #             X, loss_fn, n_grid=100, scale_grid=1.5, cmap=cmap, levels=30,
-    #             contour=True, colorbar=True)
-    #     plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap='Spectral', alpha=.4)
-
-    def plot(self, net=None):
-        X, Y = self.X, self.Y
-        if net is not None:
+    def plot(self, net=None, data=None, loss_fn=None, cmap='Spectral'):
+        if data is None:
+            X, Y = self.X, self.Y
+        else:
+            X, Y = data['inputs'], data['labels']
+        assert X.shape[1] == 2, "Cannot plot n-dimensional."
+        scale_grid, levels = 1.5, 30
+        if loss_fn is None and net is not None:
+            loss_fn, scale_grid, levels = net.predict, 1, None
+        if loss_fn is not None:
             with torch.no_grad():
-                utility.plot_contourf_data(X, net.predict, contour=True)
-        plt.scatter(X[:, 0], X[:, 1], c=Y.squeeze(), cmap='Spectral', alpha=.4)
+                utility.plot_contourf_data(
+                    X, loss_fn, n_grid=100, scale_grid=scale_grid,
+                    cmap=cmap, levels=levels, contour=True, colorbar=True)
+        plt.scatter(X[:, 0], X[:, 1],
+                    c=Y.squeeze(), cmap='Spectral', alpha=.4)
 
-    def plot_stats(self, stats_net):
-        cmap = matplotlib.cm.get_cmap('Spectral')
+    def plot_stats(self, stats_net=None):
         stats = stats_net.collect_stats()[0]
         mean = stats['running_mean']
         var = stats['running_var']
-
-        size = torch.sqrt(var) * 2
-
-        num_classes = mean.shape[0]
-        # mean = mean.T
-        if num_classes == 1:    # no class_conditional
-            c = 'k'
-        else:
-            colors = cmap(np.arange(num_classes) / (num_classes - 1.))
-        Ellipse = matplotlib.patches.Ellipse
-        for m, v, c in zip(mean, size, colors):
-            ell = Ellipse(m, v[0], v[1], edgecolor=c, lw=1, fill=False)
-            plt.gca().add_artist(ell)
-            plt.scatter(m[0], m[1], color=c,
-                        edgecolors='k', alpha=0.5,
-                        marker='^')
+        utility.plot_stats(mean, var)
 
     def plot_history(self, history, labels):
         data_list = [d for d, i in history]
         data = torch.stack(data_list, dim=-1)
-        cmap = matplotlib.cm.get_cmap('Spectral')
+        cmaps = utility.categorical_colors(self.get_num_classes())
         labels_max = max(labels).float().item()
         for i, d in enumerate(data):
-            c = cmap(labels[i].item() / labels_max)
+            c = cmaps[int(labels[i].item())]
             plt.plot(d[0], d[1], '--', c=c, linewidth=0.7, alpha=1)
             plt.plot(d[0], d[1], '.', c='k', markersize=2, alpha=1)
         x = data_list[-1].detach().T
         plt.scatter(x[0], x[1], c='k', alpha=1, marker='x')
         plt.scatter(x[0], x[1],
                     c=labels, cmap=cmap, alpha=0.9, marker='x')
+
+
+class DatasetGMM(Dataset2D):
+
+    def __init__(self, n_dims=30, n_classes=10, n_modes=8, scale_mean=1, scale_cov=1, n_samples_per_class=10000):
+        super(Dataset2D, self).__init__()
+
+        self.training_params['num_epochs'] = 500
+
+        self.gmms = [
+            random_gmm(n_modes, n_dims, scale_mean, scale_cov)
+            for _ in range(n_classes)
+        ]
+
+        self.X, self.Y = self.sample(n_samples_per_class)
+
+    def sample(self, n_samples_per_class):
+        X = Y = None
+        for c, gmm in enumerate(self.gmms):
+            x = gmm.sample(n_samples_per_class)
+            y = np.array([c] * n_samples_per_class)
+            X = np.concatenate((X, x), axis=0) if X is not None else x
+            Y = np.concatenate((Y, y), axis=0) if Y is not None else y
+        return X, Y
+
+    def JS(self):
+        for i, gmm in enumerate(self.gmms):
+            gmm_other = self.concatenate(except_for=gmm)
+            print(f"JS P_{i}|P\{i}: {gmm.JS(gmm_other)}")
+
+    def concatenate(self, except_for=None):
+        gmms = [g for g in self.gmms if g is not except_for]
+        means, covs, weights = zip(
+            *[(q.means, q.covs, q.weights) for q in gmms])
+        means = np.concatenate(means, axis=0)
+        covs = np.concatenate(covs, axis=0)
+        weights = np.concatenate(weights, axis=0)
+        weights /= weights.sum()
+        return GMM(means, covs, weights)
+
+    def load_statsnet(self, resume_training=False, use_drive=False):
+        n_dims = self.X.shape[1]
+        # layer_dims = [n_dims, 128, 64, 64, self.get_num_classes()]
+        layer_dims = [n_dims, 32, 32, 32, self.get_num_classes()]
+        net = nets.FCNet(layer_dims)
+        name = f"GMM_{n_dims}"
+        stats_net = self.pretrained_statsnet(
+            net, name, resume_training=resume_training, use_drive=use_drive)
+        return stats_net
+
+
+def make_spd_matrix(n_dims):
+    D = np.diag(np.abs(np.random.rand(n_dims)))
+    if n_dims == 1:
+        return D
+    Q = ortho_group.rvs(n_dims)
+    return Q.T.dot(D.dot(Q))
+
+
+def random_gmm(n_modes, n_dims, scale_mean=1, scale_cov=1, mean_shift=0):
+    weights = np.random.rand(n_modes)
+    weights = weights / weights.sum()
+    shift = np.random.randn(n_dims) * mean_shift
+    means = np.random.randn(n_modes, n_dims) * scale_mean + shift
+    covs = np.empty((n_modes, n_dims, n_dims))
+    for i in range(n_modes):
+        covs[i] = make_spd_matrix(n_dims) * scale_cov
+    return GMM(means, covs, weights)
+
+
+class GMM():
+
+    def __init__(self, means, covs, weights=None):
+        if weights is None:
+            weights = np.ones((1,))
+        self.means = means
+        self.covs = covs
+        self.weights = weights
+        n_modes = len(weights)
+        self.mvns = []
+        for i in range(n_modes):
+            mvn = multivariate_normal(mean=means[i], cov=covs[i])
+            self.mvns.append(mvn)
+
+    def __add__(self, Q):
+        means = np.concatenate((self.means, Q.means), axis=0)
+        covs = np.concatenate((self.covs, Q.covs), axis=0)
+        weights = np.concatenate((self.weights, Q.weights), axis=0)
+        weights /= 2
+        return GMM(means, covs, weights)
+
+    def logpdf(self, X):
+        n_modes, n_samples = len(self.means), len(X)
+        log_p_m_X = np.empty((n_modes, n_samples))
+        for i in range(n_modes):
+            log_p_m_X[i] = self.mvns[i].logpdf(X)
+        log_p_X = logsumexp(log_p_m_X, axis=0,
+                            b=self.weights.reshape(n_modes, -1))
+        return log_p_X
+
+    def score(self, X):
+        return self.logpdf(X).mean()
+
+    def sample(self, n_samples, dtype='float32'):
+        n_modes, n_dims = self.means.shape
+        n_samples = int(n_samples)
+        choice_mode = np.random.choice(
+            n_modes, size=(n_samples), p=self.weights)
+        samples = np.empty((n_samples, n_dims), dtype=dtype)
+        for mode in range(n_modes):
+            mask = choice_mode == mode
+            n_mask = mask.sum()
+            if n_mask != 0:
+                samples[mask] = self.mvns[mode].rvs(
+                    size=n_mask).reshape(-1, n_dims)
+        return samples
+
+    def DKL(self, Q, n_samples=1e4):
+        X = self.sample(n_samples)
+        return self.score(X) - Q.score(X)
+
+    def JS(self, Q, n_samples=1e4):
+        P = self
+        M = P + Q
+        return 1 / 2 * (P.DKL(M, n_samples) + Q.DKL(M, n_samples))

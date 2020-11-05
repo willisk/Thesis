@@ -18,12 +18,6 @@ sys.path.append(PWD)
 
 from ext.cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
 
-try:
-    from apex import amp
-    USE_AMP = True
-except ImportError:
-    print("Running without APEX.")
-    USE_AMP = False
 
 import datasets
 import statsnet
@@ -38,13 +32,15 @@ importlib.reload(utility)
 importlib.reload(deepinversion)
 importlib.reload(shared)
 
+args = shared.args
+
 # matplotlib params
 plt.rcParams['figure.figsize'] = (6, 6)
 plt.rcParams['animation.html'] = 'jshtml'
 
 # argparse
 parser = argparse.ArgumentParser(description="DeepInversion on cifar-10")
-parser.add_argument("-steps", "--n_steps", type=int, default=1000)
+parser.add_argument("-steps", "--n_steps", type=int, default=100)
 parser.add_argument("-bs", "--batch_size", type=int, default=32)
 parser.add_argument("-lr", "--learning_rate", type=float, default=0.05)
 parser.add_argument("-fc", "--factor_criterion", type=float, default=1)
@@ -54,7 +50,7 @@ parser.add_argument("-fl", "--factor_layer", type=float, default=10)
 parser.add_argument("-da", "--distr_a", type=float, default=1)
 parser.add_argument("-db", "--distr_b", type=float, default=1)
 parser.add_argument("-m", "--method", type=str,
-                    choices=['standard', 'paper'], default='standard')
+                    choices=['standard', 'paper'], default='paper')
 parser.add_argument("-cc", "--class_conditional", action="store_true")
 parser.add_argument("--mask_bn", action="store_true")
 parser.add_argument("--use_bn_stats", action="store_true")
@@ -65,15 +61,9 @@ parser.add_argument("--no_save", action="store_true")
 parser.add_argument("--track_history_every", type=int, default=10)
 parser.add_argument("-f", "--force", action="store_true")
 
-
+# When pushing to ipynb, additional args are added that interfere with parse_args
 if sys.argv[0] == 'ipykernel_launcher':
     args = parser.parse_args([])
-    args.n_steps = 100
-    args.method = 'paper'
-    args.class_conditional = True
-    args.mask_bn = True
-    args.track_history = True
-    args.force = True
 else:
     args = parser.parse_args()
 
@@ -84,9 +74,6 @@ LOGDIR = os.path.join(PWD, "exp03/runs")
 if True:
     FIGDIR, _ = utility.search_drive(FIGDIR)
     LOGDIR, _ = utility.search_drive(LOGDIR)
-
-if not os.path.exists(FIGDIR):
-    os.makedirs(FIGDIR)
 
 # Tensorboard summary writer
 shared.init_summary_writer(log_dir=LOGDIR)
@@ -106,19 +93,10 @@ stats_net = dataset.load_statsnet(net=ResNet34(),
                                   resume_training=False,
                                   use_drive=True
                                   )
-stats_net.bn_masked = args.mask_bn
-stats_net.use_bn_stats = args.use_bn_stats
-stats_net.class_conditional = args.class_conditional
-stats_net.method = args.method
-stats_net.eval()
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(f"Running on device '{DEVICE}'")
 stats_net.to(DEVICE)
-
-# if USE_AMP:
-#     data_type = torch.half
-# else:
-#     data_type = torch.float
 
 # dataset.print_accuracy(stats_net)
 
@@ -185,19 +163,15 @@ def regularization(x):
     loss_var = torch.norm(diff1) + torch.norm(diff2) + \
         torch.norm(diff3) + torch.norm(diff4)
 
-    # loss_l2 = torch.norm(x, 2)
-
     return loss_var
 
 
 for hp in utility.dict_product(hyperparameters):
-
     comment = utility.dict_to_str(hp)
-    print("Hyperparameters:")
-    print(comment)
-
     fig_path = os.path.join(FIGDIR, comment)
     writer = shared.get_summary_writer(comment)
+    print("Hyperparameters:")
+    print(comment)
 
     if args.hp_sweep and not any([hp['factor_input'], hp['factor_layer'], hp['factor_criterion'], hp['factor_reg']]):
         continue
@@ -206,44 +180,24 @@ for hp in utility.dict_product(hyperparameters):
         print("Experiment already run, skipping.")
         continue
 
-    target_labels = (torch.arange(hp['batch_size']) %
-                     dataset.get_num_classes()).to(DEVICE)
+    stats_net.init_hyperparameters(hp)
+
+    target_labels = (torch.arange(hp['batch_size'], device=DEVICE) %
+                     dataset.get_num_classes())
     inputs = torch.randn([hp['batch_size']] + list(stats_net.input_shape),
-                         requires_grad=True, device=DEVICE,
-                         #   dtype=data_type
-                         )
-    inputs = torch.randn([hp['batch_size']] + list(stats_net.input_shape),
-                         requires_grad=True, device=DEVICE,
-                         #   dtype=data_type
-                         )
+                         requires_grad=True, device=DEVICE,)
     optimizer = optim.Adam([inputs], lr=hp['learning_rate'])
 
-    # if USE_AMP:
-    #     stats_net, optimizer = amp.initialize(
-    #         stats_net, optimizer, opt_level='O1', loss_scale='dynamic')
-
-    # stats_net.eval()  # important, otherwise generated images will be non natural
-    # if USE_AMP:
-    #     # need to do this trick for FP16 support of batchnorms
-    #     stats_net.train()
-    #     for module in stats_net.modules():
-    #         if isinstance(module, torch.nn.BatchNorm2d):
-    #             module.eval().half()
-
-    # stats_net.eval()
-
-    # set up loss
-    loss_fn = deepinversion.inversion_loss(stats_net, criterion, target_labels,
+    loss_fn = deepinversion.inversion_loss(stats_net, criterion, target_labels, hp,
                                            regularization=regularization,
-                                           reg_reduction_type='sum',
-                                           **hp)
+                                           reg_reduction_type='sum')  # XXX: mean?
 
     invert = deepinversion.deep_inversion(inputs,
                                           stats_net,
                                           loss_fn,
                                           optimizer,
                                           steps=hp['n_steps'],
-                                          perturbation=jitter,
+                                          pre_fn=jitter,
                                           #   projection=projection,
                                           track_history=args.track_history,
                                           track_history_every=args.track_history_every,

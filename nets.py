@@ -9,8 +9,9 @@ class Net(nn.Module):
 
     def predict(self, x):
         self.eval()
-        y = self.__call__(x)
-        return torch.argmax(y, dim=-1)
+        with torch.no_grad():
+            y = self.__call__(x)
+        return torch.argmax(y, dim=1)
 
 
 class ResNet(Net):
@@ -112,18 +113,16 @@ class FCNet(Net):
     def __init__(self, layer_dims):
         super().__init__()
 
-        self.layers = nn.ModuleList()
-
-        for i in range(len(layer_dims) - 1):
-            self.layers.append(nn.Linear(layer_dims[i], layer_dims[i + 1]))
+        layers = []
+        L = len(layer_dims) - 1
+        for i in range(L):
+            layers.append(nn.Linear(layer_dims[i], layer_dims[i + 1]))
+            if i < L - 1:
+                layers.append(nn.ReLU())
+        self.main = nn.Sequential(*layers)
 
     def forward(self, x):
-        L = len(self.layers)
-        for i in range(L):
-            x = self.layers[i](x)
-            if i < L - 1:
-                x = F.relu(x)
-        return x
+        return self.main(x)
 
 
 class ConvNet(Net):
