@@ -161,28 +161,29 @@ def batch_feature_mean_var(x, keep_dims=[1], unbiased=True):
         dims_collapse.remove(dim)
     if dims_collapse == []:
         return x, torch.zeros_like(x, device=x.device)
-    mean = x.mean(dims_collapse)
-    var = x.var(dims_collapse, unbiased=unbiased)
+    mean = x.mean(dim=dims_collapse)
+    var = x.var(dim=dims_collapse, unbiased=unbiased)
     return mean, var
 
 
-def c_mean_var(data, labels, num_classes):
+def c_mean_var(data, labels, num_classes=None):
+    if num_classes is None:
+        num_classes = labels.max().item() + 1
     shape = (num_classes, data.shape[1])
     mean = torch.zeros(shape)
     var = torch.ones(shape)
     n = torch.zeros(shape[0])
 
-    for c in set(labels):
-        mask = labels == c
-        c_data = data[mask]
-        mean[c], var[c] = batch_feature_mean_var(c_data, unbiased=False)
-        n[c] = mask.sum()
+    for c in torch.unique(labels):
+        c_mask = labels == c
+        mean[c], var[c] = batch_feature_mean_var(data[c_mask], unbiased=False)
+        n[c] = c_mask.sum()
 
     return mean, var, n
 
 
 def class_count_(n, labels):
-    for c in set(labels):
+    for c in torch.unique(labels):
         n[c] += (labels == c).to(n.dtype).sum()
 
 
@@ -531,7 +532,7 @@ def categorical_cmaps(num_classes):
 
 def DKL(P, Q, n_samples=1e4):
     X = P.sample(n_samples)
-    return P.score(X) - Q.score(X)
+    return P.logpdf(X).mean() - Q.logpdf(X).mean()
 
 
 def JS(P, Q, n_samples=1e4):
@@ -564,3 +565,27 @@ def plot_stats_mean_var(mean, var):
         ell = Ellipse(m, s[0], s[1], edgecolor=c, lw=1, fill=False)
         plt.gca().add_artist(ell)
         plt.scatter(m[0], m[1], color=c, edgecolors='k', marker='^')
+
+
+def plot_random_projections(RP, X, Y=None, marker='o'):
+    if Y is None:
+        _plot_random_projections(RP, X)
+    else:
+        cmaps = categorical_colors(Y.max().item() + 1)
+        for c in torch.unique(Y):
+            _plot_random_projections(RP, X[Y == c], color=cmaps[c], marker=marker)
+
+
+def _plot_random_projections(RP, X, Y=None, color='r', marker='o'):
+    X_proj = X.matmul(RP)
+    for rp, x_p in zip(RP.T, X_proj.T):
+        m, s = x_p.mean(), x_p.var().sqrt()
+        rp_m = rp * m
+        start = rp_m - rp * s
+        end = rp_m + rp * s
+        plt.plot((start[0], end[0]), (start[1], end[1]), color=color)
+        plt.plot(*rp_m, color='black', marker='x')
+        _plot = plt.scatter(*(rp.reshape(-1, 1) * x_p), color=color, alpha=0.1, marker=marker)
+    _plot.set_label('random projected')
+    for rp_x, rp_y in RP.T:
+        plt.plot((0, rp_x * 3), (0, rp_y * 3), c='black')

@@ -1,4 +1,4 @@
-""" Simple regression test
+""" Simple regression test for recovering an affine transformation
 """
 import os
 import sys
@@ -60,9 +60,9 @@ invert = deepinversion.deep_inversion(X_B,
                                       pre_fn=preprocessing,
                                       )
 
-print("After:")
-X_B_pre = preprocessing(X_B).detach()
+print("After Pre-Processing:")
+X_B_proc = preprocessing(X_B).detach()
 plt.scatter(X_A[:, 0], X_A[:, 1], c='b', label="Data A")
-plt.scatter(X_B_pre[:, 0], X_B_pre[:, 1], c='r', label="preprocessed Data B")
+plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1], c='r', label="preprocessed Data B")
 plt.legend()
 plt.show()

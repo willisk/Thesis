@@ -1,5 +1,7 @@
 """ Testing reconstruction by matching statistics
 in input space
+Doesn't work exactly:
+Statistics are matched, but data is deformed
 """
 import os
 import sys
@@ -52,6 +54,8 @@ X_B = X_B_orig.matmul(perturb_matrix) + perturb_shift
 m_B, v_B = X_B.mean(dim=0), X_B.var(dim=0)
 
 print("Before:")
+print("Cross Entropy of A:", gmm.cross_entropy(X_A))
+print("Cross Entropy of B:", gmm.cross_entropy(X_B))
 cmaps = utility.categorical_colors(2)
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
 plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="perturbed Data B")
@@ -89,20 +93,21 @@ invert = deepinversion.deep_inversion(X_B,
                                       )
 
 # ======= Result =======
-print("After:")
-X_B_pre = preprocessing(X_B).detach()
+X_B_proc = preprocessing(X_B).detach()
+print("After Pre-Processing:")
+print("Cross Entropy of B:", gmm.cross_entropy(X_B_proc))
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
-plt.scatter(X_B_pre[:, 0], X_B_pre[:, 1],
+plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
             c=cmaps[1], label="preprocessed Data B")
 plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
             c='orange', label="unperturbed Data B", alpha=0.4)
-utility.plot_stats([X_A, X_B_pre])
+utility.plot_stats([X_A, X_B_proc])
 plt.legend()
 plt.show()
 
-m_B_pre, v_B_pre = X_B_pre.mean(dim=0), X_B_pre.var(dim=0)
+m_B_pre, v_B_pre = X_B_proc.mean(dim=0), X_B_proc.var(dim=0)
 
-print("net transform matrix (should be Id)")
+print("net transform matrix: (should be close to Id)")
 print(A.matmul(perturb_matrix).detach())
-print("net shift (should be 0)")
+print("net shift: (should be close to 0)")
 print((A.matmul(perturb_shift) + b).detach())

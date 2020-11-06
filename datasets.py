@@ -371,18 +371,18 @@ class Dataset2D(Dataset):
         x = data_list[-1].detach().T
         plt.scatter(x[0], x[1], c='k', alpha=1, marker='x')
         plt.scatter(x[0], x[1],
-                    c=labels, cmap=cmap, alpha=0.9, marker='x')
+                    c=labels, cmap=cmaps, alpha=0.9, marker='x')
 
 
 class DatasetGMM(Dataset2D):
 
-    def __init__(self, n_dims=30, n_classes=10, n_modes=8, scale_mean=1, scale_cov=1, n_samples_per_class=10000):
+    def __init__(self, n_dims=30, n_classes=10, n_modes=8, scale_mean=1, scale_cov=1, mean_shift=0, n_samples_per_class=10000):
         super(Dataset2D, self).__init__()
 
         self.training_params['num_epochs'] = 500
 
         self.gmms = [
-            random_gmm(n_modes, n_dims, scale_mean, scale_cov)
+            random_gmm(n_modes, n_dims, scale_mean, scale_cov, mean_shift)
             for _ in range(n_classes)
         ]
 
@@ -395,12 +395,18 @@ class DatasetGMM(Dataset2D):
             y = np.array([c] * n_samples_per_class)
             X = np.concatenate((X, x), axis=0) if X is not None else x
             Y = np.concatenate((Y, y), axis=0) if Y is not None else y
-        return X, Y
+        return torch.from_numpy(X), torch.from_numpy(Y)
 
-    def JS(self):
-        for i, gmm in enumerate(self.gmms):
-            gmm_other = self.concatenate(except_for=gmm)
-            print(f"JS P_{i}|P\{i}: {gmm.JS(gmm_other)}")
+    def log_likelihood(self, X, Y):
+        n_total = len(Y) + 0.
+        log_lh = 0.
+        for c, gmm in enumerate(self.gmms):
+            c_mask = Y == c
+            log_lh += gmm.logpdf(X[c_mask]).sum()
+        return log_lh / n_total
+
+    def cross_entropy(self, X, Y):
+        return -self.log_likelihood(X, Y)
 
     def concatenate(self, except_for=None):
         gmms = [g for g in self.gmms if g is not except_for]
@@ -472,8 +478,11 @@ class GMM():
                             b=self.weights.reshape(n_modes, -1))
         return log_p_X
 
-    def score(self, X):
+    def log_likelihood(self, X):
         return self.logpdf(X).mean()
+
+    def cross_entropy(self, X):
+        return -self.log_likelihood(X)
 
     def sample(self, n_samples, dtype='float32'):
         n_modes, n_dims = self.means.shape
@@ -489,9 +498,12 @@ class GMM():
                     size=n_mask).reshape(-1, n_dims)
         return samples
 
+    def DKL_samples(self, X, n_samples=1e4):
+        return self.logpdf(X).mean() - Q.logpdf(X).mean()
+
     def DKL(self, Q, n_samples=1e4):
         X = self.sample(n_samples)
-        return self.score(X) - Q.score(X)
+        return self.logpdf(X).mean() - Q.logpdf(X).mean()
 
     def JS(self, Q, n_samples=1e4):
         P = self
