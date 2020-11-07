@@ -1,5 +1,8 @@
-""" Testing reconstruction by matching statistics
-on random projections
+""" Test5 using only random projections
+NO class-conditional information
+on 2 clusters
+Comment:
+Method struggles with more distinct clusters
 """
 import os
 import sys
@@ -11,8 +14,8 @@ import matplotlib.pyplot as plt
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
 
-import datasets
 import utility
+import datasets
 import deepinversion
 
 if sys.argv[0] == 'ipykernel_launcher':
@@ -23,6 +26,7 @@ if sys.argv[0] == 'ipykernel_launcher':
 
 cmaps = utility.categorical_colors(2)
 
+
 # ======= Set Seeds =======
 np.random.seed(3)
 torch.manual_seed(3)
@@ -30,43 +34,30 @@ torch.manual_seed(3)
 # ======= Create Dataset =======
 # Gaussian Mixture Model
 
-gmm = datasets.random_gmm(
+dataset = datasets.DatasetGMM(
     n_dims=2,
     n_modes=5,
-    scale_mean=7,
+    scale_mean=6,
     scale_cov=3,
     mean_shift=20,
+    n_classes=2,
+    n_samples_per_class=100,
 )
 
-X_A = torch.from_numpy(gmm.sample(n_samples=100))
+X_A, Y_A = dataset.X, dataset.Y
 mean_A = X_A.mean(dim=0)
 
 # perturbed Dataset B
 perturb_matrix = torch.eye(2) + 1 * torch.randn((2, 2))
 perturb_shift = 2 * torch.randn(2)
 
-X_B_orig = torch.from_numpy(gmm.sample(n_samples=100))
+X_B_orig, Y_B = dataset.sample(n_samples_per_class=100)
 X_B = X_B_orig @ perturb_matrix + perturb_shift
 
 # ======= Random Projections =======
 n_projections = 3
 RP = torch.randn((2, n_projections))
 RP = RP / RP.norm(2, dim=0)
-
-
-# plot random projections
-print("Before:")
-print("Cross Entropy of A:", gmm.cross_entropy(X_A))
-print("Cross Entropy of B:", gmm.cross_entropy(X_B))
-utility.plot_random_projections(RP, X_A, mean=mean_A)
-plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
-plt.legend()
-plt.show()
-
-utility.plot_random_projections(RP, X_B, mean=mean_A)
-plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="perturbed Data B")
-plt.legend()
-plt.show()
 
 
 # ======= Preprocessing Model =======
@@ -104,23 +95,28 @@ lr = 0.1
 steps = 400
 optimizer = torch.optim.Adam([A, b], lr=lr)
 
-deepinversion.deep_inversion(X_B,
-                             loss_fn,
-                             optimizer,
-                             steps=steps,
-                             pre_fn=preprocessing,
-                             )
+history = deepinversion.deep_inversion(X_B,
+                                       loss_fn,
+                                       optimizer,
+                                       steps=steps,
+                                       pre_fn=preprocessing,
+                                       #    track_history=True,
+                                       #    track_history_every=10,
+                                       )
 
+# for x, step in zip(*zip(*history)):
+#     utility.plot_stats(x, colors=['r'] * len(history))
 # ======= Result =======
 X_B_proc = preprocessing(X_B).detach()
 print("After Pre-Processing:")
-print("Cross Entropy of B:", gmm.cross_entropy(X_B_proc))
+print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc, Y_B))
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
             c=cmaps[1], label="preprocessed Data B")
 plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
             c='orange', label="unperturbed Data B", alpha=0.4)
-utility.plot_stats([X_A, X_B_proc])
+utility.plot_stats([X_A[Y_A == 0], X_B_proc[Y_B == 0]])
+utility.plot_stats([X_A[Y_A == 1], X_B_proc[Y_B == 1]])
 plt.legend()
 plt.show()
 

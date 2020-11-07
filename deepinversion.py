@@ -2,6 +2,7 @@ import shared
 
 import torch
 from torch.cuda.amp import autocast, GradScaler
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from scipy.stats import betabinom
 
 from tqdm.auto import tqdm
@@ -75,11 +76,12 @@ def deep_inversion(inputs,
                    optimizer,
                    steps=5,
                    pre_fn=None,
+                   scheduler=None,
                    track_history=False,
                    track_history_every=1,
                    ):
 
-    writer = shared.get_summary_writer()
+    # writer = shared.get_summary_writer()
     # timer = utility.timer()
     info = {}
 
@@ -96,8 +98,8 @@ def deep_inversion(inputs,
 
     print("Beginning Inversion.", flush=True)
 
-    with tqdm(range(1, steps + 1), desc="Step") as t_bar:
-        for step in t_bar:
+    with tqdm(range(1, steps + 1), desc="Step") as pbar:
+        for step in pbar:
 
             inputs = inputs_orig
 
@@ -125,21 +127,26 @@ def deep_inversion(inputs,
                 grad_scale = 1
 
             # writer.add_scalar('loss', loss.item(), step)
-            # writer.add_scalar(
-            #     'gradient_norm', (inputs_orig.grad / grad_scale).norm(2), step)
+            # for p_group in optimizer.param_groups:
+            #     for i, param in enumerate(p_group['params']):
+            #         writer.add_scalar(
+            #             f"param_{'-'.join(map(str, param.shape))}",
+            #             (param.grad / grad_scale).norm(2), step)
 
             if USE_AMP:
                 scaler.step(optimizer)
                 scaler.update()
             else:
                 optimizer.step()
+            if scheduler is not None:
+                scheduler.step(loss)
 
             if track_history and (step % track_history_every == 0 or step == steps):
                 history.append((inputs.detach().cpu().clone(), step))
 
             # if timer.minutes_passed(print_every_n_min):
             #     print(f"Step {step}\t loss: {loss.item():3.3f}")
-            t_bar.set_postfix(loss=loss.item(), **info)
+            pbar.set_postfix(loss=loss.item(), **info)
 
     print(flush=True)
 

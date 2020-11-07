@@ -39,6 +39,7 @@ def get_summary_writer(comment=None):
     if ENABLED:
         global writer
         if comment is not None:
+            print(LOGDIR)
             writer = SummaryWriter(LOGDIR + "/" + comment)
         return writer
     else:

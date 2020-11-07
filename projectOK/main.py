@@ -92,7 +92,7 @@ shape = (n_dims, n_dims)
 perturb_matrix = torch.eye(n_dims) + perturb_factor * torch.randn(shape)
 perturb_shift = perturb_factor * torch.randn(n_dims)
 
-X_B = X_A.mm(perturb_matrix) + perturb_shift
+X_B = X_A @ perturb_matrix + perturb_shift
 # dataset.plot(data={'inputs': X_B, 'labels': Y}, net=stats_net)
 
 utility.print_accuracy(X_B, Y, stats_net,
@@ -104,7 +104,7 @@ b = torch.randn((n_dims), requires_grad=True)
 
 
 def preprocessing(X):
-    return X.mm(A) + b
+    return X @ A + b
 
 
 # print("A", A)

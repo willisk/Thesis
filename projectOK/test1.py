@@ -27,7 +27,7 @@ X_A = torch.randn((3, 2)) * 4 + torch.randn((2)) * 10
 perturb_matrix = torch.eye(2) + 2 * torch.randn((2, 2))
 perturb_shift = 2 * torch.randn(2)
 
-X_B = X_A.mm(perturb_matrix) + perturb_shift
+X_B = X_A @ perturb_matrix + perturb_shift
 
 plt.scatter(X_A[:, 0], X_A[:, 1], c='b', label="Data A")
 plt.scatter(X_B[:, 0], X_B[:, 1], c='r', label="Data B")
@@ -40,7 +40,7 @@ b = torch.randn((2), requires_grad=True)
 
 
 def preprocessing(X):
-    return X.mm(A) + b
+    return X @ A + b
 
 
 # ======= Loss Function =======
@@ -53,12 +53,12 @@ def loss_fn(X):
 
 optimizer = torch.optim.Adam([A, b], lr=0.01)
 
-invert = deepinversion.deep_inversion(X_B,
-                                      loss_fn,
-                                      optimizer,
-                                      steps=200,
-                                      pre_fn=preprocessing,
-                                      )
+deepinversion.deep_inversion(X_B,
+                             loss_fn,
+                             optimizer,
+                             steps=200,
+                             pre_fn=preprocessing,
+                             )
 
 print("After Pre-Processing:")
 X_B_proc = preprocessing(X_B).detach()

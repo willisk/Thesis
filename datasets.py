@@ -71,8 +71,9 @@ class Dataset(torch.utils.data.Dataset):
 
     def pretrained_statsnet(self, net, name, resume_training=False, use_drive=False, input_shape=None):
 
+        # XXX lr should be in training params
         criterion = self.get_criterion()
-        optimizer = optim.SGD(net.parameters(), lr=0.01)
+        optimizer = optim.Adam(net.parameters(), lr=0.01)
 
         num_classes = self.get_num_classes()
 
@@ -420,7 +421,6 @@ class DatasetGMM(Dataset2D):
 
     def load_statsnet(self, resume_training=False, use_drive=False):
         n_dims = self.X.shape[1]
-        # layer_dims = [n_dims, 128, 64, 64, self.get_num_classes()]
         layer_dims = [n_dims, 32, 32, 32, self.get_num_classes()]
         net = nets.FCNet(layer_dims)
         name = f"GMM_{n_dims}"
@@ -477,6 +477,15 @@ class GMM():
         log_p_X = logsumexp(log_p_m_X, axis=0,
                             b=self.weights.reshape(n_modes, -1))
         return log_p_X
+
+    def logpdf_unused(self, X):
+        m = self.means[0]
+        C = self.covs[0]
+        C_inv = np.linalg.inv(C)
+        l_X = - ((X - m) @ C_inv * (X - m)).sum(axis=1) / 2
+        const = (- len(m) * np.log(2 * np.pi) - np.log(np.linalg.det(C))
+                 ) / 2
+        return l_X + const
 
     def log_likelihood(self, X):
         return self.logpdf(X).mean()

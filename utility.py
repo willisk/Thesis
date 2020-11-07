@@ -13,7 +13,7 @@ from itertools import product
 from collections.abc import Iterable
 import time
 
-from tqdm.auto import tqdm
+from tqdm.auto import tqdm, trange
 # if sys.argv[0] == 'ipykernel_launcher':
 #     from tqdm import tqdm_notebook as tqdm
 
@@ -262,7 +262,7 @@ def search_drive(path):
 def train(net, data_loader, criterion, optimizer,
           num_epochs=1, save_every=10,
           model_path=None, use_drive=False,
-          resume_training=False):
+          resume_training=False, plot=False):
     "Training Loop"
 
     if model_path is not None:
@@ -288,20 +288,17 @@ def train(net, data_loader, criterion, optimizer,
         print("No Checkpoint found.")
         init_epoch = 1
 
-    # validation = True
-    # if validation:
-    #     len_train = int(len(data_loader) * 0.8)
-    #     len_val = len(data_loader) - len_train
-    #     train_set, val_set = torch.utils.data.random_split(data_loader, [len_train, len_val])
-    #     print("Splitting Dataset.")
-    #     print(f"size_train {len(train_set)}, size_val {len(val_set)}")
     net.train()
+
+    TRACKING = False
+    if plot:
+        TRACKING = {'steps': [], 'loss': [], 'accuracy': []}
 
     print("Beginning training.", flush=True)
 
-    with tqdm(range(init_epoch, init_epoch + num_epochs), desc="Epoch") as t_bar:
+    with tqdm(range(init_epoch, init_epoch + num_epochs), desc="Epoch") as pbar:
         saved_epoch = 0
-        for epoch in t_bar:
+        for epoch in pbar:
             total_count = 0.0
             total_loss = 0.0
             total_correct = 0.0
@@ -326,6 +323,11 @@ def train(net, data_loader, criterion, optimizer,
                 #         (total_count / batch_size, total_loss / total_count, total_correct / total_count))
 
             accuracy = (total_correct / total_count).item()
+
+            if TRACKING:
+                TRACKING['steps'].append(epoch)
+                TRACKING['loss'].append(total_loss)
+                TRACKING['accuracy'].append(accuracy)
             # tb.add_scalar('Loss/train', total_loss, epoch)
             # tb.add_scalar('Accuracy/train', accuracy, epoch)
 
@@ -343,20 +345,47 @@ def train(net, data_loader, criterion, optimizer,
                 }, save_path)
                 saved_epoch = epoch
 
-            t_bar.set_postfix(
-                loss=total_loss, accuracy=f"{accuracy*100:.0f}%", saved_epoch=saved_epoch)
+            pbar.set_postfix(
+                loss=total_loss,
+                acc=f"{accuracy*100:.0f}%",
+                chkpt=saved_epoch,
+            )
 
     print("Finished Training")
+
+    if plot:
+        plot_metrics(TRACKING)
+        plt.xlabel('Epochs')
+        plt.show()
+
+    net.eval()
+    return TRACKING
+
+
+def plot_metrics(metrics):
+    steps = metrics.pop('steps')
+    accuracy = None
+    if 'accuracy' in metrics:
+        accuracy = metrics.pop('accuracy')
+    for key, val in metrics.items():
+        plt.plot(steps, val, label=key)
+    plt.title('Metrics')
+    if accuracy:
+        y_lim = plt.gca().get_ylim()
+        y_min, y_max = min(y_lim), max(y_lim)
+        acc_scaled = [y_min + a * (y_max - y_min) for a in accuracy]
+    plt.plot(steps, acc_scaled, alpha=0.6, label='accuracy (scaled)')
+    plt.legend()
 
 
 def learn_stats(stats_net, data_loader):
 
     stats_net.start_tracking_stats()
 
-    print("Beginning tracking stats.")
+    print("Beginning tracking stats.", flush=True)
 
-    with torch.no_grad(), tqdm(data_loader, desc="Batch") as t_bar:
-        for data in t_bar:
+    with torch.no_grad(), tqdm(data_loader, desc="Batch") as pbar:
+        for data in pbar:
             inputs, labels = data
             x = {'inputs': inputs,
                  'labels': labels}
@@ -519,8 +548,6 @@ def subplots_labels(x_labels, y_labels):
 
 def categorical_colors(num_classes):
     cmap = matplotlib.cm.get_cmap('Spectral')
-    if num_classes == 1:
-        return ['k']
     return cmap(np.arange(num_classes) / (num_classes - 1.))
 
 
@@ -545,7 +572,7 @@ from matplotlib.axes._axes import _log as matplotlib_axes_logger
 matplotlib_axes_logger.setLevel('ERROR')
 
 
-def plot_stats(X, Y=None):
+def plot_stats(X, Y=None, colors=None):
     if Y is None:
         if isinstance(X, list):
             mean, var = [x.mean(dim=0) for x in X], [x.var(dim=0) for x in X]
@@ -553,12 +580,12 @@ def plot_stats(X, Y=None):
             mean, var = [X.mean(dim=0)], [X.var(dim=0)]
     else:
         mean, var, _ = c_mean_var(X, Y, Y.max() + 1)
-    plot_stats_mean_var(mean, var)
+    plot_stats_mean_var(mean, var, colors=colors)
 
 
-def plot_stats_mean_var(mean, var):
-    num_classes = len(mean)
-    colors = categorical_colors(num_classes)
+def plot_stats_mean_var(mean, var, colors=None):
+    if colors is None:
+        colors = categorical_colors(len(mean))
     Ellipse = matplotlib.patches.Ellipse
     for m, v, c in zip(mean, var, colors):
         s = torch.sqrt(v) * 2
@@ -567,25 +594,31 @@ def plot_stats_mean_var(mean, var):
         plt.scatter(m[0], m[1], color=c, edgecolors='k', marker='^')
 
 
-def plot_random_projections(RP, X, Y=None, marker='o'):
+def plot_random_projections(RP, X, mean=None, Y=None, marker='o'):
     if Y is None:
-        _plot_random_projections(RP, X)
+        _plot_random_projections(RP, X, mean=mean)
     else:
+        if len(Y.unique()) == 2:
+            marker = ['+', 'd']
         cmaps = categorical_colors(Y.max().item() + 1)
-        for c in torch.unique(Y):
-            _plot_random_projections(RP, X[Y == c], color=cmaps[c], marker=marker)
+        for c, m in zip(Y.unique(), marker):
+            _plot_random_projections(RP, X[Y == c], mean=mean,
+                                     color=cmaps[c], marker=m)
 
 
-def _plot_random_projections(RP, X, Y=None, color='r', marker='o'):
-    X_proj = X.matmul(RP)
+def _plot_random_projections(RP, X, mean=None, color='r', marker='o'):
+    m_X = mean if mean is not None else X.mean(dim=0)
+    X_proj = (X - m_X) @ RP
     for rp, x_p in zip(RP.T, X_proj.T):
         m, s = x_p.mean(), x_p.var().sqrt()
-        rp_m = rp * m
+        rp_m = rp * m + m_X
         start = rp_m - rp * s
         end = rp_m + rp * s
         plt.plot((start[0], end[0]), (start[1], end[1]), color=color)
         plt.plot(*rp_m, color='black', marker='x')
-        _plot = plt.scatter(*(rp.reshape(-1, 1) * x_p), color=color, alpha=0.1, marker=marker)
+        mm = m_X + rp * x_p.reshape(-1, 1)
+        _plot = plt.scatter(*mm.T,
+                            color=color, alpha=0.1, marker=marker)
     _plot.set_label('random projected')
-    for rp_x, rp_y in RP.T:
-        plt.plot((0, rp_x * 3), (0, rp_y * 3), c='black')
+    for rp in RP.T:
+        plt.plot(*(m_X + rp * 3).T, c='black')

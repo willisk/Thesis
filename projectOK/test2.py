@@ -1,7 +1,8 @@
 """ Testing reconstruction by matching statistics
 in input space
-Doesn't work exactly:
-Statistics are matched, but data is deformed
+Comment:
+Statistics are matched, but data is deformed.
+Not enough information given.
 """
 import os
 import sys
@@ -13,20 +14,17 @@ import matplotlib.pyplot as plt
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
 
-import datasets
-import statsnet
 import utility
+import datasets
 import deepinversion
-import shared
 
 if sys.argv[0] == 'ipykernel_launcher':
     import importlib
-    importlib.reload(datasets)
-    importlib.reload(statsnet)
     importlib.reload(utility)
+    importlib.reload(datasets)
     importlib.reload(deepinversion)
-    importlib.reload(shared)
 
+cmaps = utility.categorical_colors(2)
 
 # ======= Set Seeds =======
 np.random.seed(3)
@@ -46,22 +44,22 @@ gmm = datasets.random_gmm(
 X_A = torch.from_numpy(gmm.sample(n_samples=100))
 m_A, v_A = X_A.mean(dim=0), X_A.var(dim=0)
 
+# perturbed Dataset B
 perturb_matrix = torch.eye(2) + 1 * torch.randn((2, 2))
 perturb_shift = 2 * torch.randn(2)
 
 X_B_orig = torch.from_numpy(gmm.sample(n_samples=100))
-X_B = X_B_orig.matmul(perturb_matrix) + perturb_shift
+X_B = X_B_orig @ perturb_matrix + perturb_shift
 m_B, v_B = X_B.mean(dim=0), X_B.var(dim=0)
 
 print("Before:")
-print("Cross Entropy of A:", gmm.cross_entropy(X_A))
-print("Cross Entropy of B:", gmm.cross_entropy(X_B))
-cmaps = utility.categorical_colors(2)
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
 plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="perturbed Data B")
 utility.plot_stats([X_A, X_B])
 plt.legend()
 plt.show()
+print("Cross Entropy of A:", gmm.cross_entropy(X_A))
+print("Cross Entropy of B:", gmm.cross_entropy(X_B))
 
 # ======= Preprocessing Model =======
 A = torch.randn((2, 2), requires_grad=True)
@@ -69,12 +67,13 @@ b = torch.randn((2), requires_grad=True)
 
 
 def preprocessing(X):
-    return X.matmul(A) + b
+    return X @ A + b
 
 
 # ======= Loss Function =======
-
 def loss_fn(X):
+    # log likelihood * 2 - const
+    # loss_mean = ((X - m_A)**2 / v_A.detach()).sum(dim=0).mean()
     loss_mean = ((X.mean(dim=0) - m_A)**2).mean()
     loss_var = ((X.var(dim=0) - v_A)**2).mean()
     return loss_mean + loss_var
@@ -85,17 +84,16 @@ lr = 0.1
 steps = 400
 optimizer = torch.optim.Adam([A, b], lr=lr)
 
-invert = deepinversion.deep_inversion(X_B,
-                                      loss_fn,
-                                      optimizer,
-                                      steps=steps,
-                                      pre_fn=preprocessing,
-                                      )
+deepinversion.deep_inversion(X_B,
+                             loss_fn,
+                             optimizer,
+                             steps=steps,
+                             pre_fn=preprocessing,
+                             )
 
 # ======= Result =======
 X_B_proc = preprocessing(X_B).detach()
 print("After Pre-Processing:")
-print("Cross Entropy of B:", gmm.cross_entropy(X_B_proc))
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
             c=cmaps[1], label="preprocessed Data B")
@@ -104,10 +102,12 @@ plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
 utility.plot_stats([X_A, X_B_proc])
 plt.legend()
 plt.show()
+print("Cross Entropy of B:", gmm.cross_entropy(X_B_proc))
 
 m_B_pre, v_B_pre = X_B_proc.mean(dim=0), X_B_proc.var(dim=0)
 
-print("net transform matrix: (should be close to Id)")
-print(A.matmul(perturb_matrix).detach())
-print("net shift: (should be close to 0)")
-print((A.matmul(perturb_shift) + b).detach())
+print("effective transformation X.A + b")
+print("A (should be close to Id):")
+print((A @ perturb_matrix).detach())
+print("b (should be close to 0):")
+print((A @ perturb_shift + b).detach())
