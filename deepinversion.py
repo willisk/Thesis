@@ -1,11 +1,17 @@
 import shared
+import utility
+import importlib
+importlib.reload(utility)
+
+from collections import defaultdict
 
 import torch
 from torch.cuda.amp import autocast, GradScaler
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from scipy.stats import betabinom
 
 from tqdm.auto import tqdm
+
+import matplotlib.pyplot as plt
 
 
 def betabinom_distr(N, a=1, b=1):
@@ -71,36 +77,41 @@ def inversion_loss(stats_net, criterion, target_labels, hp,
 
 
 # @timing
-def deep_inversion(inputs,
-                   loss_fn,
-                   optimizer,
-                   steps=5,
-                   pre_fn=None,
-                   scheduler=None,
-                   track_history=False,
-                   track_history_every=1,
+def deep_inversion(inputs, loss_fn, optimizer, steps=10,
+                   pre_fn=None, scheduler=None,
+                   track_history_every=None, plot=False,
                    ):
 
     # writer = shared.get_summary_writer()
-    # timer = utility.timer()
-    info = {}
-
     USE_AMP = inputs.device.type == 'gpu'
     if USE_AMP:
         scaler = GradScaler()
 
-    if track_history:
+    history = []
+    if track_history_every:
         history = [(inputs.detach().cpu().clone(), 0)]
-    else:
-        history = []
 
-    inputs_orig = inputs
+    TRACKING = False
+    if plot:
+        TRACKING = defaultdict(list, steps=[])
+
+    def process_result(res, pbar):
+        info = {}
+        if isinstance(res, tuple):
+            loss, info = res
+            if TRACKING:
+                for k, v in info.items():
+                    TRACKING[k].append(v)
+        else:
+            loss = res
+        pbar.set_postfix(loss=loss.item(), **info)
+        return loss
 
     print("Beginning Inversion.", flush=True)
 
     with tqdm(range(1, steps + 1), desc="Step") as pbar:
+        inputs_orig = inputs
         for step in pbar:
-
             inputs = inputs_orig
 
             if pre_fn is not None:
@@ -110,28 +121,25 @@ def deep_inversion(inputs,
 
             if USE_AMP:
                 with autocast():
-                    result = loss_fn(inputs)
-                    if isinstance(result, tuple):
-                        loss, info = result
-                    else:
-                        loss = result
+                    res = loss_fn(inputs)
+                    loss = process_result(res, pbar)
                 scaler.scale(loss).backward()
                 grad_scale = scaler.get_scale()
             else:
-                result = loss_fn(inputs)
-                if isinstance(result, tuple):
-                    loss, info = result
-                else:
-                    loss = result
+                res = loss_fn(inputs)
+                loss = process_result(res, pbar)
                 loss.backward()
                 grad_scale = 1
 
-            # writer.add_scalar('loss', loss.item(), step)
-            # for p_group in optimizer.param_groups:
-            #     for i, param in enumerate(p_group['params']):
-            #         writer.add_scalar(
-            #             f"param_{'-'.join(map(str, param.shape))}",
-            #             (param.grad / grad_scale).norm(2), step)
+            if TRACKING:
+                TRACKING['steps'].append(step)
+                TRACKING['loss'].append(loss.item())
+                for p_group in optimizer.param_groups:
+                    for i, param in enumerate(p_group['params']):
+                        # p_name = f"parpam_{'-'.join(map(str, param.shape))}"
+                        p_name = f'grad_{i}'
+                        TRACKING[p_name].append(
+                            (param.grad / grad_scale).norm(2))
 
             if USE_AMP:
                 scaler.step(optimizer)
@@ -141,13 +149,15 @@ def deep_inversion(inputs,
             if scheduler is not None:
                 scheduler.step(loss)
 
-            if track_history and (step % track_history_every == 0 or step == steps):
+            if track_history_every and (
+                    step % track_history_every == 0 or step == steps):
                 history.append((inputs.detach().cpu().clone(), step))
 
-            # if timer.minutes_passed(print_every_n_min):
-            #     print(f"Step {step}\t loss: {loss.item():3.3f}")
-            pbar.set_postfix(loss=loss.item(), **info)
+    print(flush=True, end='')
 
-    print(flush=True)
+    if TRACKING:
+        utility.plot_metrics(TRACKING)
+        plt.xlabel('Steps')
+        plt.show()
 
     return history

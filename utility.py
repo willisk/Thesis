@@ -10,6 +10,7 @@ import torch
 import itertools
 from functools import reduce, wraps
 from itertools import product
+from collections import defaultdict
 from collections.abc import Iterable
 import time
 
@@ -292,7 +293,7 @@ def train(net, data_loader, criterion, optimizer,
 
     TRACKING = False
     if plot:
-        TRACKING = {'steps': [], 'loss': [], 'accuracy': []}
+        TRACKING = defaultdict(list, steps=[])
 
     print("Beginning training.", flush=True)
 
@@ -318,22 +319,12 @@ def train(net, data_loader, criterion, optimizer,
                 total_loss += loss.item() * batch_size
                 total_correct += count_correct(outputs, labels)
 
-                # if verbose == 1:
-                #     print("{batch %d} avg-loss: %.3f, avg-accuracy: %.3f" %
-                #         (total_count / batch_size, total_loss / total_count, total_correct / total_count))
-
             accuracy = (total_correct / total_count).item()
 
             if TRACKING:
                 TRACKING['steps'].append(epoch)
                 TRACKING['loss'].append(total_loss)
                 TRACKING['accuracy'].append(accuracy)
-            # tb.add_scalar('Loss/train', total_loss, epoch)
-            # tb.add_scalar('Accuracy/train', accuracy, epoch)
-
-            # if epoch % print_every == 0:
-            #     print("[%d / %d] loss: %.3f, accuracy: %.3f" %
-            #         (epoch, init_epoch + num_epochs - 1, total_loss, accuracy))
 
             if save_path is not None \
                 and (save_every is not None
@@ -351,14 +342,14 @@ def train(net, data_loader, criterion, optimizer,
                 chkpt=saved_epoch,
             )
 
-    print("Finished Training")
+    print(flush=True, end='')
+    net.eval()
 
-    if plot:
+    if TRACKING:
         plot_metrics(TRACKING)
         plt.xlabel('Epochs')
         plt.show()
 
-    net.eval()
     return TRACKING
 
 
@@ -369,12 +360,17 @@ def plot_metrics(metrics):
         accuracy = metrics.pop('accuracy')
     for key, val in metrics.items():
         plt.plot(steps, val, label=key)
+
+    vals = sum(metrics.values(), [])
+    mean, std = np.mean(vals), np.std(vals)
+    y_min, y_max = plt.gca().get_ylim()
+    y_min, y_max = max(y_min, mean - std), min(y_max, mean + std)
+    plt.gca().set_ylim([y_min, y_max])
+
     plt.title('Metrics')
     if accuracy:
-        y_lim = plt.gca().get_ylim()
-        y_min, y_max = min(y_lim), max(y_lim)
         acc_scaled = [y_min + a * (y_max - y_min) for a in accuracy]
-    plt.plot(steps, acc_scaled, alpha=0.6, label='accuracy (scaled)')
+        plt.plot(steps, acc_scaled, alpha=0.6, label='acc (scaled)')
     plt.legend()
 
 
@@ -391,7 +387,7 @@ def learn_stats(stats_net, data_loader):
                  'labels': labels}
             stats_net(x)
 
-    print("Finished Tracking Stats.")
+    print(flush=True, end='')
 
 
 def scatter_matrix(data, labels,

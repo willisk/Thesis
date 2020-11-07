@@ -60,7 +60,7 @@ X_B = X_B_orig @ perturb_matrix + perturb_shift
 
 # ======= Neural Network =======
 lr = 0.01
-steps = 400
+steps = 100
 layer_dims = [2, 4, 4, 4, n_classes]
 model_path = os.path.join(
     PWD, f"models/net_GMM_{'-'.join(map(repr, layer_dims))}.pt")
@@ -139,7 +139,7 @@ loss_fn = loss_frechet
 
 # ======= Optimize =======
 lr = 0.1
-steps = 400
+steps = 50
 optimizer = torch.optim.Adam([A, b], lr=lr)
 
 history = deepinversion.deep_inversion(X_B,
@@ -149,28 +149,29 @@ history = deepinversion.deep_inversion(X_B,
                                        pre_fn=preprocessing,
                                        #    track_history=True,
                                        #    track_history_every=10,
+                                       plot=True,
                                        )
 
-# for x, step in zip(*zip(*history)):
-#     utility.plot_stats(x, colors=['r'] * len(history))
-# ======= Result =======
-X_B_proc = preprocessing(X_B).detach()
-print("After Pre-Processing:")
-print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc, Y_B))
-plt.title("Data A")
-plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
-plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-            c=cmaps[1], label="preprocessed Data B")
-plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
-            c='orange', label="unperturbed Data B", alpha=0.4)
-utility.plot_stats([X_A[Y_A == 0], X_B_proc[Y_B == 0]])
-utility.plot_stats([X_A[Y_A == 1], X_B_proc[Y_B == 1]])
-plt.legend()
-plt.show()
+# # for x, step in zip(*zip(*history)):
+# #     utility.plot_stats(x, colors=['r'] * len(history))
+# # ======= Result =======
+# X_B_proc = preprocessing(X_B).detach()
+# print("After Pre-Processing:")
+# print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc, Y_B))
+# plt.title("Data A")
+# plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
+# plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
+#             c=cmaps[1], label="preprocessed Data B")
+# plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
+#             c='orange', label="unperturbed Data B", alpha=0.4)
+# utility.plot_stats([X_A[Y_A == 0], X_B_proc[Y_B == 0]])
+# utility.plot_stats([X_A[Y_A == 1], X_B_proc[Y_B == 1]])
+# plt.legend()
+# plt.show()
 
 
-print("effective transformation X.A + b")
-print("A (should be close to Id):")
-print((A @ perturb_matrix).detach())
-print("b (should be close to 0):")
-print((A @ perturb_shift + b).detach())
+# print("effective transformation X.A + b")
+# print("A (should be close to Id):")
+# print((A @ perturb_matrix).detach())
+# print("b (should be close to 0):")
+# print((A @ perturb_shift + b).detach())

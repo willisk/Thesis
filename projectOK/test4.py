@@ -33,7 +33,7 @@ cmaps = utility.categorical_colors(2)
 # Tensorboard
 LOGDIR = os.path.join(PWD, "projectOK/runs")
 shared.init_summary_writer(log_dir=LOGDIR)
-writer = shared.get_summary_writer("test4")
+# writer = shared.get_summary_writer("test4")
 
 
 # ======= Set Seeds =======
