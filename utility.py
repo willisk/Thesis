@@ -91,6 +91,7 @@ def net_accuracy(net, inputs, labels):
         predictions = torch.argmax(net(inputs), dim=1)
     return (predictions == labels).to(torch.float).mean().item()
 
+
 def print_net_accuracy(net, inputs, labels):
     accuracy = net_accuracy(net, inputs, labels)
     print(f"net accuracy: {accuracy * 100:.1f}%")
@@ -280,6 +281,9 @@ def train(net, data_loader, criterion, optimizer,
             save_path, load_path = search_drive(model_path)
         else:
             save_path, load_path = model_path, model_path
+        save_dir = os.path.dirname(save_path)
+        if not os.path.exists(save_path):
+            os.makedirs(save_dir)
     else:
         save_path, load_path = None, None
 
