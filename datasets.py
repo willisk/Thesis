@@ -494,8 +494,8 @@ class DatasetGMM(Dataset2D):
         return stats_net
 
 
-def make_spd_matrix(n_dims):
-    D = torch.diag(torch.abs(torch.rand((n_dims))))
+def make_spd_matrix(n_dims, eps_min=0.1):
+    D = torch.diag(torch.abs(torch.rand((n_dims)))) + eps_min
     if n_dims == 1:
         return D
     Q = torch.as_tensor(ortho_group.rvs(n_dims), dtype=D.dtype)
