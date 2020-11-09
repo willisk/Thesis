@@ -16,7 +16,7 @@ python projectOK/main.py \
 
 
 
-![png](/content/Thesis/figures/README/README_5_3.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_3.png)
 
 
     net accuracy: 87.2%
@@ -31,7 +31,7 @@ python projectOK/main.py \
 
 
 
-![png](/content/Thesis/figures/README/README_5_7.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_7.png)
 
 
     Results:
@@ -50,7 +50,7 @@ python projectOK/main.py \
 
 
 
-![png](/content/Thesis/figures/README/README_5_11.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_11.png)
 
 
     Results:
@@ -69,7 +69,7 @@ python projectOK/main.py \
 
 
 
-![png](/content/Thesis/figures/README/README_5_15.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_15.png)
 
 
     Results:
@@ -88,7 +88,7 @@ python projectOK/main.py \
 
 
 
-![png](/content/Thesis/figures/README/README_5_19.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_19.png)
 
 
     Results:
