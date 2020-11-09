@@ -34,10 +34,6 @@ print("#", __doc__)
 
 cmaps = utility.categorical_colors(2)
 
-# ======= Set Seeds =======
-np.random.seed(9000)
-torch.manual_seed(9000)
-
 # ======= Arg Parse =======
 parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
 parser.add_argument("-n_classes", type=int, default=10)
@@ -57,6 +53,7 @@ parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("-n_random_projections", type=int, default=16)
 parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
+parser.add_argument("-seed", type=int, default=333)
 
 if sys.argv[0] == 'ipykernel_launcher':
     args = parser.parse_args([])
@@ -66,6 +63,9 @@ else:
 print("Hyperparameters:")
 print(utility.dict_to_str(vars(args)), '\n')
 
+# ======= Set Seeds =======
+np.random.seed(args.seed)
+torch.manual_seed(args.seed)
 
 # ======= Hyperparameters =======
 # Dataset
@@ -217,23 +217,23 @@ def loss_fn_wrapper(loss_fn, project, class_conditional):
 
 methods = {
     "NN feature": loss_fn_wrapper(
-        loss_frechet,
-        project_NN,
+        loss_fn=loss_frechet,
+        project=project_NN,
         class_conditional=False,
     ),
     "NN feature CC": loss_fn_wrapper(
-        loss_frechet,
-        project_NN,
+        loss_fn=loss_frechet,
+        project=project_NN,
         class_conditional=True,
     ),
     "RP": loss_fn_wrapper(
-        loss_frechet,
-        project_RP,
+        loss_fn=loss_frechet,
+        project=project_RP,
         class_conditional=False,
     ),
     "RP CC": loss_fn_wrapper(
-        loss_frechet,
-        project_RP,
+        loss_fn=loss_frechet,
+        project=project_RP,
         class_conditional=True,
     ),
 }
