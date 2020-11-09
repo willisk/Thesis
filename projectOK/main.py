@@ -233,7 +233,7 @@ methods = {
     ),
     "RP CC": loss_fn_wrapper(
         loss_frechet,
-        project_NN,
+        project_RP,
         class_conditional=True,
     ),
 }
