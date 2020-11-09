@@ -30,7 +30,7 @@ if sys.argv[0] == 'ipykernel_launcher':
     importlib.reload(deepinversion)
     importlib.reload(shared)
 
-print(__doc__)
+print("#", __doc__)
 
 cmaps = utility.categorical_colors(2)
 
@@ -204,7 +204,7 @@ metrics = defaultdict(dict)
 
 for method, loss_fn in methods.items():
     print()
-    print("# Method:", method)
+    print("## Method:", method)
 
     preprocessing, params = preprocessing_model()
     optimizer = torch.optim.Adam(params, lr=inv_lr)
