@@ -1,10 +1,12 @@
-""" Testing reconstruction by matching statistics
-on random projections
+"""Testing reconstruction by matching statistics
+of Gaussian Mixture Model on random projections..
 """
 import os
 import sys
 
 import torch
+# from torch.optim.lr_scheduler import ReduceLROnPlateau
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -20,6 +22,8 @@ if sys.argv[0] == 'ipykernel_launcher':
     importlib.reload(utility)
     importlib.reload(datasets)
     importlib.reload(deepinversion)
+
+print(__doc__)
 
 cmaps = utility.categorical_colors(2)
 
@@ -103,18 +107,22 @@ def loss_fn(X):
 lr = 0.1
 steps = 400
 optimizer = torch.optim.Adam([A, b], lr=lr)
+# scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
 deepinversion.deep_inversion(X_B,
                              loss_fn,
                              optimizer,
+                             #  scheduler=scheduler,
                              steps=steps,
                              pre_fn=preprocessing,
+                             plot=True,
                              )
 
 # ======= Result =======
 X_B_proc = preprocessing(X_B).detach()
 print("After Pre-Processing:")
 print("Cross Entropy of B:", gmm.cross_entropy(X_B_proc))
+print("Cross Entropy of unperturbed B:", gmm.cross_entropy(X_B_orig))
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
             c=cmaps[1], label="preprocessed Data B")

@@ -1,5 +1,6 @@
-""" Testing reconstruction by matching statistics
-in input space
+"""Testing reconstruction by matching statistics
+of Gaussian Mixture Model in input space..
+
 Comment:
 Statistics are matched, but data is deformed.
 Not enough information given.
@@ -23,6 +24,8 @@ if sys.argv[0] == 'ipykernel_launcher':
     importlib.reload(utility)
     importlib.reload(datasets)
     importlib.reload(deepinversion)
+
+print(__doc__)
 
 cmaps = utility.categorical_colors(2)
 
@@ -89,11 +92,13 @@ deepinversion.deep_inversion(X_B,
                              optimizer,
                              steps=steps,
                              pre_fn=preprocessing,
+                             plot=True,
                              )
 
 # ======= Result =======
 X_B_proc = preprocessing(X_B).detach()
 print("After Pre-Processing:")
+print("Cross Entropy of B:", gmm.cross_entropy(X_B_proc))
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
             c=cmaps[1], label="preprocessed Data B")
@@ -102,7 +107,6 @@ plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
 utility.plot_stats([X_A, X_B_proc])
 plt.legend()
 plt.show()
-print("Cross Entropy of B:", gmm.cross_entropy(X_B_proc))
 
 m_B_pre, v_B_pre = X_B_proc.mean(dim=0), X_B_proc.var(dim=0)
 

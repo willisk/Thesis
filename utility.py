@@ -71,7 +71,7 @@ def dict_to_str(p):
 
 def count_correct(outputs, labels):
     preds = outputs.argmax(dim=-1)
-    return (preds == labels).sum()
+    return (preds == labels).sum().item()
 
 
 def sum_all_but(x, dim):
@@ -86,14 +86,23 @@ def expand_as_r(a, b):
     return a.reshape(shape)
 
 
-def print_accuracy(X, Y, net, str_format=None):
-    predictions = net.predict(X)
-    accuracy = (predictions == Y).type(torch.float).mean()
-    accuracy = f"{accuracy * 100:.0f}%"
-    if str_format is None:
-        print(f"Accuracy: {accuracy}")
-    else:
-        print(str_format.format(accuracy=accuracy))
+def net_accuracy(net, inputs, labels):
+    with torch.no_grad():
+        predictions = torch.argmax(net(inputs), dim=1)
+    return (predictions == labels).to(torch.float).mean().item()
+
+def print_net_accuracy(net, inputs, labels):
+    accuracy = net_accuracy(net, inputs, labels)
+    print(f"Net Accuracy: {accuracy * 100:.1f}%")
+
+# def print_accuracy(X, Y, net, str_format=None):
+#     predictions = net.predict(X)
+#     accuracy = (predictions == Y).type(torch.float).mean()
+#     accuracy = f"{accuracy * 100:.0f}%"
+#     if str_format is None:
+#         print(f"Accuracy: {accuracy}")
+#     else:
+#         print(str_format.format(accuracy=accuracy))
 
 
 def combine_mean_var(mean_a, var_a, n_a, mean_b, var_b, n_b):
@@ -169,13 +178,13 @@ def batch_feature_mean_var(x, keep_dims=[1], unbiased=True):
 
 def c_mean_var(data, labels, num_classes=None):
     if num_classes is None:
-        num_classes = labels.max().item() + 1
+        num_classes = int(labels.max().item() + 1)
     shape = (num_classes, data.shape[1])
     mean = torch.zeros(shape)
     var = torch.ones(shape)
     n = torch.zeros(shape[0])
 
-    for c in torch.unique(labels):
+    for c in set(labels.to(torch.long)):
         c_mask = labels == c
         mean[c], var[c] = batch_feature_mean_var(data[c_mask], unbiased=False)
         n[c] = c_mask.sum()
@@ -303,6 +312,7 @@ def train(net, data_loader, criterion, optimizer,
             total_count = 0.0
             total_loss = 0.0
             total_correct = 0.0
+            grad_total = 0.0
 
             for data in data_loader:
                 inputs, labels = data
@@ -312,6 +322,10 @@ def train(net, data_loader, criterion, optimizer,
                 outputs = net(inputs)
                 loss = criterion(outputs, labels)
                 loss.backward()
+
+                for param in net.parameters():
+                    grad_total += param.grad.norm(2).item()
+
                 optimizer.step()
 
                 batch_size = len(inputs)
@@ -319,12 +333,15 @@ def train(net, data_loader, criterion, optimizer,
                 total_loss += loss.item() * batch_size
                 total_correct += count_correct(outputs, labels)
 
-            accuracy = (total_correct / total_count).item()
+            loss = total_loss / total_count
+            accuracy = total_correct / total_count
+            grad_norm = grad_total / total_count
 
             if TRACKING:
                 TRACKING['steps'].append(epoch)
-                TRACKING['loss'].append(total_loss)
+                TRACKING['loss'].append(loss)
                 TRACKING['accuracy'].append(accuracy)
+                TRACKING['grad'].append(grad_norm)
 
             if save_path is not None \
                 and (save_every is not None
@@ -337,7 +354,7 @@ def train(net, data_loader, criterion, optimizer,
                 saved_epoch = epoch
 
             pbar.set_postfix(
-                loss=total_loss,
+                loss=loss,
                 acc=f"{accuracy*100:.0f}%",
                 chkpt=saved_epoch,
             )
@@ -363,9 +380,10 @@ def plot_metrics(metrics):
 
     vals = sum(metrics.values(), [])
     mean, std = np.mean(vals), np.std(vals)
-    y_min, y_max = plt.gca().get_ylim()
+    y_min, y_max = min(vals), max(vals)
     y_min, y_max = max(y_min, mean - std), min(y_max, mean + std)
-    plt.gca().set_ylim([y_min, y_max])
+    buffer = 0.1 * (y_max - y_min)
+    plt.gca().set_ylim([y_min - buffer, y_max + buffer])
 
     plt.title('Metrics')
     if accuracy:
@@ -465,6 +483,12 @@ def plot_contourf(x_min, x_max, y_min, y_max, func, n_grid=400, cmap='Spectral',
     if levels is not None:
         plt.colorbar(cf)
 
+    # MC Integration
+    # d_x = torch.as_tensor(x_max - x_min) / n_grid
+    # d_y = torch.as_tensor(y_max - y_min) / n_grid
+    # I = ((torch.as_tensor(Z)).sum() * d_x * d_y).item()
+    # print(f"MC Integral: {I}")
+
 
 def make_grid(X, labels=None, description=None, title_fmt="label: {}", ncols=3, colors=None):
     L = len(X)
@@ -553,14 +577,24 @@ def categorical_cmaps(num_classes):
             for c in range(num_classes)]
 
 
-def DKL(P, Q, n_samples=1e4):
-    X = P.sample(n_samples)
-    return P.logpdf(X).mean() - Q.logpdf(X).mean()
+# def DKL(P, Q, n_samples=1e4):
+#     X = P.sample(n_samples)
+#     return P.logpdf(X).mean() - Q.logpdf(X).mean()
 
 
-def JS(P, Q, n_samples=1e4):
-    M = P + Q
-    return 1 / 2 * (DKL(P, M, n_samples) + DKL(Q, M, n_samples))
+# def JS(P, Q, n_samples=1e4):
+#     M = P + Q
+#     return 1 / 2 * (DKL(P, M, n_samples) + DKL(Q, M, n_samples))
+
+def logsumexp(a, dim=None, b=None):
+    a = torch.as_tensor(a)
+    a_max = a.max().item() if dim is None else torch.max(a, dim=dim)[0]
+    if b is not None:
+        e = torch.as_tensor(b) * torch.exp(a - a_max)
+        out = e.sum().log() if dim is None else e.sum(dim=dim).log()
+    else:
+        out = (a - a_max).exp().sum(dim=0).log()
+    return out + a_max
 
 
 # stupid matplotlib....
@@ -618,3 +652,16 @@ def _plot_random_projections(RP, X, mean=None, color='r', marker='o'):
     _plot.set_label('random projected')
     for rp in RP.T:
         plt.plot(*(m_X + rp * 3).T, c='black')
+
+
+def print_tabular(data, row_name="", spacing=2):
+    print()
+    headers = list(next(iter(data.values())).keys())
+    widths = [max(map(len, data.keys()))] + list(map(len, headers))
+    row_data = [[row_name] + headers] + [[m] + [f"{data[m][h]:.2f}" for h in headers]
+                                         for m in data.keys()]
+    for i, rd in enumerate(row_data):
+        line = "".join(f"{e:<{w + spacing}}" for e, w in zip(rd, widths))
+        print(line)
+        if i == 0:
+            print('-' * len(line))

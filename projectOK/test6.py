@@ -1,10 +1,12 @@
-""" Testing reconstruction by matching
+"""Testing reconstruction by matching
 statistics on neural network feature
 """
 import os
 import sys
 
 import torch
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -26,6 +28,8 @@ if sys.argv[0] == 'ipykernel_launcher':
     importlib.reload(deepinversion)
     importlib.reload(shared)
 
+print(__doc__)
+
 cmaps = utility.categorical_colors(2)
 
 
@@ -36,19 +40,19 @@ torch.manual_seed(3)
 # ======= Create Dataset =======
 # Gaussian Mixture Model
 
-n_classes = 2
+n_classes = 3
+
 dataset = datasets.DatasetGMM(
     n_dims=2,
-    n_modes=5,
-    scale_mean=6,
-    scale_cov=3,
-    mean_shift=20,
     n_classes=n_classes,
+    n_modes=8,
+    scale_mean=5,
+    scale_cov=2,
+    # mean_shift=20,
     n_samples_per_class=100,
 )
 
 X_A, Y_A = dataset.X, dataset.Y
-mean_A = X_A.mean(dim=0)
 
 # perturbed Dataset B
 perturb_matrix = torch.eye(2) + 1 * torch.randn((2, 2))
@@ -60,14 +64,14 @@ X_B = X_B_orig @ perturb_matrix + perturb_shift
 
 # ======= Neural Network =======
 lr = 0.01
-steps = 100
-layer_dims = [2, 4, 4, 4, n_classes]
+steps = 200
+layer_dims = [2, 16, 16, 16, n_classes]
+# layer_dims = [2, 4, 4, 4, n_classes]
 model_path = os.path.join(
     PWD, f"models/net_GMM_{'-'.join(map(repr, layer_dims))}.pt")
 net = nets.FCNet(layer_dims)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=lr)
-# stats_net = dataset.load_statsnet()
 utility.train(net, dataset.train_loader(), criterion, optimizer,
               model_path=model_path,
               num_epochs=steps,
@@ -139,12 +143,14 @@ loss_fn = loss_frechet
 
 # ======= Optimize =======
 lr = 0.1
-steps = 50
+steps = 400
 optimizer = torch.optim.Adam([A, b], lr=lr)
+scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
 history = deepinversion.deep_inversion(X_B,
                                        loss_fn,
                                        optimizer,
+                                       scheduler=scheduler,
                                        steps=steps,
                                        pre_fn=preprocessing,
                                        #    track_history=True,
@@ -152,26 +158,26 @@ history = deepinversion.deep_inversion(X_B,
                                        plot=True,
                                        )
 
-# # for x, step in zip(*zip(*history)):
-# #     utility.plot_stats(x, colors=['r'] * len(history))
-# # ======= Result =======
-# X_B_proc = preprocessing(X_B).detach()
-# print("After Pre-Processing:")
-# print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc, Y_B))
-# plt.title("Data A")
-# plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
-# plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-#             c=cmaps[1], label="preprocessed Data B")
-# plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
-#             c='orange', label="unperturbed Data B", alpha=0.4)
-# utility.plot_stats([X_A[Y_A == 0], X_B_proc[Y_B == 0]])
-# utility.plot_stats([X_A[Y_A == 1], X_B_proc[Y_B == 1]])
-# plt.legend()
-# plt.show()
+# for x, step in zip(*zip(*history)):
+#     utility.plot_stats(x, colors=['r'] * len(history))
+# ======= Result =======
+X_B_proc = preprocessing(X_B).detach()
+print("After Pre-Processing:")
+print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc, Y_B))
+plt.title("Data A")
+plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A", alpha=0.5)
+plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
+            c=cmaps[1], label="preprocessed Data B", alpha=0.5)
+plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
+            c='orange', label="unperturbed Data B", alpha=0.4)
+for c in range(n_classes):
+    utility.plot_stats([X_A[Y_A == c], X_B_proc[Y_B == c]])
+plt.legend()
+plt.show()
 
 
-# print("effective transformation X.A + b")
-# print("A (should be close to Id):")
-# print((A @ perturb_matrix).detach())
-# print("b (should be close to 0):")
-# print((A @ perturb_shift + b).detach())
+print("effective transformation X.A + b")
+print("A (should be close to Id):")
+print((A @ perturb_matrix).detach())
+print("b (should be close to 0):")
+print((A @ perturb_shift + b).detach())

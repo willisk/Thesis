@@ -1,8 +1,7 @@
-""" Test5 using only random projections
-NO class-conditional information
-on 2 clusters
+"""Test3 using random projections
+on 2 distinct clusters
 Comment:
-Method struggles with more distinct clusters
+Method struggles with more seperated clusters
 """
 import os
 import sys
@@ -23,6 +22,8 @@ if sys.argv[0] == 'ipykernel_launcher':
     importlib.reload(utility)
     importlib.reload(datasets)
     importlib.reload(deepinversion)
+
+print(__doc__)
 
 cmaps = utility.categorical_colors(2)
 
@@ -59,6 +60,21 @@ n_projections = 3
 RP = torch.randn((2, n_projections))
 RP = RP / RP.norm(2, dim=0)
 
+
+# plot random projections
+utility.plot_random_projections(RP, X_A, mean=mean_A)
+plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
+plt.legend()
+plt.show()
+
+utility.plot_random_projections(RP, X_B, mean=mean_A)
+plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="perturbed Data B")
+plt.legend()
+plt.show()
+
+print("Before:")
+print("Cross Entropy of A:", gmm.cross_entropy(X_A))
+print("Cross Entropy of B:", gmm.cross_entropy(X_B))
 
 # ======= Preprocessing Model =======
 A = torch.eye((2), requires_grad=True)
@@ -102,6 +118,7 @@ history = deepinversion.deep_inversion(X_B,
                                        pre_fn=preprocessing,
                                        #    track_history=True,
                                        #    track_history_every=10,
+                                       plot=True,
                                        )
 
 # for x, step in zip(*zip(*history)):

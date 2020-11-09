@@ -1,4 +1,4 @@
-""" Testing reconstruction by matching
+"""Testing reconstruction by matching
 class-conditional statistics
 Comment:
 Model doesn't fully converge with either MSE or Frechet-Dist..
@@ -28,6 +28,7 @@ if sys.argv[0] == 'ipykernel_launcher':
     importlib.reload(deepinversion)
     importlib.reload(shared)
 
+print(__doc__)
 cmaps = utility.categorical_colors(2)
 
 # Tensorboard
@@ -62,9 +63,10 @@ perturb_shift = 2 * torch.randn(2)
 X_B_orig, Y_B = dataset.sample(n_samples_per_class=100)
 X_B = X_B_orig @ perturb_matrix + perturb_shift
 
-print("Before:")
-print("Cross Entropy of A:", dataset.cross_entropy(X_A, Y_A))
-print("Cross Entropy of B:", dataset.cross_entropy(X_B, Y_B))
+# Y_B_orig = Y_B
+# Y_A.fill_(0)
+# Y_B = Y_B * 0
+
 plt.scatter(X_A[Y_A == 0][:, 0], X_A[Y_A == 0][:, 1],
             c=cmaps[0], marker='+', alpha=0.4, label="Data A cl 0")
 plt.scatter(X_A[Y_A == 1][:, 0], X_A[Y_A == 1][:, 1],
@@ -77,6 +79,10 @@ utility.plot_stats([X_A[Y_A == 0], X_B[Y_B == 0]])
 utility.plot_stats([X_A[Y_A == 1], X_B[Y_B == 1]])
 plt.legend()
 plt.show()
+
+print("Before:")
+print("Cross Entropy of A:", dataset.cross_entropy(X_A, Y_A))
+print("Cross Entropy of B:", dataset.cross_entropy(X_B, Y_B))
 
 # ======= Preprocessing Model =======
 A = torch.eye((2), requires_grad=True)
@@ -109,12 +115,13 @@ def loss_fn(X, Y=Y_B):
     X_means, X_vars, _ = utility.c_mean_var(X, Y)
     diff_mean = ((X_means - A_means)**2)
     diff_var = torch.abs(X_vars - A_vars).sqrt()
-    loss = (0
-            + diff_mean[0].mean()
-            + diff_mean[1].mean()
-            + diff_var[0].mean()
-            + diff_var[1].mean()
-            )
+    loss = diff_mean.mean() + diff_var.mean()
+    # loss = (0
+    #         + diff_mean[0].mean()
+    #         + diff_mean[1].mean()
+    #         + diff_var[0].mean()
+    #         + diff_var[1].mean()
+    #         )
     return loss
 
 
@@ -135,6 +142,7 @@ history = deepinversion.deep_inversion(X_B,
                                        pre_fn=preprocessing,
                                        #    track_history=True,
                                        #    track_history_every=10,
+                                       plot=True,
                                        )
 
 # x_history, steps = zip(*history)
@@ -164,4 +172,4 @@ print("b (should be close to 0):")
 print((A @ perturb_shift + b).detach())
 
 
-writer.close()
+# writer.close()

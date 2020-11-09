@@ -131,6 +131,7 @@ def deep_inversion(inputs, loss_fn, optimizer, steps=10,
                 loss.backward()
                 grad_scale = 1
 
+            grad_total = 0.
             if TRACKING:
                 TRACKING['steps'].append(step)
                 TRACKING['loss'].append(loss.item())
@@ -138,8 +139,9 @@ def deep_inversion(inputs, loss_fn, optimizer, steps=10,
                     for i, param in enumerate(p_group['params']):
                         # p_name = f"parpam_{'-'.join(map(str, param.shape))}"
                         p_name = f'grad_{i}'
-                        TRACKING[p_name].append(
-                            (param.grad / grad_scale).norm(2))
+                        p_grad = (param.grad / grad_scale).norm(2).item()
+                        grad_total += p_grad
+                        TRACKING[p_name].append(p_grad)
 
             if USE_AMP:
                 scaler.step(optimizer)
@@ -147,7 +149,7 @@ def deep_inversion(inputs, loss_fn, optimizer, steps=10,
             else:
                 optimizer.step()
             if scheduler is not None:
-                scheduler.step(loss)
+                scheduler.step(grad_total)
 
             if track_history_every and (
                     step % track_history_every == 0 or step == steps):
