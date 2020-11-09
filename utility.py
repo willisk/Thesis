@@ -282,7 +282,7 @@ def train(net, data_loader, criterion, optimizer,
         else:
             save_path, load_path = model_path, model_path
         save_dir = os.path.dirname(save_path)
-        if not os.path.exists(save_path):
+        if not os.path.exists(save_dir):
             os.makedirs(save_dir)
     else:
         save_path, load_path = None, None
