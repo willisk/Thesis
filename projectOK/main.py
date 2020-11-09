@@ -1,5 +1,4 @@
-"""Testing reconstruction methods on
-high-dimensional Gaussian Mixtures
+"""Testing reconstruction methods on high-dimensional Gaussian Mixtures
 """
 import os
 import sys
@@ -40,22 +39,29 @@ torch.manual_seed(3)
 
 # ======= Hyperparameters =======
 # Dataset
-n_classes = 3
-n_dims = 2
+n_classes = 5
+n_dims = 20
 perturb_strength = 1.5
+
+# gmm
+n_modes = 8
+scale_mean = 2
+scale_cov = 3
+mean_shift = 10
+n_samples_per_class = 500
 
 # Neural Network
 nn_lr = 0.01
-nn_steps = 10
-# nn_layer_dims = [n_dims, 16, 16, 16, n_classes]
-nn_layer_dims = [n_dims, 4, 4, 4, n_classes]
+nn_steps = 500
+nn_layer_dims = [n_dims, 16, 16, 16, 16, n_classes]
+# nn_layer_dims = [n_dims, 4, 4, 4, n_classes]
 
 # Random Projections
 n_random_projections = 3
 
 # Inversion
 inv_lr = 0.1
-inv_steps = 10
+inv_steps = 500
 
 
 # ======= Create Dataset =======
@@ -63,11 +69,11 @@ inv_steps = 10
 dataset = datasets.DatasetGMM(
     n_dims=n_dims,
     n_classes=n_classes,
-    n_modes=2,
-    scale_mean=5,
-    scale_cov=2,
-    # mean_shift=20,
-    n_samples_per_class=100,
+    n_modes=n_modes,
+    scale_mean=scale_mean,
+    scale_cov=scale_cov,
+    mean_shift=mean_shift,
+    n_samples_per_class=n_samples_per_class,
 )
 
 X_A, Y_A = dataset.X, dataset.Y
@@ -203,7 +209,6 @@ methods = {
 metrics = defaultdict(dict)
 
 for method, loss_fn in methods.items():
-    print()
     print("## Method:", method)
 
     preprocessing, params = preprocessing_model()
