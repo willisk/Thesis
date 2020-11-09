@@ -1,4 +1,6 @@
+```
 python3 projectOK/main.py
+```
 ```
 
 # Testing reconstruction methods on
