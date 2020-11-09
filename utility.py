@@ -660,9 +660,9 @@ def _plot_random_projections(RP, X, mean=None, color='r', marker='o'):
 
 def print_tabular(data, row_name="", spacing=2):
     headers = list(next(iter(data.values())).keys())
-    widths = [max(map(len, data.keys()))] + list(map(len, headers))
     row_data = [[row_name] + headers] + [[m] + [f"{data[m][h]:.2f}" for h in headers]
                                          for m in data.keys()]
+    widths = [max(map(len, column)) for column in zip(*row_data)]
     for i, rd in enumerate(row_data):
         line = "".join(f"{e:<{w + spacing}}" for e, w in zip(rd, widths))
         print(line)
