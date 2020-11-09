@@ -3,6 +3,7 @@
 import os
 import sys
 
+import argparse
 from collections import defaultdict
 
 import torch
@@ -37,32 +38,59 @@ cmaps = utility.categorical_colors(2)
 np.random.seed(9000)
 torch.manual_seed(9000)
 
+# ======= Arg Parse =======
+parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
+parser.add_argument("-n_classes", type=int, default=10)
+parser.add_argument("-n_dims", type=int, default=20)
+parser.add_argument("-n_samples", type=int, default=100)
+parser.add_argument("-perturb_strength", type=float, default=1.5)
+parser.add_argument("-g_modes", type=int, default=12)
+parser.add_argument("-g_scale_mean", type=float, default=2)
+parser.add_argument("-g_scale_cov", type=float, default=20)
+parser.add_argument("-g_mean_shift", type=float, default=0)
+parser.add_argument("-nn_lr", type=float, default=0.01)
+parser.add_argument("-nn_steps", type=int, default=100)
+parser.add_argument("-nn_width", type=int, default=16)
+parser.add_argument("-nn_depth", type=int, default=4)
+parser.add_argument("-n_random_projections", type=int, default=16)
+parser.add_argument("-inv_lr", type=float, default=0.1)
+parser.add_argument("-inv_steps", type=int, default=100)
+
+if sys.argv[0] == 'ipykernel_launcher':
+    args = parser.parse_args([])
+else:
+    args = parser.parse_args()
+
+print("Hyperparameters:")
+print(utility.dict_to_str(vars(args)), '\n')
+
+
 # ======= Hyperparameters =======
 # Dataset
-n_classes = 10
-n_dims = 20
-perturb_strength = 1.5
+n_classes = args.n_classes
+n_dims = args.n_dims
+perturb_strength = args.perturb_strength
 
 # gmm
-n_modes = 12
-scale_mean = 2
-scale_cov = 20
-mean_shift = 0
-n_samples_per_class = 1000
+n_modes = args.g_modes
+scale_mean = args.g_scale_mean
+scale_cov = args.g_scale_cov
+mean_shift = args.g_mean_shift
+n_samples_per_class = args.n_samples
 
 # Neural Network
-nn_lr = 0.01
-nn_steps = 100
-nn_layer_dims = [n_dims, 16, 16, 16, 16, n_classes]
-# nn_layer_dims = [n_dims, 4, 4, 4, n_classes]
+nn_lr = args.nn_lr
+nn_steps = args.nn_steps
+nn_width = args.nn_width
+nn_depth = args.nn_depth
+nn_layer_dims = [n_dims] + [nn_width] * nn_depth + [n_classes]
 
 # Random Projections
-n_random_projections = 16
+n_random_projections = args.n_random_projections
 
 # Inversion
-inv_lr = 0.1
-inv_steps = 100
-
+inv_lr = args.inv_lr
+inv_steps = args.inv_steps
 
 # ======= Create Dataset =======
 # Gaussian Mixture Model
