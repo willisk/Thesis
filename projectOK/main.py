@@ -54,6 +54,7 @@ parser.add_argument("-nn_width", type=int, default=16)
 parser.add_argument("-nn_depth", type=int, default=4)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
+parser.add_argument("-n_random_projections", type=int, default=16)
 parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
 
