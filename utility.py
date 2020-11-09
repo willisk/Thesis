@@ -271,7 +271,7 @@ def search_drive(path):
 
 
 def train(net, data_loader, criterion, optimizer,
-          num_epochs=1, save_every=10,
+          num_epochs=10, save_every=20,
           model_path=None, use_drive=False,
           resume_training=False, reset=False, plot=False):
     "Training Loop"
