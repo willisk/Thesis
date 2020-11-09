@@ -52,7 +52,9 @@ parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-nn_width", type=int, default=16)
 parser.add_argument("-nn_depth", type=int, default=4)
-parser.add_argument("-n_random_projections", type=int, default=16)
+parser.add_argument("-nn_depth", type=int, default=4)
+parser.add_argument("--nn_resume_train", action="store_true")
+parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
 
@@ -84,6 +86,8 @@ nn_steps = args.nn_steps
 nn_width = args.nn_width
 nn_depth = args.nn_depth
 nn_layer_dims = [n_dims] + [nn_width] * nn_depth + [n_classes]
+nn_resume_training = args.nn_resume_train
+nn_reset_training = args.nn_reset_train
 
 # Random Projections
 n_random_projections = args.n_random_projections
@@ -129,7 +133,8 @@ optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
 utility.train(net, dataset.train_loader(), criterion, optimizer,
               model_path=model_path,
               num_epochs=nn_steps,
-              #   resume_training=True,
+              resume_training=nn_resume_training,
+              reset=nn_reset_training,
               plot=True,
               )
 # dataset.plot(net=net)

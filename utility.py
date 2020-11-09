@@ -273,7 +273,7 @@ def search_drive(path):
 def train(net, data_loader, criterion, optimizer,
           num_epochs=1, save_every=10,
           model_path=None, use_drive=False,
-          resume_training=False, plot=False):
+          resume_training=False, reset=False, plot=False):
     "Training Loop"
 
     if model_path is not None:
@@ -287,7 +287,7 @@ def train(net, data_loader, criterion, optimizer,
     else:
         save_path, load_path = None, None
 
-    if load_path is not None and os.path.exists(load_path):
+    if load_path is not None and not reset and os.path.exists(load_path):
         checkpoint = torch.load(load_path)
         if 'net_state_dict' in checkpoint:
             net.load_state_dict(checkpoint['net_state_dict'])
@@ -299,7 +299,7 @@ def train(net, data_loader, criterion, optimizer,
         if not resume_training:
             return
     else:
-        print("No Checkpoint found.")
+        print("No Checkpoint found / Reset.")
         init_epoch = 1
 
     net.train()
