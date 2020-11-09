@@ -404,7 +404,7 @@ class DatasetGMM(Dataset2D):
         X = Y = None
         for c, gmm in enumerate(self.gmms):
             x = gmm.sample(n_samples_per_class)
-            y = torch.Tensor([c] * n_samples_per_class)
+            y = torch.LongTensor([c] * n_samples_per_class)
             X = torch.cat((X, x), dim=0) if X is not None else x
             Y = torch.cat((Y, y), dim=0) if Y is not None else y
         return X, Y

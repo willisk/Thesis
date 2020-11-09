@@ -93,7 +93,7 @@ def net_accuracy(net, inputs, labels):
 
 def print_net_accuracy(net, inputs, labels):
     accuracy = net_accuracy(net, inputs, labels)
-    print(f"Net Accuracy: {accuracy * 100:.1f}%")
+    print(f"net accuracy: {accuracy * 100:.1f}%")
 
 # def print_accuracy(X, Y, net, str_format=None):
 #     predictions = net.predict(X)
@@ -655,7 +655,6 @@ def _plot_random_projections(RP, X, mean=None, color='r', marker='o'):
 
 
 def print_tabular(data, row_name="", spacing=2):
-    print()
     headers = list(next(iter(data.values())).keys())
     widths = [max(map(len, data.keys()))] + list(map(len, headers))
     row_data = [[row_name] + headers] + [[m] + [f"{data[m][h]:.2f}" for h in headers]

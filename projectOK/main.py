@@ -1,5 +1,5 @@
 """Testing reconstruction methods on
-high-dimensional Gaussian Mixture
+high-dimensional Gaussian Mixtures
 """
 import os
 import sys
@@ -203,6 +203,8 @@ methods = {
 metrics = defaultdict(dict)
 
 for method, loss_fn in methods.items():
+    print()
+    print("# Method:", method)
 
     preprocessing, params = preprocessing_model()
     optimizer = torch.optim.Adam(params, lr=inv_lr)
@@ -221,24 +223,25 @@ for method, loss_fn in methods.items():
 
     # ======= Result =======
     X_B_proc = preprocessing(X_B).detach()
-    print("After Pre-Processing:")
+
+    print("Results:")
 
     # Loss
     loss = loss_fn(X_B_proc).item()
-    print(f"loss: {loss:.3f}")
+    print(f"\tloss: {loss:.3f}")
 
     # L2 Reconstruction Error
     Id = torch.eye(n_dims)
     l2_err = (preprocessing(perturbation(Id)) - Id).norm(2).item()
-    print(f"l2 reconstruction error: {l2_err:.3f}")
+    print(f"\tl2 reconstruction error: {l2_err:.3f}")
 
     # Cross Entropy
     entropy = dataset.cross_entropy(X_B_proc, Y_B)
-    print(f"cross entropy of B: {entropy:.3f}")
+    print(f"\tcross entropy of B: {entropy:.3f}")
 
     # NN Accuracy
     accuracy = utility.net_accuracy(net, X_B_proc, Y_B)
-    print(f"nn accuracy: {accuracy * 100:.1f} %")
+    print(f"\tnn accuracy: {accuracy * 100:.1f} %")
 
     metrics[method]['loss'] = loss
     metrics[method]['l2 err'] = l2_err
@@ -246,7 +249,23 @@ for method, loss_fn in methods.items():
     metrics[method]['cross-entropy'] = entropy
 
 
-print("Summary:")
-print("cross entropy of A:", dataset.cross_entropy(X_A, Y_A).item())
-print("cross entropy of perturbed B:", dataset.cross_entropy(X_B, Y_B).item())
+print()
+print("Summary")
+print("=======")
+
+print()
+print("Data A")
+accuracy = utility.net_accuracy(net, X_A, Y_A)
+entropy = dataset.cross_entropy(X_A, Y_A).item()
+print(f"cross entropy: {entropy:.3f}")
+print(f"nn accuracy: {accuracy * 100:.1f} %")
+
+print()
+print("perturbed Data B")
+accuracy = utility.net_accuracy(net, X_B, Y_B)
+entropy = dataset.cross_entropy(X_B, Y_B).item()
+print(f"cross entropy: {entropy:.3f}")
+print(f"nn accuracy: {accuracy * 100:.1f} %")
+
+print()
 utility.print_tabular(metrics, row_name="method")
