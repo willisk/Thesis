@@ -40,19 +40,19 @@ torch.manual_seed(9000)
 # ======= Hyperparameters =======
 # Dataset
 n_classes = 10
-n_dims = 100
+n_dims = 20
 perturb_strength = 1.5
 
 # gmm
 n_modes = 12
 scale_mean = 2
-scale_cov = 10
-mean_shift = 10
+scale_cov = 20
+mean_shift = 0
 n_samples_per_class = 1000
 
 # Neural Network
 nn_lr = 0.01
-nn_steps = 200
+nn_steps = 100
 nn_layer_dims = [n_dims, 16, 16, 16, 16, n_classes]
 # nn_layer_dims = [n_dims, 4, 4, 4, n_classes]
 
@@ -61,7 +61,7 @@ n_random_projections = 16
 
 # Inversion
 inv_lr = 0.1
-inv_steps = 200
+inv_steps = 100
 
 
 # ======= Create Dataset =======
