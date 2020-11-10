@@ -450,29 +450,29 @@ class DatasetGMM(Dataset2D):
                 X_c = X[Y == c]
                 if len(X_c) == 0:
                     continue
-                p_c = 1
-            else:
-                # estimated class prob, should use equal
-                p_c = (self.Y == c).sum().item() / len(self.Y)
+            # estimated class prob, should use equal?
+            p_c = (self.Y == c).sum().item() / len(self.Y)
             n_modes, n_c = len(gmm.means), len(X_c)
             b[c] = gmm.weights.reshape(n_modes, -1) * p_c
             a[c] = torch.empty((n_modes, n_c))
             for m in range(n_modes):
                 a[c][m] = torch.as_tensor(gmm.mvns[m].logpdf(X_c))
             a_max = max(a_max, torch.max(a[c]).item())
-        sum_exp = torch.zeros((len(X)))
-        for c, (log_p_c_X, w) in enumerate(zip(a, b)):
-            if log_p_c_X is None:
+        p_X = torch.zeros((len(X)))
+        for c, (log_p_X_c_m, w) in enumerate(zip(a, b)):
+            if log_p_X_c_m is None:
                 continue
-            s = (w * torch.exp(log_p_c_X - a_max)).sum(dim=0)
+            p_X_c = (w * torch.exp(log_p_X_c_m - a_max)).sum(dim=0)
             if Y is not None:
-                sum_exp[Y == c] = s
+                p_X[Y == c] = p_X_c
             else:
-                sum_exp = sum_exp + s
-        return torch.log(sum_exp) + a_max
+                p_X = p_X + p_X_c
+        # print((p_X == 0).sum().item())
+        # print(p_X.shape)
+        return torch.log(p_X) + a_max
 
-    def cross_entropy(self, X, Y):
-        return -self.log_pdf(X, Y).mean()
+    def cross_entropy(self, X, Y=None):
+        return -self.log_pdf(X, Y=Y).mean()
 
     # def concatenate(self, except_for=None):
     #     gmms = [g for g in self.gmms if g is not except_for]
