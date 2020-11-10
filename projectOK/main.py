@@ -116,7 +116,7 @@ dataset = datasets.DatasetGMM(
 )
 
 X_A, Y_A = dataset.X, dataset.Y
-X_B, Y_B = dataset.sample(n_samples_per_class=args.n_samples_per_class_B)
+X_B, Y_B = dataset.sample(n_samples_per_class=n_samples_per_class_B)
 X_B_valid, Y_B_valid = dataset.sample(
     n_samples_per_class=n_samples_per_class_valid)
 
