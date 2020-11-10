@@ -38,7 +38,9 @@ cmaps = utility.categorical_colors(2)
 parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
 parser.add_argument("-n_classes", type=int, default=10)
 parser.add_argument("-n_dims", type=int, default=20)
-parser.add_argument("-n_samples", type=int, default=100)
+parser.add_argument("-n_samples_A", type=int, default=500)
+parser.add_argument("-n_samples_B", type=int, default=100)
+parser.add_argument("-n_samples_valid", type=int, default=1000)
 parser.add_argument("-perturb_strength", type=float, default=1.5)
 parser.add_argument("-g_modes", type=int, default=12)
 parser.add_argument("-g_scale_mean", type=float, default=2)
@@ -81,7 +83,9 @@ n_modes = args.g_modes
 scale_mean = args.g_scale_mean
 scale_cov = args.g_scale_cov
 mean_shift = args.g_mean_shift
-n_samples_per_class = args.n_samples
+n_samples_per_class_A = args.n_samples_A
+n_samples_per_class_B args.n_samples_B
+n_samples_per_class_valid args.n_samples_valid
 
 # Neural Network
 nn_lr = args.nn_lr
@@ -108,11 +112,13 @@ dataset = datasets.DatasetGMM(
     scale_mean=scale_mean,
     scale_cov=scale_cov,
     mean_shift=mean_shift,
-    n_samples_per_class=n_samples_per_class,
+    n_samples_per_class=n_samples_per_class_A,
 )
 
 X_A, Y_A = dataset.X, dataset.Y
-X_B_orig, Y_B = dataset.sample(n_samples_per_class=100)
+X_B, Y_B = dataset.sample(n_samples_per_class=args.n_samples_per_class_B)
+X_B_valid, Y_B_valid = dataset.sample(
+    n_samples_per_class=n_samples_per_class_valid)
 
 perturb_matrix = torch.eye(n_dims) + perturb_strength * \
     torch.randn((n_dims, n_dims))
@@ -124,6 +130,7 @@ def perturb(X):
 
 
 # perturbed Dataset B
+X_B_orig = X_B
 X_B = perturb(X_B_orig)
 
 
@@ -158,7 +165,7 @@ def hook(module, inputs, outputs):
 net.main[-3].register_forward_hook(hook)
 
 
-def project_NN(X, Y):
+def project_NN(X, _Y):
     net(X)
     return feature_activation
 
@@ -170,7 +177,7 @@ RP = RP / RP.norm(2, dim=0)
 mean_A = X_A.mean(dim=0)
 
 
-def project_RP(X, Y):
+def project_RP(X, _Y):
     return (X - mean_A) @ RP
 
 
@@ -291,12 +298,14 @@ for method, loss_fn in methods.items():
 
     # NN Accuracy
     accuracy = utility.net_accuracy(net, X_B_proc, Y_B)
+    accuracy_valid = utility.net_accuracy(net, X_B_valid, Y_B_valid)
     print(f"\tnn accuracy: {accuracy * 100:.1f} %")
 
     metrics[method]['loss'] = loss
     metrics[method]['l2 err'] = l2_err
-    metrics[method]['accuracy'] = accuracy
-    metrics[method]['cross-entropy'] = entropy
+    metrics[method]['acc'] = accuracy
+    metrics[method]['acc (val)'] = accuracy_valid
+    metrics[method]['c-entr'] = entropy
 
 
 print()
