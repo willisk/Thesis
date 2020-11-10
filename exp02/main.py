@@ -68,7 +68,7 @@ hyperparameters = dict(
 regularization = None
 
 
-def perturbation(x, noise_level=0.001):
+def perturb(x, noise_level=0.001):
     x.data += torch.randn_like(x) * noise_level
     return x
 
@@ -127,7 +127,7 @@ for hp in utility.dict_product(hyperparameters):
                                           loss_fn,
                                           optimizer,
                                           steps=hp['n_steps'],
-                                          #   pre_fn=perturbation,
+                                          #   pre_fn=perturb,
                                           track_history=True,
                                           track_history_every=10
                                           )
