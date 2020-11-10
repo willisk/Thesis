@@ -654,13 +654,13 @@ def plot_random_projections(RP, X, mean, Y=None, marker='o'):
     if Y is None:
         _plot_random_projections(RP, X, mean=mean)
     else:
-        n_classes = len(means)
+        n_classes = len(mean)
         if n_classes == 2:
             marker = ['+', 'd']
         # cmaps = categorical_colors(Y.max().item() + 1)
         for c, m in zip(Y.unique(), marker):
             _plot_random_projections(RP, X[Y == c],
-                                     mean=means[c],
+                                     mean=mean[c],
                                      #  mean=means,
                                      #  color=cmaps[c],
                                      marker=m)
