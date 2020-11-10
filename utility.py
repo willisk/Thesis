@@ -276,7 +276,8 @@ def search_drive(path):
 def train(net, data_loader, criterion, optimizer,
           num_epochs=10, save_every=20,
           model_path=None, use_drive=False,
-          resume_training=False, reset=False, plot=False):
+          resume_training=False, reset=False,
+          scheduler=None, plot=False):
     "Training Loop"
 
     if model_path is not None:
@@ -342,7 +343,7 @@ def train(net, data_loader, criterion, optimizer,
                     grad_scale = 1
 
                 for param in net.parameters():
-                    grad_total += (param / grad_scale).grad.norm(2).item()
+                    grad_total += (param.grad / grad_scale).norm(2).item()
 
                 if USE_AMP:
                     scaler.step(optimizer)
