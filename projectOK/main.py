@@ -63,7 +63,7 @@ if sys.argv[0] == 'ipykernel_launcher':
     args.g_modes = 3
     args.n_samples_A = 100
     args.n_samples_B = 100
-    args.n_samples_val = 100
+    args.n_samples_valid = 100
     args.nn_width = 8
 else:
     args = parser.parse_args()
@@ -120,7 +120,7 @@ dataset = datasets.DatasetGMM(
 
 X_A, Y_A = dataset.X, dataset.Y
 X_B, Y_B = dataset.sample(n_samples_per_class=n_samples_per_class_B)
-X_B_valid, Y_B_valid = dataset.sample(
+X_B_val, Y_B_val = dataset.sample(
     n_samples_per_class=n_samples_per_class_valid)
 
 perturb_matrix = torch.eye(n_dims) + perturb_strength * \
@@ -135,6 +135,7 @@ def perturb(X):
 # perturbed Dataset B
 X_B_orig = X_B
 X_B = perturb(X_B_orig)
+X_B_val = perturb(X_B_val)
 
 
 # ======= Neural Network =======
@@ -283,6 +284,7 @@ for method, loss_fn in methods.items():
 
     # ======= Result =======
     X_B_proc = preprocess(X_B).detach()
+    X_B_val_proc = preprocess(X_B_val).detach()
 
     print("Results:")
 
@@ -301,13 +303,15 @@ for method, loss_fn in methods.items():
 
     # NN Accuracy
     accuracy = utility.net_accuracy(net, X_B_proc, Y_B)
-    accuracy_valid = utility.net_accuracy(net, X_B_valid, Y_B_valid)
+    accuracy_val = utility.net_accuracy(
+        net, X_B_val_proc, Y_B_val)
     print(f"\tnn accuracy: {accuracy * 100:.1f} %")
+    print(f"\tnn validation accuracy: {accuracy_val * 100:.1f} %")
 
     metrics[method]['loss'] = loss
-    metrics[method]['l2 err'] = l2_err
+    metrics[method]['l2-err'] = l2_err
     metrics[method]['acc'] = accuracy
-    metrics[method]['acc (val)'] = accuracy_valid
+    metrics[method]['acc(val)'] = accuracy_val
     metrics[method]['c-entr'] = entropy
 
 
