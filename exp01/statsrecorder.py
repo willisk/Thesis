@@ -33,7 +33,8 @@ class StatsRecorder:
         if not self.initialized:
             self.__init__(self.n_classes, data, labels)
         else:
-            new_mean, new_var, m = utility.c_mean_var(data, labels, self.n_classes)
+            new_mean, new_var, m = utility.c_mean_var(
+                data, labels, self.n_classes)
             old_mean, old_var, n = self.mean, self.var, self.n
 
             self.mean, self.var, self.n = utility.combine_mean_var(old_mean, old_var, n,
@@ -43,7 +44,7 @@ class StatsRecorder:
 # pylint: disable=no-member
 torch.manual_seed(0)
 
-n_classes = 10
+n_classes = 3
 n_features = 5
 stats = StatsRecorder(n_classes)
 
@@ -52,7 +53,7 @@ data = [torch.empty([0] + data_shape)] * n_classes
 
 for i in range(300):
     n_samples = torch.randint(10, 101, size=(1,)).item()
-    new_data = torch.randn(n_samples, *data_shape) * 100
+    new_data = torch.randn((n_samples, *data_shape)) * 10
     new_labels = torch.randint(n_classes, size=(n_samples,))
 
     # print("incoming data shape: ", new_data.shape)
@@ -65,7 +66,7 @@ for i in range(300):
 
     for c in range(n_classes):
         # data: [n_class] * [n_cc_batch, n_feature, 32, 32]
-        print(data[0].shape)
+        # print(data[0].shape)
         class_mean, class_var = utility.batch_feature_mean_var(data[c])
 
         # utility.assert_mean_var(class_mean, class_var,
@@ -74,7 +75,7 @@ for i in range(300):
         assert stats.mean[stats.n.squeeze() != 0].isfinite().all(), \
             "recorded mean has invalid entries"
         assert stats.mean[c].shape == class_mean.shape
-        assert torch.allclose(stats.mean[c], class_mean, atol=1e-7, equal_nan=True), \
+        assert torch.allclose(stats.mean[c], class_mean, equal_nan=True), \
             "class {}".format(c) \
             + "\nclass mean: {}".format(class_mean) \
             + "\nrecorded mean: {}".format(stats.mean[c]) \
