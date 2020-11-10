@@ -474,7 +474,8 @@ class DatasetGMM(Dataset2D):
 
     def cross_entropy(self, X, Y=None):
         X = X.to('cpu')
-        Y = Y.to('cpu')
+        if Y is not None:
+            Y = Y.to('cpu')
         return -self.log_pdf(X, Y=Y).mean()
 
     # def concatenate(self, except_for=None):
