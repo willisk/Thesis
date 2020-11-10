@@ -316,7 +316,7 @@ for method, loss_fn in methods.items():
     print(f"\tloss: {loss:.3f}")
 
     # L2 Reconstruction Error
-    Id = torch.eye(n_dims)
+    Id = torch.eye(n_dims, device=DEVICE)
     l2_err = (preprocess(perturb(Id)) - Id).norm(2).item()
     print(f"\tl2 reconstruction error: {l2_err:.3f}")
 
