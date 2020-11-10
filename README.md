@@ -10,23 +10,45 @@ python projectOK/main.py \
 -g_modes=12 \
 -g_scale_mean=3 \
 -g_scale_cov=20 \
--g_mean_shift=1 \
+-g_mean_shift=2 \
 -nn_lr=0.01 \
--nn_steps=300 \
+-nn_steps=100 \
 -nn_width=32 \
 -nn_depth=4 \
 -n_random_projections=32 \
 -inv_lr=0.1 \
--inv_steps=1000 \
---nn_resume_train \
---nn_reset_train \
+-inv_steps=300 \
+--nn_verifier \
+
+# --nn_reset_train \
+# --nn_resume_train \
 ```
 
-# Testing reconstruction methods on high-dimensional Gaussian Mixtures
     
     Hyperparameters:
-    n_classes=10 n_dims=20 n_samples_A=1000 n_samples_B=300 n_samples_valid=1000 perturb_strength=1.5 g_modes=12 g_scale_mean=3.0 g_scale_cov=20.0 g_mean_shift=1.0 nn_lr=0.01 nn_steps=300 nn_width=32 nn_depth=4 nn_resume_train=True nn_reset_train=True n_random_projections=32 inv_lr=0.1 inv_steps=1000 seed=300 
+    n_classes=10
+    n_dims=20
+    n_samples_A=1000
+    n_samples_B=300
+    n_samples_valid=1000
+    perturb_strength=1.5
+    g_modes=12
+    g_scale_mean=3.0
+    g_scale_cov=20.0
+    g_mean_shift=2.0
+    nn_lr=0.01
+    nn_steps=100
+    nn_width=32
+    nn_depth=4
+    nn_resume_train=True
+    nn_reset_train=True
+    nn_verifier=True
+    n_random_projections=32
+    inv_lr=0.1
+    inv_steps=300
+    seed=300
     
+    Running on 'cpu'
     No Checkpoint found / Reset.
     Beginning training.
 
@@ -38,11 +60,19 @@ python projectOK/main.py \
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_4_3.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_7_3.png)
 
 
-    net accuracy: 79.0%
-## Method: NN feature
+    net accuracy: 88.7%
+    No Checkpoint found / Reset.
+    Beginning training.
+
+
+
+
+
+    
+    verifier net accuracy: 89.2%
     Beginning Inversion.
 
 
@@ -53,16 +83,16 @@ python projectOK/main.py \
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_4_7.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_7_9.png)
 
 
     Results:
     	loss: 0.000
-    	l2 reconstruction error: 9.636
+    	l2 reconstruction error: 13.280
     	cross entropy of B: inf
-    	nn accuracy: 11.0 %
-    	nn validation accuracy: 11.1 %
-## Method: NN feature CC
+    	nn accuracy: 13.2 %
+    	nn validation set accuracy: 13.7 %
+    	nn verifier accuracy: 13.1 %
     Beginning Inversion.
 
 
@@ -73,16 +103,16 @@ python projectOK/main.py \
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_4_11.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_7_13.png)
 
 
     Results:
-    	loss: 5749.976
-    	l2 reconstruction error: 30.526
+    	loss: 13050.233
+    	l2 reconstruction error: 76.772
     	cross entropy of B: inf
-    	nn accuracy: 40.7 %
-    	nn validation accuracy: 32.4 %
-## Method: RP
+    	nn accuracy: 28.0 %
+    	nn validation set accuracy: 26.1 %
+    	nn verifier accuracy: 15.7 %
     Beginning Inversion.
 
 
@@ -93,16 +123,16 @@ python projectOK/main.py \
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_4_15.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_7_17.png)
 
 
     Results:
     	loss: 0.000
-    	l2 reconstruction error: 9.636
+    	l2 reconstruction error: 13.280
     	cross entropy of B: inf
-    	nn accuracy: 11.0 %
-    	nn validation accuracy: 11.1 %
-## Method: RP CC
+    	nn accuracy: 13.2 %
+    	nn validation set accuracy: 13.7 %
+    	nn verifier accuracy: 13.1 %
     Beginning Inversion.
 
 
@@ -113,32 +143,37 @@ python projectOK/main.py \
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_4_19.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_7_21.png)
 
 
     Results:
-    	loss: 0.485
-    	l2 reconstruction error: 9.308
+    	loss: 0.939
+    	l2 reconstruction error: 11.140
     	cross entropy of B: inf
-    	nn accuracy: 29.0 %
-    	nn validation accuracy: 30.1 %
+    	nn accuracy: 39.0 %
+    	nn validation set accuracy: 38.7 %
+    	nn verifier accuracy: 41.8 %
     
-    Summary
-    =======
+    =========
     
     Data A
     cross entropy: 54.999
-    nn accuracy: 79.0 %
+    nn accuracy: 88.7 %
     
     perturbed Data B
     cross entropy: inf
-    nn accuracy: 11.2 %
-    nn accuracy B valid: 10.7 %
+    nn accuracy: 12.9 %
+    nn accuracy B valid: 11.7 %
+    nn verifier accuracy: 12.0 %
     
-    method         loss     l2-err  acc   acc(val)  c-entr  
-    --------------------------------------------------------
-    NN feature     0.00     9.64    0.11  0.11      inf     
-    NN feature CC  5749.98  30.53   0.41  0.32      inf     
-    RP             0.00     9.64    0.11  0.11      inf     
-    RP CC          0.49     9.31    0.29  0.30      inf     
+    method         loss      l2-err  acc   acc(val)  acc(ver)  c-entr  
+    -------------------------------------------------------------------
+    NN feature     0.00      13.28   0.13  0.14      0.13      inf     
+    NN feature CC  13050.23  76.77   0.28  0.26      0.16      inf     
+    RP             0.00      13.28   0.13  0.14      0.13      inf     
+    RP CC          0.94      11.14   0.39  0.39      0.42      inf     
+
+
+# TESTS
+
 
