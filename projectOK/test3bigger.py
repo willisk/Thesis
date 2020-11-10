@@ -52,8 +52,13 @@ mean_A = X_A.mean(dim=0)
 perturb_matrix = torch.eye(2) + 1 * torch.randn((2, 2))
 perturb_shift = 2 * torch.randn(2)
 
+
+def perturb(X):
+    return X @ perturb_matrix + perturb_shift
+
+
 X_B_orig, Y_B = dataset.sample(n_samples_per_class=100)
-X_B = X_B_orig @ perturb_matrix + perturb_shift
+X_B = perturb(X_B_orig)
 
 # ======= Random Projections =======
 n_projections = 3
@@ -73,8 +78,8 @@ plt.legend()
 plt.show()
 
 print("Before:")
-print("Cross Entropy of A:", gmm.cross_entropy(X_A))
-print("Cross Entropy of B:", gmm.cross_entropy(X_B))
+print("Cross Entropy of A:", dataset.cross_entropy(X_A).item())
+print("Cross Entropy of B:", dataset.cross_entropy(X_B).item())
 
 # ======= Preprocessing Model =======
 A = torch.eye((2), requires_grad=True)
@@ -108,7 +113,7 @@ def loss_fn(X):
 
 # ======= Optimize =======
 lr = 0.1
-steps = 400
+steps = 600
 optimizer = torch.optim.Adam([A, b], lr=lr)
 
 history = deepinversion.deep_inversion(X_B,
@@ -126,7 +131,9 @@ history = deepinversion.deep_inversion(X_B,
 # ======= Result =======
 X_B_proc = preprocessing(X_B).detach()
 print("After Pre-Processing:")
-print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc, Y_B))
+print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc).item())
+print("Cross Entropy of unperturbed B:",
+      dataset.cross_entropy(X_B_orig).item())
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
             c=cmaps[1], label="preprocessed Data B")
@@ -137,8 +144,7 @@ utility.plot_stats([X_A[Y_A == 1], X_B_proc[Y_B == 1]])
 plt.legend()
 plt.show()
 
-print("effective transformation X.A + b")
-print("A (should be close to Id):")
-print((A @ perturb_matrix).detach())
-print("b (should be close to 0):")
-print((A @ perturb_shift + b).detach())
+# L2 Reconstruction Error
+Id = torch.eye(2)
+l2_err = (preprocessing(perturb(Id)) - Id).norm(2).item()
+print(f"l2 reconstruction error: {l2_err:.3f}")

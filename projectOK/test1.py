@@ -28,7 +28,13 @@ X_A = torch.randn((3, 2)) * 4 + torch.randn((2)) * 10
 perturb_matrix = torch.eye(2) + 2 * torch.randn((2, 2))
 perturb_shift = 2 * torch.randn(2)
 
-X_B = X_A @ perturb_matrix + perturb_shift
+
+def perturb(X):
+    return X @ perturb_matrix + perturb_shift
+
+
+# perturbed Dataset B
+X_B = perturb(X_A)
 
 plt.scatter(X_A[:, 0], X_A[:, 1], c='b', label="Data A")
 plt.scatter(X_B[:, 0], X_B[:, 1], c='r', label="Data B")
@@ -66,8 +72,7 @@ plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1], c='r', label="preprocessed Data B")
 plt.legend()
 plt.show()
 
-print("effective transformation X.A + b")
-print("A (should be close to Id):")
-print((A @ perturb_matrix).detach())
-print("b (should be close to 0):")
-print((A @ perturb_shift + b).detach())
+# L2 Reconstruction Error
+Id = torch.eye(2)
+l2_err = (preprocessing(perturb(Id)) - Id).norm(2).item()
+print(f"l2 reconstruction error: {l2_err:.3f}")

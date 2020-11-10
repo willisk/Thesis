@@ -30,8 +30,8 @@ print(__doc__)
 cmaps = utility.categorical_colors(2)
 
 # ======= Set Seeds =======
-np.random.seed(3)
-torch.manual_seed(3)
+np.random.seed(1)
+torch.manual_seed(1)
 
 # ======= Create Dataset =======
 # Gaussian Mixture Model
@@ -44,15 +44,20 @@ gmm = datasets.random_gmm(
     mean_shift=30,
 )
 
-X_A = torch.from_numpy(gmm.sample(n_samples=100))
+X_A = gmm.sample(n_samples=100)
 m_A, v_A = X_A.mean(dim=0), X_A.var(dim=0)
 
 # perturbed Dataset B
 perturb_matrix = torch.eye(2) + 1 * torch.randn((2, 2))
 perturb_shift = 2 * torch.randn(2)
 
-X_B_orig = torch.from_numpy(gmm.sample(n_samples=100))
-X_B = X_B_orig @ perturb_matrix + perturb_shift
+
+def perturb(X):
+    return X @ perturb_matrix + perturb_shift
+
+
+X_B_orig = gmm.sample(n_samples=100)
+X_B = perturb(X_B_orig)
 m_B, v_B = X_B.mean(dim=0), X_B.var(dim=0)
 
 print("Before:")
@@ -61,8 +66,8 @@ plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="perturbed Data B")
 utility.plot_stats([X_A, X_B])
 plt.legend()
 plt.show()
-print("Cross Entropy of A:", gmm.cross_entropy(X_A))
-print("Cross Entropy of B:", gmm.cross_entropy(X_B))
+print("Cross Entropy of A:", gmm.cross_entropy(X_A).item())
+print("Cross Entropy of B:", gmm.cross_entropy(X_B).item())
 
 # ======= Preprocessing Model =======
 A = torch.randn((2, 2), requires_grad=True)
@@ -98,7 +103,8 @@ deepinversion.deep_inversion(X_B,
 # ======= Result =======
 X_B_proc = preprocessing(X_B).detach()
 print("After Pre-Processing:")
-print("Cross Entropy of B:", gmm.cross_entropy(X_B_proc))
+print("Cross Entropy of B:", gmm.cross_entropy(X_B_proc).item())
+print("Cross Entropy of unperturbed B:", gmm.cross_entropy(X_B_orig).item())
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
             c=cmaps[1], label="preprocessed Data B")
@@ -110,8 +116,7 @@ plt.show()
 
 m_B_pre, v_B_pre = X_B_proc.mean(dim=0), X_B_proc.var(dim=0)
 
-print("effective transformation X.A + b")
-print("A (should be close to Id):")
-print((A @ perturb_matrix).detach())
-print("b (should be close to 0):")
-print((A @ perturb_shift + b).detach())
+# L2 Reconstruction Error
+Id = torch.eye(2)
+l2_err = (preprocessing(perturb(Id)) - Id).norm(2).item()
+print(f"l2 reconstruction error: {l2_err:.3f}")

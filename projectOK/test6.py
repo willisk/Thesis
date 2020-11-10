@@ -58,8 +58,13 @@ X_A, Y_A = dataset.X, dataset.Y
 perturb_matrix = torch.eye(2) + 1 * torch.randn((2, 2))
 perturb_shift = 2 * torch.randn(2)
 
+
+def perturb(X):
+    return X @ perturb_matrix + perturb_shift
+
+
 X_B_orig, Y_B = dataset.sample(n_samples_per_class=100)
-X_B = X_B_orig @ perturb_matrix + perturb_shift
+X_B = perturb(X_B_orig)
 
 
 # ======= Neural Network =======
@@ -176,8 +181,6 @@ plt.legend()
 plt.show()
 
 
-print("effective transformation X.A + b")
-print("A (should be close to Id):")
-print((A @ perturb_matrix).detach())
-print("b (should be close to 0):")
-print((A @ perturb_shift + b).detach())
+# L2 Reconstruction Error
+Id = torch.eye(2)
+l2_err = (preprocessing(perturb(Id)) - Id).norm(2).item()

@@ -39,6 +39,7 @@ dataset = datasets.DatasetGMM(
     n_samples_per_class=100,
 )
 
+dataset.Y = dataset.Y[:220]
 X_A, Y_A = dataset.X, dataset.Y
 # X_B, Y_B = dataset.sample(n_samples_per_class=1)
 
@@ -54,7 +55,8 @@ dataset.pairwise_JS()
 # print(dataset.gmms[1].weights)
 for c in range(n_classes):
     def loss_fn(X):
-        return dataset.pdf(X, torch.Tensor([c] * len(X)))
+        return dataset.pdf(X)
+        # return dataset.pdf(X, torch.Tensor([c] * len(X)))
     dataset.plot(loss_fn=loss_fn, scatter=False, legend=True,)
     plt.show()
 # dataset.plot(

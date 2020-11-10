@@ -57,6 +57,9 @@ parser.add_argument("-seed", type=int, default=333)
 
 if sys.argv[0] == 'ipykernel_launcher':
     args = parser.parse_args([])
+    args.n_classes = 10
+    args.g_modes = 10
+    args.n_samples = 1000
 else:
     args = parser.parse_args()
 
@@ -116,12 +119,12 @@ perturb_matrix = torch.eye(n_dims) + perturb_strength * \
 perturb_shift = perturb_strength * torch.randn(n_dims)
 
 
-def perturbation(X):
+def perturb(X):
     return X @ perturb_matrix + perturb_shift
 
 
 # perturbed Dataset B
-X_B = perturbation(X_B_orig)
+X_B = perturb(X_B_orig)
 
 
 # ======= Neural Network =======
@@ -155,7 +158,7 @@ def hook(module, inputs, outputs):
 net.main[-3].register_forward_hook(hook)
 
 
-def project_NN(X):
+def project_NN(X, Y):
     net(X)
     return feature_activation
 
@@ -164,12 +167,21 @@ def project_NN(X):
 RP = torch.randn((n_dims, n_random_projections))
 RP = RP / RP.norm(2, dim=0)
 
-# XXX: Change to cluster means
 mean_A = X_A.mean(dim=0)
 
 
-def project_RP(X):
+def project_RP(X, Y):
     return (X - mean_A) @ RP
+
+
+means_A, _, _ = utility.c_mean_var(X_A, Y_A)
+
+
+def project_RP_CC(X, Y):
+    X_proj_C = torch.empty((X.shape[0], n_random_projections))
+    for c in range(n_classes):
+        X_proj_C[Y == c] = (X[Y == c] - means_A[c]) @ RP
+    return X_proj_C
 
 
 # ======= Preprocessing Model =======
@@ -177,9 +189,9 @@ def preprocessing_model():
     A = torch.eye(n_dims, requires_grad=True)
     b = torch.zeros((n_dims), requires_grad=True)
 
-    def preprocessing(X):
+    def preprocessing_fn(X):
         return X @ A + b
-    return preprocessing, (A, b)
+    return preprocessing_fn, (A, b)
 
 
 # ======= Loss Function =======
@@ -199,16 +211,16 @@ def loss_di(X_proj_means, X_proj_vars, means_target, vars_target):
 
 def loss_fn_wrapper(loss_fn, project, class_conditional):
     with torch.no_grad():
-        X_A_proj = project(X_A)
+        X_A_proj = project(X_A, Y_A)
     if class_conditional:
         A_proj_means, A_proj_vars, _ = utility.c_mean_var(X_A_proj, Y_A)
     else:
         A_proj_means, A_proj_vars = X_A.mean(dim=0), X_A.var(dim=0)
 
-    def _loss_fn(X, loss_fn=loss_fn, project=project, means_target=A_proj_means, vars_target=A_proj_vars, class_conditional=class_conditional):
-        X_proj = project(X)
+    def _loss_fn(X, Y=Y_B, loss_fn=loss_fn, project=project, means_target=A_proj_means, vars_target=A_proj_vars, class_conditional=class_conditional):
+        X_proj = project(X, Y)
         if class_conditional:
-            X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y_B)
+            X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y)
         else:
             X_proj_means, X_proj_vars = X.mean(dim=0), X.var(dim=0)
         return loss_fn(X_proj_means, X_proj_vars, means_target, vars_target)
@@ -233,7 +245,7 @@ methods = {
     ),
     "RP CC": loss_fn_wrapper(
         loss_fn=loss_frechet,
-        project=project_RP,
+        project=project_RP_CC,
         class_conditional=True,
     ),
 }
@@ -244,7 +256,7 @@ metrics = defaultdict(dict)
 for method, loss_fn in methods.items():
     print("## Method:", method)
 
-    preprocessing, params = preprocessing_model()
+    preprocess, params = preprocessing_model()
     optimizer = torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
@@ -253,14 +265,14 @@ for method, loss_fn in methods.items():
                                  optimizer,
                                  #    scheduler=scheduler,
                                  steps=inv_steps,
-                                 pre_fn=preprocessing,
+                                 pre_fn=preprocess,
                                  #    track_history=True,
                                  #    track_history_every=10,
                                  plot=True,
                                  )
 
     # ======= Result =======
-    X_B_proc = preprocessing(X_B).detach()
+    X_B_proc = preprocess(X_B).detach()
 
     print("Results:")
 
@@ -270,7 +282,7 @@ for method, loss_fn in methods.items():
 
     # L2 Reconstruction Error
     Id = torch.eye(n_dims)
-    l2_err = (preprocessing(perturbation(Id)) - Id).norm(2).item()
+    l2_err = (preprocess(perturb(Id)) - Id).norm(2).item()
     print(f"\tl2 reconstruction error: {l2_err:.3f}")
 
     # Cross Entropy
