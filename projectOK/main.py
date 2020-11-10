@@ -66,11 +66,13 @@ if sys.argv[0] == 'ipykernel_launcher':
     args.n_samples_B = 100
     args.n_samples_valid = 100
     args.nn_width = 8
+    args.nn_verifier = True
 else:
     args = parser.parse_args()
 
 print("Hyperparameters:")
 print(utility.dict_to_str(vars(args), '\n'))
+print()
 
 # ======= Set Seeds =======
 np.random.seed(args.seed)
@@ -108,6 +110,10 @@ n_random_projections = args.n_random_projections
 inv_lr = args.inv_lr
 inv_steps = args.inv_steps
 
+# ======= Device =======
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(f"Running on '{DEVICE}'")
+
 # ======= Create Dataset =======
 # Gaussian Mixture Model
 dataset = datasets.DatasetGMM(
@@ -118,6 +124,7 @@ dataset = datasets.DatasetGMM(
     scale_cov=scale_cov,
     mean_shift=mean_shift,
     n_samples_per_class=n_samples_per_class_A,
+    device=DEVICE,
 )
 
 X_A, Y_A = dataset.X, dataset.Y
@@ -128,6 +135,8 @@ X_B_val, Y_B_val = dataset.sample(
 perturb_matrix = torch.eye(n_dims) + perturb_strength * \
     torch.randn((n_dims, n_dims))
 perturb_shift = perturb_strength * torch.randn(n_dims)
+perturb_matrix.to(DEVICE)
+perturb_shift.to(DEVICE)
 
 
 def perturb(X):
@@ -139,11 +148,11 @@ X_B_orig = X_B
 X_B = perturb(X_B_orig)
 X_B_val = perturb(X_B_val)
 
-
 # ======= Neural Network =======
 model_name = f"net_GMM_{'-'.join(map(repr, nn_layer_dims))}"
 model_path = os.path.join(PWD, f"models/{model_name}.pt")
 net = nets.FCNet(nn_layer_dims)
+net.to(DEVICE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
 utility.train(net, dataset.train_loader(), criterion, optimizer,
@@ -160,6 +169,7 @@ utility.print_net_accuracy(net, X_A, Y_A)
 if nn_verifier:
     verifier_path = os.path.join(PWD, f"models/{model_name}_verifier.pt")
     verifier_net = nets.FCNet(nn_layer_dims)
+    verifier_net.to(DEVICE)
     optimizer = torch.optim.Adam(verifier_net.parameters(), lr=nn_lr)
     utility.train(verifier_net, dataset.train_loader(), criterion, optimizer,
                   model_path=verifier_path,
@@ -190,7 +200,7 @@ def project_NN(X, _Y):
 
 
 # ======= Random Projections =======
-RP = torch.randn((n_dims, n_random_projections))
+RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
 RP = RP / RP.norm(2, dim=0)
 
 mean_A = X_A.mean(dim=0)
@@ -204,7 +214,7 @@ means_A, _, _ = utility.c_mean_var(X_A, Y_A)
 
 
 def project_RP_CC(X, Y):
-    X_proj_C = torch.empty((X.shape[0], n_random_projections))
+    X_proj_C = torch.empty((X.shape[0], n_random_projections), device=X.device)
     for c in range(n_classes):
         X_proj_C[Y == c] = (X[Y == c] - means_A[c]) @ RP
     return X_proj_C
@@ -212,8 +222,8 @@ def project_RP_CC(X, Y):
 
 # ======= Preprocessing Model =======
 def preprocessing_model():
-    A = torch.eye(n_dims, requires_grad=True)
-    b = torch.zeros((n_dims), requires_grad=True)
+    A = torch.eye(n_dims, requires_grad=True, device=DEVICE)
+    b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
 
     def preprocessing_fn(X):
         return X @ A + b
@@ -314,17 +324,20 @@ for method, loss_fn in methods.items():
 
     # Cross Entropy
     entropy = dataset.cross_entropy(X_B_proc, Y_B)
+    accuracy_val = utility.net_accuracy(
+        net, X_B_val_proc, Y_B_val)
     print(f"\tcross entropy of B: {entropy:.3f}")
 
     # NN Accuracy
     accuracy = utility.net_accuracy(net, X_B_proc, Y_B)
+    print(f"\tnn accuracy: {accuracy * 100:.1f} %")
     accuracy_val = utility.net_accuracy(
         net, X_B_val_proc, Y_B_val)
-    print(f"\tnn accuracy: {accuracy * 100:.1f} %")
     print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
 
     if nn_verifier:
-        accuracy_ver = utility.net_accuracy(verifier_net, X_B_val_proc, Y_B)
+        accuracy_ver = utility.net_accuracy(
+            verifier_net, X_B_val_proc, Y_B_val)
         print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
 
     metrics[method]['loss'] = loss
@@ -356,7 +369,7 @@ print(f"cross entropy: {entropy:.3f}")
 print(f"nn accuracy: {accuracy * 100:.1f} %")
 print(f"nn accuracy B valid: {accuracy_val * 100:.1f} %")
 if nn_verifier:
-    accuracy_ver = utility.net_accuracy(verifier_net, X_B_val, Y_B)
+    accuracy_ver = utility.net_accuracy(verifier_net, X_B_val, Y_B_val)
     print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
 
 print()

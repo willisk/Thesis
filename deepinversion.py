@@ -148,6 +148,7 @@ def deep_inversion(inputs, loss_fn, optimizer, steps=10,
                 scaler.update()
             else:
                 optimizer.step()
+
             if scheduler is not None:
                 scheduler.step(grad_total)
 

@@ -6,6 +6,7 @@ import matplotlib.colors
 from matplotlib import gridspec
 
 import torch
+from torch.cuda.amp import autocast, GradScaler
 
 import itertools
 from functools import reduce, wraps
@@ -184,9 +185,9 @@ def c_mean_var(data, labels, num_classes=None, unbiased=False):
         (num_classes, data.shape[1]), dtype=data.dtype, device=data.device)
     var = torch.ones(
         (num_classes, data.shape[1]), dtype=data.dtype, device=data.device)
-    n = torch.zeros(num_classes, dtype=torch.long)
+    n = torch.zeros(num_classes, dtype=torch.long, device=data.device)
 
-    for c in labels.to(torch.long).unique():
+    for c in labels.unique().to(torch.long):
         c_mask = labels == c
         mean[c], var[c] = batch_feature_mean_var(
             data[c_mask], unbiased=unbiased)
@@ -306,6 +307,10 @@ def train(net, data_loader, criterion, optimizer,
 
     net.train()
 
+    USE_AMP = next(net.parameters()).device.type == 'gpu'
+    if USE_AMP:
+        scaler = GradScaler()
+
     TRACKING = False
     if plot:
         TRACKING = defaultdict(list, steps=[])
@@ -324,15 +329,26 @@ def train(net, data_loader, criterion, optimizer,
                 inputs, labels = data
 
                 optimizer.zero_grad()
-
-                outputs = net(inputs)
-                loss = criterion(outputs, labels)
-                loss.backward()
+                if USE_AMP:
+                    with autocast():
+                        outputs = net(inputs)
+                        loss = criterion(outputs, labels)
+                    scaler.scale(loss).backward()
+                    grad_scale = scaler.get_scale()
+                else:
+                    outputs = net(inputs)
+                    loss = criterion(outputs, labels)
+                    loss.backward()
+                    grad_scale = 1
 
                 for param in net.parameters():
-                    grad_total += param.grad.norm(2).item()
+                    grad_total += (param / grad_scale).grad.norm(2).item()
 
-                optimizer.step()
+                if USE_AMP:
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    optimizer.step()
 
                 batch_size = len(inputs)
                 total_count += batch_size
@@ -342,6 +358,9 @@ def train(net, data_loader, criterion, optimizer,
             loss = total_loss / total_count
             accuracy = total_correct / total_count
             grad_norm = grad_total / total_count
+
+            if scheduler is not None:
+                scheduler.step(grad_norm)
 
             if TRACKING:
                 TRACKING['steps'].append(epoch)

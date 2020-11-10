@@ -382,7 +382,7 @@ class Dataset2D(Dataset):
 
 class DatasetGMM(Dataset2D):
 
-    def __init__(self, n_dims=30, n_classes=10, n_modes=8, scale_mean=1, scale_cov=1, mean_shift=0, n_samples_per_class=10000, weights=None):
+    def __init__(self, n_dims=30, n_classes=10, n_modes=8, scale_mean=1, scale_cov=1, mean_shift=0, n_samples_per_class=10000, device='cpu', weights=None):
         # pylint: disable=bad-super-call
         super(Dataset2D, self).__init__()
 
@@ -392,6 +392,7 @@ class DatasetGMM(Dataset2D):
         # if weights is None:
         #     weights = torch.ones((n_classes))
         # self.weights = weights / weights.sum()
+        self.device = device
 
         self.gmms = [
             random_gmm(n_modes, n_dims, scale_mean, scale_cov, mean_shift)
@@ -407,7 +408,7 @@ class DatasetGMM(Dataset2D):
             y = torch.LongTensor([c] * n_samples_per_class)
             X = torch.cat((X, x), dim=0) if X is not None else x
             Y = torch.cat((Y, y), dim=0) if Y is not None else y
-        return X, Y
+        return X.to(self.device), Y.to(self.device)
 
     def log_likelihood(self, X, Y):
         n_total = len(Y) + 0.
@@ -472,6 +473,8 @@ class DatasetGMM(Dataset2D):
         return torch.log(p_X) + a_max
 
     def cross_entropy(self, X, Y=None):
+        X = X.to('cpu')
+        Y = Y.to('cpu')
         return -self.log_pdf(X, Y=Y).mean()
 
     # def concatenate(self, except_for=None):
