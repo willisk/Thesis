@@ -1,29 +1,31 @@
 ```
 python projectOK/main.py \
--seed=333 \
+-seed=300 \
 -n_classes=10 \
--n_dims=30 \
--n_samples=1000 \
+-n_dims=20 \
+-n_samples_A=1000 \
+-n_samples_B=300 \
+-n_samples_valid=1000 \
 -perturb_strength=1.5 \
 -g_modes=12 \
 -g_scale_mean=3 \
 -g_scale_cov=20 \
--g_mean_shift=0 \
+-g_mean_shift=1 \
 -nn_lr=0.01 \
--nn_steps=200 \
+-nn_steps=300 \
 -nn_width=32 \
 -nn_depth=4 \
---nn_reset_train \
---nn_resume_train \
 -n_random_projections=32 \
 -inv_lr=0.1 \
--inv_steps=100 \
+-inv_steps=1000 \
+--nn_resume_train \
+--nn_reset_train \
 ```
 
 # Testing reconstruction methods on high-dimensional Gaussian Mixtures
     
     Hyperparameters:
-    n_classes=10 n_dims=30 n_samples=1000 perturb_strength=1.5 g_modes=12 g_scale_mean=3.0 g_scale_cov=20.0 g_mean_shift=0.0 nn_lr=0.01 nn_steps=200 nn_width=32 nn_depth=4 nn_resume_train=True nn_reset_train=True n_random_projections=32 inv_lr=0.1 inv_steps=100 seed=333 
+    n_classes=10 n_dims=20 n_samples_A=1000 n_samples_B=300 n_samples_valid=1000 perturb_strength=1.5 g_modes=12 g_scale_mean=3.0 g_scale_cov=20.0 g_mean_shift=1.0 nn_lr=0.01 nn_steps=300 nn_width=32 nn_depth=4 nn_resume_train=True nn_reset_train=True n_random_projections=32 inv_lr=0.1 inv_steps=1000 seed=300 
     
     No Checkpoint found / Reset.
     Beginning training.
@@ -36,10 +38,10 @@ python projectOK/main.py \
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_3.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_4_3.png)
 
 
-    net accuracy: 87.2%
+    net accuracy: 79.0%
 ## Method: NN feature
     Beginning Inversion.
 
@@ -51,14 +53,15 @@ python projectOK/main.py \
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_7.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_4_7.png)
 
 
     Results:
-    	loss: 0.008
-    	l2 reconstruction error: 14.958
+    	loss: 0.000
+    	l2 reconstruction error: 9.636
     	cross entropy of B: inf
-    	nn accuracy: 5.7 %
+    	nn accuracy: 11.0 %
+    	nn validation accuracy: 11.1 %
 ## Method: NN feature CC
     Beginning Inversion.
 
@@ -70,14 +73,15 @@ python projectOK/main.py \
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_11.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_4_11.png)
 
 
     Results:
-    	loss: 164791.125
-    	l2 reconstruction error: 169.524
+    	loss: 5749.976
+    	l2 reconstruction error: 30.526
     	cross entropy of B: inf
-    	nn accuracy: 13.3 %
+    	nn accuracy: 40.7 %
+    	nn validation accuracy: 32.4 %
 ## Method: RP
     Beginning Inversion.
 
@@ -89,14 +93,15 @@ python projectOK/main.py \
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_15.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_4_15.png)
 
 
     Results:
-    	loss: 0.008
-    	l2 reconstruction error: 14.958
+    	loss: 0.000
+    	l2 reconstruction error: 9.636
     	cross entropy of B: inf
-    	nn accuracy: 5.7 %
+    	nn accuracy: 11.0 %
+    	nn validation accuracy: 11.1 %
 ## Method: RP CC
     Beginning Inversion.
 
@@ -108,30 +113,32 @@ python projectOK/main.py \
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_19.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_4_19.png)
 
 
     Results:
-    	loss: 1.603
-    	l2 reconstruction error: 30.579
+    	loss: 0.485
+    	l2 reconstruction error: 9.308
     	cross entropy of B: inf
-    	nn accuracy: 16.8 %
+    	nn accuracy: 29.0 %
+    	nn validation accuracy: 30.1 %
     
     Summary
     =======
     
     Data A
-    cross entropy: 75.819
-    nn accuracy: 87.2 %
+    cross entropy: 54.999
+    nn accuracy: 79.0 %
     
     perturbed Data B
     cross entropy: inf
-    nn accuracy: 11.9 %
+    nn accuracy: 11.2 %
+    nn accuracy B valid: 10.7 %
     
-    method         loss       l2 err  accuracy  cross-entropy  
-    -----------------------------------------------------------
-    NN feature     0.01       14.96   0.06      inf            
-    NN feature CC  164791.12  169.52  0.13      inf            
-    RP             0.01       14.96   0.06      inf            
-    RP CC          1.60       30.58   0.17      inf            
+    method         loss     l2-err  acc   acc(val)  c-entr  
+    --------------------------------------------------------
+    NN feature     0.00     9.64    0.11  0.11      inf     
+    NN feature CC  5749.98  30.53   0.41  0.32      inf     
+    RP             0.00     9.64    0.11  0.11      inf     
+    RP CC          0.49     9.31    0.29  0.30      inf     
 
