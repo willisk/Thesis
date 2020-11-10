@@ -368,7 +368,7 @@ print(f"nn accuracy: {accuracy * 100:.1f} %")
 print(f"nn accuracy B valid: {accuracy_val * 100:.1f} %")
 if nn_verifier:
     accuracy_ver = utility.net_accuracy(verifier_net, X_B_val, Y_B_val)
-    print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
+    print(f"nn verifier accuracy: {accuracy_ver * 100:.1f} %")
 
 print()
 utility.print_tabular(metrics, row_name="method")
