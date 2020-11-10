@@ -59,9 +59,12 @@ parser.add_argument("-seed", type=int, default=333)
 
 if sys.argv[0] == 'ipykernel_launcher':
     args = parser.parse_args([])
-    args.n_classes = 10
-    args.g_modes = 10
-    args.n_samples = 1000
+    args.n_classes = 3
+    args.g_modes = 3
+    args.n_samples_A = 100
+    args.n_samples_B = 100
+    args.n_samples_val = 100
+    args.nn_width = 8
 else:
     args = parser.parse_args()
 
