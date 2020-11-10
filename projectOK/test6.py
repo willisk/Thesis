@@ -5,7 +5,7 @@ import os
 import sys
 
 import torch
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+# from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -87,8 +87,8 @@ dataset.plot(net=net)
 plt.show()
 
 print("Before:")
-print("Cross Entropy of A:", dataset.cross_entropy(X_A, Y_A))
-print("Cross Entropy of B:", dataset.cross_entropy(X_B, Y_B))
+print("Cross Entropy of A:", dataset.cross_entropy(X_A, Y_A).item())
+print("Cross Entropy of B:", dataset.cross_entropy(X_B, Y_B).item())
 
 
 # ======= Collect Projected Stats from A =======
@@ -150,12 +150,12 @@ loss_fn = loss_frechet
 lr = 0.1
 steps = 400
 optimizer = torch.optim.Adam([A, b], lr=lr)
-scheduler = ReduceLROnPlateau(optimizer, verbose=True)
+# scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
 history = deepinversion.deep_inversion(X_B,
                                        loss_fn,
                                        optimizer,
-                                       scheduler=scheduler,
+                                       #    scheduler=scheduler,
                                        steps=steps,
                                        pre_fn=preprocessing,
                                        #    track_history=True,
@@ -168,7 +168,7 @@ history = deepinversion.deep_inversion(X_B,
 # ======= Result =======
 X_B_proc = preprocessing(X_B).detach()
 print("After Pre-Processing:")
-print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc, Y_B))
+print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc, Y_B).item())
 plt.title("Data A")
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A", alpha=0.5)
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],

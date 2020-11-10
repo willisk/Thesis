@@ -500,7 +500,7 @@ def plot_contourf(x_min, x_max, y_min, y_max, func, n_grid=400, cmap='Spectral',
     Z = func(mesh)
     Z = Z.T.reshape(xx.shape)
     cf = plt.contourf(xx, yy, Z, levels=levels, cmap=cmap,
-                      alpha=alpha, linewidths=5, linestyles='solid')
+                      alpha=alpha, linestyles='solid')
     if contour:
         if levels is not None:
             plt.contour(xx, yy, Z, cmap=cmap, levels=levels, linewidths=0.3)
