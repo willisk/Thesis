@@ -1,4 +1,24 @@
+```
 python projectOK/main.py \
+-seed=333 \
+-n_classes=10 \
+-n_dims=30 \
+-n_samples=1000 \
+-perturb_strength=1.5 \
+-g_modes=12 \
+-g_scale_mean=3 \
+-g_scale_cov=20 \
+-g_mean_shift=0 \
+-nn_lr=0.01 \
+-nn_steps=200 \
+-nn_width=32 \
+-nn_depth=4 \
+--nn_reset_train \
+--nn_resume_train \
+-n_random_projections=32 \
+-inv_lr=0.1 \
+-inv_steps=100 \
+```
 
 # Testing reconstruction methods on high-dimensional Gaussian Mixtures
     
@@ -16,7 +36,7 @@ python projectOK/main.py \
 
 
 
-![png](/content/Thesis/figures/README/README_5_3.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_3.png)
 
 
     net accuracy: 87.2%
@@ -31,7 +51,7 @@ python projectOK/main.py \
 
 
 
-![png](/content/Thesis/figures/README/README_5_7.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_7.png)
 
 
     Results:
@@ -50,7 +70,7 @@ python projectOK/main.py \
 
 
 
-![png](/content/Thesis/figures/README/README_5_11.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_11.png)
 
 
     Results:
@@ -69,7 +89,7 @@ python projectOK/main.py \
 
 
 
-![png](/content/Thesis/figures/README/README_5_15.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_15.png)
 
 
     Results:
@@ -88,7 +108,7 @@ python projectOK/main.py \
 
 
 
-![png](/content/Thesis/figures/README/README_5_19.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_5_19.png)
 
 
     Results:
