@@ -132,11 +132,9 @@ X_B, Y_B = dataset.sample(n_samples_per_class=n_samples_per_class_B)
 X_B_val, Y_B_val = dataset.sample(
     n_samples_per_class=n_samples_per_class_valid)
 
-perturb_matrix = torch.eye(n_dims) + perturb_strength * \
-    torch.randn((n_dims, n_dims))
-perturb_shift = perturb_strength * torch.randn(n_dims)
-perturb_matrix.to(DEVICE)
-perturb_shift.to(DEVICE)
+perturb_matrix = (torch.eye(n_dims) + perturb_strength *
+    torch.randn((n_dims, n_dims)).to(DEVICE)
+perturb_shift=(perturb_strength * torch.randn(n_dims)).to(DEVICE)
 
 
 def perturb(X):
@@ -144,17 +142,17 @@ def perturb(X):
 
 
 # perturbed Dataset B
-X_B_orig = X_B
-X_B = perturb(X_B_orig)
-X_B_val = perturb(X_B_val)
+X_B_orig=X_B
+X_B=perturb(X_B_orig)
+X_B_val=perturb(X_B_val)
 
 # ======= Neural Network =======
-model_name = f"net_GMM_{'-'.join(map(repr, nn_layer_dims))}"
-model_path = os.path.join(PWD, f"models/{model_name}.pt")
-net = nets.FCNet(nn_layer_dims)
+model_name=f"net_GMM_{'-'.join(map(repr, nn_layer_dims))}"
+model_path=os.path.join(PWD, f"models/{model_name}.pt")
+net=nets.FCNet(nn_layer_dims)
 net.to(DEVICE)
-criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
+criterion=torch.nn.CrossEntropyLoss()
+optimizer=torch.optim.Adam(net.parameters(), lr=nn_lr)
 utility.train(net, dataset.train_loader(), criterion, optimizer,
               model_path=model_path,
               num_epochs=nn_steps,
@@ -167,10 +165,10 @@ utility.train(net, dataset.train_loader(), criterion, optimizer,
 utility.print_net_accuracy(net, X_A, Y_A)
 
 if nn_verifier:
-    verifier_path = os.path.join(PWD, f"models/{model_name}_verifier.pt")
-    verifier_net = nets.FCNet(nn_layer_dims)
+    verifier_path=os.path.join(PWD, f"models/{model_name}_verifier.pt")
+    verifier_net=nets.FCNet(nn_layer_dims)
     verifier_net.to(DEVICE)
-    optimizer = torch.optim.Adam(verifier_net.parameters(), lr=nn_lr)
+    optimizer=torch.optim.Adam(verifier_net.parameters(), lr=nn_lr)
     utility.train(verifier_net, dataset.train_loader(), criterion, optimizer,
                   model_path=verifier_path,
                   num_epochs=nn_steps,
@@ -182,12 +180,12 @@ if nn_verifier:
 
 
 # ======= NN Project =======
-feature_activation = None
+feature_activation=None
 
 
 def hook(module, inputs, outputs):
     global feature_activation
-    feature_activation = outputs
+    feature_activation=outputs
 
 
 # skip last, skip relu
@@ -200,30 +198,30 @@ def project_NN(X, _Y):
 
 
 # ======= Random Projections =======
-RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
-RP = RP / RP.norm(2, dim=0)
+RP=torch.randn((n_dims, n_random_projections), device=DEVICE)
+RP=RP / RP.norm(2, dim=0)
 
-mean_A = X_A.mean(dim=0)
+mean_A=X_A.mean(dim=0)
 
 
 def project_RP(X, _Y):
     return (X - mean_A) @ RP
 
 
-means_A, _, _ = utility.c_mean_var(X_A, Y_A)
+means_A, _, _=utility.c_mean_var(X_A, Y_A)
 
 
 def project_RP_CC(X, Y):
-    X_proj_C = torch.empty((X.shape[0], n_random_projections), device=X.device)
+    X_proj_C=torch.empty((X.shape[0], n_random_projections), device=X.device)
     for c in range(n_classes):
-        X_proj_C[Y == c] = (X[Y == c] - means_A[c]) @ RP
+        X_proj_C[Y == c]=(X[Y == c] - means_A[c]) @ RP
     return X_proj_C
 
 
 # ======= Preprocessing Model =======
 def preprocessing_model():
-    A = torch.eye(n_dims, requires_grad=True, device=DEVICE)
-    b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
+    A=torch.eye(n_dims, requires_grad=True, device=DEVICE)
+    b=torch.zeros((n_dims), requires_grad=True, device=DEVICE)
 
     def preprocessing_fn(X):
         return X @ A + b
@@ -232,38 +230,38 @@ def preprocessing_model():
 
 # ======= Loss Function =======
 def loss_frechet(X_proj_means, X_proj_vars, means_target, vars_target):
-    loss_mean = ((X_proj_means - means_target)**2).sum(dim=0).mean()
-    loss_var = (X_proj_vars + vars_target
+    loss_mean=((X_proj_means - means_target)**2).sum(dim=0).mean()
+    loss_var=(X_proj_vars + vars_target
                 - 2 * (X_proj_vars * vars_target).sqrt()
                 ).sum(dim=0).mean()
     return loss_mean + loss_var
 
 
 def loss_di(X_proj_means, X_proj_vars, means_target, vars_target):
-    loss_mean = ((X_proj_means - means_target)**2).mean()
-    loss_var = ((X_proj_vars - vars_target)**2).mean()
+    loss_mean=((X_proj_means - means_target)**2).mean()
+    loss_var=((X_proj_vars - vars_target)**2).mean()
     return loss_mean + loss_var
 
 
 def loss_fn_wrapper(loss_fn, project, class_conditional):
     with torch.no_grad():
-        X_A_proj = project(X_A, Y_A)
+        X_A_proj=project(X_A, Y_A)
     if class_conditional:
-        A_proj_means, A_proj_vars, _ = utility.c_mean_var(X_A_proj, Y_A)
+        A_proj_means, A_proj_vars, _=utility.c_mean_var(X_A_proj, Y_A)
     else:
-        A_proj_means, A_proj_vars = X_A.mean(dim=0), X_A.var(dim=0)
+        A_proj_means, A_proj_vars=X_A.mean(dim=0), X_A.var(dim=0)
 
     def _loss_fn(X, Y=Y_B, loss_fn=loss_fn, project=project, means_target=A_proj_means, vars_target=A_proj_vars, class_conditional=class_conditional):
-        X_proj = project(X, Y)
+        X_proj=project(X, Y)
         if class_conditional:
-            X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y)
+            X_proj_means, X_proj_vars, _=utility.c_mean_var(X_proj, Y)
         else:
-            X_proj_means, X_proj_vars = X.mean(dim=0), X.var(dim=0)
+            X_proj_means, X_proj_vars=X.mean(dim=0), X.var(dim=0)
         return loss_fn(X_proj_means, X_proj_vars, means_target, vars_target)
     return _loss_fn
 
 
-methods = {
+methods={
     "NN feature": loss_fn_wrapper(
         loss_fn=loss_frechet,
         project=project_NN,
@@ -287,13 +285,13 @@ methods = {
 }
 
 # ======= Optimize =======
-metrics = defaultdict(dict)
+metrics=defaultdict(dict)
 
 for method, loss_fn in methods.items():
     print("## Method:", method)
 
-    preprocess, params = preprocessing_model()
-    optimizer = torch.optim.Adam(params, lr=inv_lr)
+    preprocess, params=preprocessing_model()
+    optimizer=torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
     deepinversion.deep_inversion(X_B,
@@ -308,45 +306,45 @@ for method, loss_fn in methods.items():
                                  )
 
     # ======= Result =======
-    X_B_proc = preprocess(X_B).detach()
-    X_B_val_proc = preprocess(X_B_val).detach()
+    X_B_proc=preprocess(X_B).detach()
+    X_B_val_proc=preprocess(X_B_val).detach()
 
     print("Results:")
 
     # Loss
-    loss = loss_fn(X_B_proc).item()
+    loss=loss_fn(X_B_proc).item()
     print(f"\tloss: {loss:.3f}")
 
     # L2 Reconstruction Error
-    Id = torch.eye(n_dims)
-    l2_err = (preprocess(perturb(Id)) - Id).norm(2).item()
+    Id=torch.eye(n_dims)
+    l2_err=(preprocess(perturb(Id)) - Id).norm(2).item()
     print(f"\tl2 reconstruction error: {l2_err:.3f}")
 
     # Cross Entropy
-    entropy = dataset.cross_entropy(X_B_proc, Y_B)
-    accuracy_val = utility.net_accuracy(
+    entropy=dataset.cross_entropy(X_B_proc, Y_B)
+    accuracy_val=utility.net_accuracy(
         net, X_B_val_proc, Y_B_val)
     print(f"\tcross entropy of B: {entropy:.3f}")
 
     # NN Accuracy
-    accuracy = utility.net_accuracy(net, X_B_proc, Y_B)
+    accuracy=utility.net_accuracy(net, X_B_proc, Y_B)
     print(f"\tnn accuracy: {accuracy * 100:.1f} %")
-    accuracy_val = utility.net_accuracy(
+    accuracy_val=utility.net_accuracy(
         net, X_B_val_proc, Y_B_val)
     print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
 
     if nn_verifier:
-        accuracy_ver = utility.net_accuracy(
+        accuracy_ver=utility.net_accuracy(
             verifier_net, X_B_val_proc, Y_B_val)
         print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
 
-    metrics[method]['loss'] = loss
-    metrics[method]['l2-err'] = l2_err
-    metrics[method]['acc'] = accuracy
-    metrics[method]['acc(val)'] = accuracy_val
-    metrics[method]['c-entr'] = entropy
+    metrics[method]['loss']=loss
+    metrics[method]['l2-err']=l2_err
+    metrics[method]['acc']=accuracy
+    metrics[method]['acc(val)']=accuracy_val
     if nn_verifier:
-        metrics[method]['acc(ver)'] = accuracy_ver
+        metrics[method]['acc(ver)']=accuracy_ver
+    metrics[method]['c-entr']=entropy
 
 
 print()
@@ -355,21 +353,21 @@ print("=========")
 
 print()
 print("Data A")
-accuracy = utility.net_accuracy(net, X_A, Y_A)
-entropy = dataset.cross_entropy(X_A, Y_A).item()
+accuracy=utility.net_accuracy(net, X_A, Y_A)
+entropy=dataset.cross_entropy(X_A, Y_A).item()
 print(f"cross entropy: {entropy:.3f}")
 print(f"nn accuracy: {accuracy * 100:.1f} %")
 
 print()
 print("perturbed Data B")
-accuracy = utility.net_accuracy(net, X_B, Y_B)
-accuracy_val = utility.net_accuracy(net, X_B_val, Y_B_val)
-entropy = dataset.cross_entropy(X_B, Y_B).item()
+accuracy=utility.net_accuracy(net, X_B, Y_B)
+accuracy_val=utility.net_accuracy(net, X_B_val, Y_B_val)
+entropy=dataset.cross_entropy(X_B, Y_B).item()
 print(f"cross entropy: {entropy:.3f}")
 print(f"nn accuracy: {accuracy * 100:.1f} %")
 print(f"nn accuracy B valid: {accuracy_val * 100:.1f} %")
 if nn_verifier:
-    accuracy_ver = utility.net_accuracy(verifier_net, X_B_val, Y_B_val)
+    accuracy_ver=utility.net_accuracy(verifier_net, X_B_val, Y_B_val)
     print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
 
 print()
