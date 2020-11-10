@@ -93,7 +93,7 @@ def project(X, Y):
 
 
 plt.title("Data A")
-utility.plot_random_projections(RP, X_A, means=means_A, Y=Y_A, marker='+')
+utility.plot_random_projections(RP, X_A, mean=means_A, Y=Y_A, marker='+')
 plt.scatter(X_A[Y_A == 0][:, 0], X_A[Y_A == 0][:, 1],
             c=cmaps[0], marker='+', alpha=0.4, label="Data A cl 0")
 plt.scatter(X_A[Y_A == 1][:, 0], X_A[Y_A == 1][:, 1],
@@ -103,7 +103,7 @@ plt.legend()
 plt.show()
 
 plt.title("perturbed Data B")
-utility.plot_random_projections(RP, X_B, means=means_A, Y=Y_B)
+utility.plot_random_projections(RP, X_B, mean=means_A, Y=Y_B)
 plt.scatter(X_B[Y_B == 0][:, 0], X_B[Y_B == 0][:, 1],
             c=cmaps[1], marker='+', alpha=0.4, label="Data B cl 0")
 plt.scatter(X_B[Y_B == 1][:, 0], X_B[Y_B == 1][:, 1],

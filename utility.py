@@ -630,9 +630,9 @@ def plot_stats_mean_var(mean, var, colors=None):
         plt.scatter(m[0], m[1], color=c, edgecolors='k', marker='^')
 
 
-def plot_random_projections(RP, X, means, Y=None, marker='o'):
+def plot_random_projections(RP, X, mean, Y=None, marker='o'):
     if Y is None:
-        _plot_random_projections(RP, X, mean=X.mean(dim=0))
+        _plot_random_projections(RP, X, mean=mean)
     else:
         n_classes = len(means)
         if n_classes == 2:
