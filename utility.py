@@ -166,28 +166,30 @@ def nan_to_zero(x):
     return x
 
 
-def batch_feature_mean_var(x, keep_dims=[1], unbiased=True):
+def batch_feature_mean_var(x, keep_dims=[1], unbiased=False):
     dims_collapse = list(range(len(x.shape)))
     for dim in keep_dims:
         dims_collapse.remove(dim)
     if dims_collapse == []:
-        return x, torch.zeros_like(x, device=x.device)
+        return x, torch.zeros_like(x)
     mean = x.mean(dim=dims_collapse)
     var = x.var(dim=dims_collapse, unbiased=unbiased)
     return mean, var
 
 
-def c_mean_var(data, labels, num_classes=None):
+def c_mean_var(data, labels, num_classes=None, unbiased=False):
     if num_classes is None:
         num_classes = int(labels.max().item() + 1)
-    shape = (num_classes, data.shape[1])
-    mean = torch.zeros(shape)
-    var = torch.ones(shape)
-    n = torch.zeros(shape[0])
+    mean = torch.zeros(
+        (num_classes, data.shape[1]), dtype=data.dtype, device=data.device)
+    var = torch.ones(
+        (num_classes, data.shape[1]), dtype=data.dtype, device=data.device)
+    n = torch.zeros(num_classes, dtype=torch.long)
 
-    for c in set(labels.to(torch.long)):
+    for c in labels.to(torch.long).unique():
         c_mask = labels == c
-        mean[c], var[c] = batch_feature_mean_var(data[c_mask], unbiased=False)
+        mean[c], var[c] = batch_feature_mean_var(
+            data[c_mask], unbiased=unbiased)
         n[c] = c_mask.sum()
 
     return mean, var, n
@@ -628,34 +630,36 @@ def plot_stats_mean_var(mean, var, colors=None):
         plt.scatter(m[0], m[1], color=c, edgecolors='k', marker='^')
 
 
-def plot_random_projections(RP, X, mean=None, Y=None, marker='o'):
+def plot_random_projections(RP, X, means, Y=None, marker='o'):
     if Y is None:
-        _plot_random_projections(RP, X, mean=mean)
+        _plot_random_projections(RP, X, mean=X.mean(dim=0))
     else:
-        if len(Y.unique()) == 2:
+        n_classes = len(means)
+        if n_classes == 2:
             marker = ['+', 'd']
-        cmaps = categorical_colors(Y.max().item() + 1)
+        # cmaps = categorical_colors(Y.max().item() + 1)
         for c, m in zip(Y.unique(), marker):
-            _plot_random_projections(RP, X[Y == c], mean=mean,
-                                     color=cmaps[c], marker=m)
+            _plot_random_projections(RP, X[Y == c],
+                                     mean=means[c],
+                                     #  mean=means,
+                                     #  color=cmaps[c],
+                                     marker=m)
 
 
-def _plot_random_projections(RP, X, mean=None, color='r', marker='o'):
-    m_X = mean if mean is not None else X.mean(dim=0)
-    X_proj = (X - m_X) @ RP
+def _plot_random_projections(RP, X, mean, color='r', marker='o'):
+    X_proj = (X - mean) @ RP
     for rp, x_p in zip(RP.T, X_proj.T):
         m, s = x_p.mean(), x_p.var().sqrt()
-        rp_m = rp * m + m_X
-        start = rp_m - rp * s
-        end = rp_m + rp * s
-        plt.plot((start[0], end[0]), (start[1], end[1]), color=color)
+        rp_m = rp * m + mean
+        start, end = rp_m - rp * s, rp_m + rp * s
+        plt.plot(*list(zip(start, end)), color=color)
         plt.plot(*rp_m, color='black', marker='x')
-        mm = m_X + rp * x_p.reshape(-1, 1)
+        mm = mean + rp * x_p.reshape(-1, 1)
         _plot = plt.scatter(*mm.T,
                             color=color, alpha=0.1, marker=marker)
     _plot.set_label('random projected')
     for rp in RP.T:
-        plt.plot(*(m_X + rp * 3).T, c='black')
+        plt.plot(*list(zip(mean, mean + rp * 3)), c='black')
 
 
 def print_tabular(data, row_name="", spacing=2):
