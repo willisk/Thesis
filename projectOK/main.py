@@ -84,8 +84,8 @@ scale_mean = args.g_scale_mean
 scale_cov = args.g_scale_cov
 mean_shift = args.g_mean_shift
 n_samples_per_class_A = args.n_samples_A
-n_samples_per_class_B args.n_samples_B
-n_samples_per_class_valid args.n_samples_valid
+n_samples_per_class_B = args.n_samples_B
+n_samples_per_class_valid = args.n_samples_valid
 
 # Neural Network
 nn_lr = args.nn_lr
