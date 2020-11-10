@@ -65,8 +65,8 @@ def dict_product(params):
     return [dict(zip(params.keys(), v)) for v in product(*params.values())]
 
 
-def dict_to_str(p):
-    return " ".join([k + "=" + str(v) for k, v in p.items()])
+def dict_to_str(p, delim=" "):
+    return delim.join([f"{k}={v}" for k, v in p.items()])
 
 
 def count_correct(outputs, labels):
@@ -658,8 +658,8 @@ def _plot_random_projections(RP, X, mean, color='r', marker='o'):
         _plot = plt.scatter(*mm.T,
                             color=color, alpha=0.1, marker=marker)
     _plot.set_label('random projected')
-    for rp in RP.T:
-        plt.plot(*list(zip(mean, mean + rp * 3)), c='black')
+    # for rp in RP.T:
+    #     plt.plot(*list(zip(mean, mean + rp * 3)), c='black')
 
 
 def print_tabular(data, row_name="", spacing=2):

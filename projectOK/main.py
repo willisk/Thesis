@@ -52,6 +52,7 @@ parser.add_argument("-nn_width", type=int, default=16)
 parser.add_argument("-nn_depth", type=int, default=4)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
+parser.add_argument("--nn_verifier", action="store_true")
 parser.add_argument("-n_random_projections", type=int, default=16)
 parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
@@ -69,7 +70,7 @@ else:
     args = parser.parse_args()
 
 print("Hyperparameters:")
-print(utility.dict_to_str(vars(args)), '\n')
+print(utility.dict_to_str(vars(args), '\n'))
 
 # ======= Set Seeds =======
 np.random.seed(args.seed)
@@ -98,6 +99,7 @@ nn_depth = args.nn_depth
 nn_layer_dims = [n_dims] + [nn_width] * nn_depth + [n_classes]
 nn_resume_training = args.nn_resume_train
 nn_reset_training = args.nn_reset_train
+nn_verifier = args.nn_verifier
 
 # Random Projections
 n_random_projections = args.n_random_projections
@@ -139,8 +141,8 @@ X_B_val = perturb(X_B_val)
 
 
 # ======= Neural Network =======
-model_path = os.path.join(
-    PWD, f"models/net_GMM_{'-'.join(map(repr, nn_layer_dims))}.pt")
+model_name = f"net_GMM_{'-'.join(map(repr, nn_layer_dims))}"
+model_path = os.path.join(PWD, f"models/{model_name}.pt")
 net = nets.FCNet(nn_layer_dims)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
@@ -154,6 +156,19 @@ utility.train(net, dataset.train_loader(), criterion, optimizer,
 # dataset.plot(net=net)
 # plt.show()
 utility.print_net_accuracy(net, X_A, Y_A)
+
+if nn_verifier:
+    verifier_path = os.path.join(PWD, f"models/{model_name}_verifier.pt")
+    verifier_net = nets.FCNet(nn_layer_dims)
+    optimizer = torch.optim.Adam(verifier_net.parameters(), lr=nn_lr)
+    utility.train(verifier_net, dataset.train_loader(), criterion, optimizer,
+                  model_path=verifier_path,
+                  num_epochs=nn_steps,
+                  resume_training=nn_resume_training,
+                  reset=nn_reset_training,
+                  )
+    print("verifier ", end='')
+    utility.print_net_accuracy(verifier_net, X_A, Y_A)
 
 
 # ======= NN Project =======
@@ -306,18 +321,24 @@ for method, loss_fn in methods.items():
     accuracy_val = utility.net_accuracy(
         net, X_B_val_proc, Y_B_val)
     print(f"\tnn accuracy: {accuracy * 100:.1f} %")
-    print(f"\tnn validation accuracy: {accuracy_val * 100:.1f} %")
+    print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
+
+    if nn_verifier:
+        accuracy_ver = utility.net_accuracy(verifier_net, X_B_val_proc, Y_B)
+        print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
 
     metrics[method]['loss'] = loss
     metrics[method]['l2-err'] = l2_err
     metrics[method]['acc'] = accuracy
     metrics[method]['acc(val)'] = accuracy_val
     metrics[method]['c-entr'] = entropy
+    if nn_verifier:
+        metrics[method]['acc(ver)'] = accuracy_ver
 
 
 print()
-print("Summary")
-print("=======")
+print("# Summary")
+print("=========")
 
 print()
 print("Data A")
@@ -334,6 +355,9 @@ entropy = dataset.cross_entropy(X_B, Y_B).item()
 print(f"cross entropy: {entropy:.3f}")
 print(f"nn accuracy: {accuracy * 100:.1f} %")
 print(f"nn accuracy B valid: {accuracy_val * 100:.1f} %")
+if nn_verifier:
+    accuracy_ver = utility.net_accuracy(verifier_net, X_B_val, Y_B)
+    print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
 
 print()
 utility.print_tabular(metrics, row_name="method")
