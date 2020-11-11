@@ -6,6 +6,7 @@ import matplotlib.colors
 from matplotlib import gridspec
 
 import torch
+import torch.nn as nn
 from torch.cuda.amp import autocast, GradScaler
 
 import itertools
@@ -695,3 +696,20 @@ def print_tabular(data, row_name="", spacing=2):
         print(line)
         if i == 0:
             print('-' * len(line))
+
+
+def get_child_modules(net, ignore_types=[]):
+    all_layers = []
+    for layer in net.children():
+        if "container" in layer.__module__:
+            all_layers = all_layers + \
+                net_get_relevant_layers(layer, ignore_types)
+        if len(list(layer.children())) == 0:
+            skip = False
+            for ignore in ignore_types:
+                if ignore in layer.__module__:
+                    skip = True
+            if skip:
+                continue
+            all_layers.append(layer)
+    return all_layers

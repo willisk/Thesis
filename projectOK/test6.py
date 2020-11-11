@@ -83,8 +83,8 @@ utility.train(net, dataset.train_loader(), criterion, optimizer,
               #   resume_training=True,
               plot=True,
               )
-dataset.plot(net=net)
-plt.show()
+# dataset.plot(net=net)
+# plt.show()
 
 print("Before:")
 print("Cross Entropy of A:", dataset.cross_entropy(X_A, Y_A).item())
@@ -92,28 +92,31 @@ print("Cross Entropy of B:", dataset.cross_entropy(X_B, Y_B).item())
 
 
 # ======= Collect Projected Stats from A =======
-
-feature_activation = None
-
-
-def hook(module, inputs, outputs):
-    global feature_activation
-    feature_activation = outputs
+net_layers = utility.net_get_relevant_layers(net, ignore_types=["activation"])
+layer_activations = [0] * len(net_layers)
 
 
-# skip last, skip relu
-net.main[-3].register_forward_hook(hook)
+def layer_hook_wrapper(l):
+    def hook(module, inputs, outputs):
+        layer_activations[l] = outputs
+    return hook
+
+
+for l, layer in enumerate(net_layers):
+    layer.register_forward_hook(layer_hook_wrapper(l))
+
+# # skip last, skip relu
+# net.main[-3].register_forward_hook(hook)
 
 
 def project(X):
     net(X)
-    return feature_activation
+    return torch.cat(layer_activations, dim=1)
 
 
 with torch.no_grad():
     X_A_proj = project(X_A)
 A_proj_means, A_proj_vars, _ = utility.c_mean_var(X_A_proj, Y_A)
-
 
 # ======= Preprocessing Model =======
 A = torch.eye((2), requires_grad=True)

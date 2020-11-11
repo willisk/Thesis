@@ -22,7 +22,7 @@ import deepinversion
 import shared
 import nets
 
-if sys.argv[0] == 'ipykernel_launcher':
+if sys.argv[0] == 'ipykernel_launcher' or 'COLAB_GPU' in os.environ:
     import importlib
     importlib.reload(datasets)
     importlib.reload(statsnet)
@@ -180,21 +180,28 @@ if nn_verifier:
 
 
 # ======= NN Project =======
-feature_activation = None
+net_layers = utility.get_child_modules(net, ignore_types=["activation"])
+layer_activations = [0] * len(net_layers)
 
 
-def hook(module, inputs, outputs):
-    global feature_activation
-    feature_activation = outputs
+def layer_hook_wrapper(l):
+    def hook(module, inputs, outputs):
+        layer_activations[l] = outputs
+    return hook
 
 
-# skip last, skip relu
-net.main[-3].register_forward_hook(hook)
+for l, layer in enumerate(net_layers):
+    layer.register_forward_hook(layer_hook_wrapper(l))
 
 
 def project_NN(X, _Y):
     net(X)
-    return feature_activation
+    return layer_activations[-1]
+
+
+def project_NN_all(X, _Y):
+    net(X)
+    return torch.cat(layer_activations, dim=1)
 
 
 # ======= Random Projections =======
@@ -264,12 +271,12 @@ def loss_fn_wrapper(loss_fn, project, class_conditional):
 methods = {
     "NN feature": loss_fn_wrapper(
         loss_fn=loss_frechet,
-        project=project_NN,
+        project=project_NN_all,
         class_conditional=False,
     ),
     "NN feature CC": loss_fn_wrapper(
         loss_fn=loss_frechet,
-        project=project_NN,
+        project=project_NN_all,
         class_conditional=True,
     ),
     "RP": loss_fn_wrapper(
