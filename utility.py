@@ -703,7 +703,7 @@ def get_child_modules(net, ignore_types=[]):
     for layer in net.children():
         if "container" in layer.__module__:
             all_layers = all_layers + \
-                net_get_relevant_layers(layer, ignore_types)
+                get_child_modules(layer, ignore_types)
         if len(list(layer.children())) == 0:
             skip = False
             for ignore in ignore_types:
