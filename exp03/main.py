@@ -62,7 +62,7 @@ parser.add_argument("--track_history_every", type=int, default=10)
 parser.add_argument("-f", "--force", action="store_true")
 
 # When pushing to ipynb, additional args are added that interfere with parse_args
-if sys.argv[0] == 'ipykernel_launcher':
+if 'ipykernel_launcher' in sys.argv:
     args = parser.parse_args([])
 else:
     args = parser.parse_args()
