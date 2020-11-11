@@ -243,7 +243,7 @@ def project_RP_relu_CC(X, _Y=None):
 # ======= Combined =======
 def combine(project1, project2):
     def _combined_fn(X, Y=None):
-        return torch.cat(project1(X, Y), project2(X, Y), dim=1)
+        return torch.cat((project1(X, Y), project2(X, Y)), dim=1)
     return _combined_fn
 
 # ======= Preprocessing Model =======
