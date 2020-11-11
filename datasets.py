@@ -25,7 +25,7 @@ import nets
 import utility
 import statsnet
 import deepinversion
-if sys.argv[0] == 'ipykernel_launcher':
+if 'ipykernel_launcher' in sys.argv:
     import importlib
     importlib.reload(nets)
     importlib.reload(utility)

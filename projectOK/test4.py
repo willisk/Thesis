@@ -18,7 +18,7 @@ import datasets
 import deepinversion
 import shared
 
-if sys.argv[0] == 'ipykernel_launcher':
+if 'ipykernel_launcher' in sys.argv:
     import importlib
     importlib.reload(utility)
     importlib.reload(datasets)

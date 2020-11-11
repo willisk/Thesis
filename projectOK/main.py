@@ -7,6 +7,7 @@ import argparse
 from collections import defaultdict
 
 import torch
+import torch.nn.functional as F
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import numpy as np
@@ -22,7 +23,7 @@ import deepinversion
 import shared
 import nets
 
-if sys.argv[0] == 'ipykernel_launcher' or 'COLAB_GPU' in os.environ:
+if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
     import importlib
     importlib.reload(datasets)
     importlib.reload(statsnet)
@@ -58,7 +59,7 @@ parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
 parser.add_argument("-seed", type=int, default=333)
 
-if sys.argv[0] == 'ipykernel_launcher':
+if 'ipykernel_launcher' in sys.argv:
     args = parser.parse_args([])
     args.n_classes = 3
     args.g_modes = 3
@@ -159,9 +160,8 @@ utility.train(net, dataset.train_loader(), criterion, optimizer,
               resume_training=nn_resume_training,
               reset=nn_reset_training,
               plot=True,
+              use_drive=True,
               )
-# dataset.plot(net=net)
-# plt.show()
 utility.print_net_accuracy(net, X_A, Y_A)
 
 if nn_verifier:
@@ -194,12 +194,12 @@ for l, layer in enumerate(net_layers):
     layer.register_forward_hook(layer_hook_wrapper(l))
 
 
-def project_NN(X, _Y):
+def project_NN(X, _Y=None):
     net(X)
     return layer_activations[-1]
 
 
-def project_NN_all(X, _Y):
+def project_NN_all(X, _Y=None):
     net(X)
     return torch.cat(layer_activations, dim=1)
 
@@ -208,24 +208,45 @@ def project_NN_all(X, _Y):
 RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
 RP = RP / RP.norm(2, dim=0)
 
-mean_A = X_A.mean(dim=0)
+mean_A, var_A = X_A.mean(dim=0), X_A.var(dim=0)
+mean_A_C, var_A_C, _ = utility.c_mean_var(X_A, Y_A)
 
 
-def project_RP(X, _Y):
+def project_RP(X, _Y=None):
     return (X - mean_A) @ RP
-
-
-means_A, _, _ = utility.c_mean_var(X_A, Y_A)
 
 
 def project_RP_CC(X, Y):
     X_proj_C = torch.empty((X.shape[0], n_random_projections), device=X.device)
     for c in range(n_classes):
-        X_proj_C[Y == c] = (X[Y == c] - means_A[c]) @ RP
+        X_proj_C[Y == c] = (X[Y == c] - mean_A_C[c]) @ RP
     return X_proj_C
 
 
+# Random ReLU Projections
+relu_bias = torch.random((1, n_random_projections),
+                         device=DEVICE) * var_A.sqrt()
+relu_bias_C = torch.random(
+    (n_classes, 1, n_random_projections), device=DEVICE) * var_A_C.sqrt()
+
+
+def project_RP_relu(X, _Y=None):
+    return F.relu((X - mean_A) @ RP + relu_bias)
+
+
+def project_RP_relu_CC(X, _Y=None):
+    return F.relu((X - mean_A) @ RP + relu_bias)
+
+
+# ======= Combined =======
+def combine(project1, project2):
+    def _combined_fn(X, Y=None):
+        return torch.cat(project1(X, Y), project2(X, Y), dim=1)
+    return _combined_fn
+
 # ======= Preprocessing Model =======
+
+
 def preprocessing_model():
     A = torch.eye(n_dims, requires_grad=True, device=DEVICE)
     b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
@@ -268,27 +289,54 @@ def loss_fn_wrapper(loss_fn, project, class_conditional):
     return _loss_fn
 
 
+loss_fn = loss_frechet
+
 methods = {
-    "NN feature": loss_fn_wrapper(
-        loss_fn=loss_frechet,
+    "NN": loss_fn_wrapper(
+        loss_fn=loss_fn,
+        project=project_NN,
+        class_conditional=False,
+    ),
+    "NN CC": loss_fn_wrapper(
+        loss_fn=loss_fn,
+        project=project_NN,
+        class_conditional=True,
+    ),
+    "NN ALL": loss_fn_wrapper(
+        loss_fn=loss_fn,
         project=project_NN_all,
         class_conditional=False,
     ),
-    "NN feature CC": loss_fn_wrapper(
-        loss_fn=loss_frechet,
+    "NN ALL CC": loss_fn_wrapper(
+        loss_fn=loss_fn,
         project=project_NN_all,
         class_conditional=True,
     ),
     "RP": loss_fn_wrapper(
-        loss_fn=loss_frechet,
+        loss_fn=loss_fn,
         project=project_RP,
         class_conditional=False,
     ),
     "RP CC": loss_fn_wrapper(
-        loss_fn=loss_frechet,
+        loss_fn=loss_fn,
         project=project_RP_CC,
         class_conditional=True,
     ),
+    "RP ReLU": loss_fn_wrapper(
+        loss_fn=loss_fn,
+        project=project_RP_relu,
+        class_conditional=False,
+    ),
+    "RP ReLU CC": loss_fn_wrapper(
+        loss_fn=loss_fn,
+        project=project_RP_relu_CC,
+        class_conditional=True,
+    ),
+    # "combined": loss_fn_wrapper(
+    #     loss_fn=loss_fn,
+    #     project=combine(),
+    #     class_conditional=True,
+    # ),
 }
 
 # ======= Optimize =======

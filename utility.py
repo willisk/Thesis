@@ -17,7 +17,7 @@ from collections.abc import Iterable
 import time
 
 from tqdm.auto import tqdm, trange
-# if sys.argv[0] == 'ipykernel_launcher':
+# if 'ipykernel_launcher' in sys.argv:
 #     from tqdm import tqdm_notebook as tqdm
 
 
