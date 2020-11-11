@@ -92,7 +92,7 @@ print("Cross Entropy of B:", dataset.cross_entropy(X_B, Y_B).item())
 
 
 # ======= Collect Projected Stats from A =======
-net_layers = utility.net_get_relevant_layers(net, ignore_types=["activation"])
+net_layers = utility.get_child_modules(net, ignore_types=["activation"])
 layer_activations = [0] * len(net_layers)
 
 

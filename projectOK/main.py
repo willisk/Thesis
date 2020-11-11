@@ -224,10 +224,12 @@ def project_RP_CC(X, Y):
 
 
 # Random ReLU Projections
-relu_bias = torch.randn((1, n_random_projections),
-                        device=DEVICE) * var_A.max().sqrt()
-relu_bias_C = torch.randn(
-    (n_classes, 1, n_random_projections), device=DEVICE) * var_A_C.max(dim=1).sqrt()
+relu_bias = (torch.randn((1, n_random_projections), device=DEVICE)
+             * var_A.max().sqrt())
+relu_bias_C = (torch.randn((n_classes, 1, n_random_projections), device=DEVICE)
+               * var_A_C.max(dim=1)[0].sqrt().reshape(-1, 1, 1))
+
+print(var_A_C.max(dim=1)[0].sqrt().shape)
 
 
 def project_RP_relu(X, _Y=None):
@@ -332,11 +334,11 @@ methods = {
         project=project_RP_relu_CC,
         class_conditional=True,
     ),
-    # "combined": loss_fn_wrapper(
-    #     loss_fn=loss_fn,
-    #     project=combine(),
-    #     class_conditional=True,
-    # ),
+    "combined": loss_fn_wrapper(
+        loss_fn=loss_fn,
+        project=combine(project_NN_all, project_RP_CC),
+        class_conditional=True,
+    ),
 }
 
 # ======= Optimize =======
