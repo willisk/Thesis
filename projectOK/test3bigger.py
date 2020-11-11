@@ -144,6 +144,24 @@ utility.plot_stats([X_A[Y_A == 1], X_B_proc[Y_B == 1]])
 plt.legend()
 plt.show()
 
+
+utility.plot_random_projections(
+    RP, X_A, mean=mean_A, color=cmaps[0], scatter=False)
+plt.scatter(X_A[:, 0], X_A[:, 1],
+            c=cmaps[0], label="Data A")
+plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
+            c=cmaps[1], label="perturbed Data B", alpha=0.4)
+plt.legend()
+plt.show()
+utility.plot_random_projections(
+    RP, X_B_proc, mean=mean_A, color=cmaps[1], scatter=False)
+plt.scatter(X_A[:, 0], X_A[:, 1],
+            c=cmaps[0], label="Data A", alpha=0.4)
+plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
+            c=cmaps[1], label="perturbed Data B")
+plt.legend()
+plt.show()
+
 # L2 Reconstruction Error
 Id = torch.eye(2)
 l2_err = (preprocessing(perturb(Id)) - Id).norm(2).item()

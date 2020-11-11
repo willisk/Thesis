@@ -650,9 +650,10 @@ def plot_stats_mean_var(mean, var, colors=None):
         plt.scatter(m[0], m[1], color=c, edgecolors='k', marker='^')
 
 
-def plot_random_projections(RP, X, mean, Y=None, marker='o'):
+def plot_random_projections(RP, X, mean, Y=None, color='r', marker='o', scatter=True):
     if Y is None:
-        _plot_random_projections(RP, X, mean=mean)
+        _plot_random_projections(
+            RP, X, mean=mean, color=color, marker=marker, scatter=scatter,)
     else:
         n_classes = len(mean)
         if n_classes == 2:
@@ -661,12 +662,12 @@ def plot_random_projections(RP, X, mean, Y=None, marker='o'):
         for c, m in zip(Y.unique(), marker):
             _plot_random_projections(RP, X[Y == c],
                                      mean=mean[c],
-                                     #  mean=means,
-                                     #  color=cmaps[c],
-                                     marker=m)
+                                     color=color,
+                                     marker=m,
+                                     scatter=scatter,)
 
 
-def _plot_random_projections(RP, X, mean, color='r', marker='o'):
+def _plot_random_projections(RP, X, mean, color='r', marker='o', scatter=True):
     X_proj = (X - mean) @ RP
     for rp, x_p in zip(RP.T, X_proj.T):
         m, s = x_p.mean(), x_p.var().sqrt()
@@ -675,9 +676,11 @@ def _plot_random_projections(RP, X, mean, color='r', marker='o'):
         plt.plot(*list(zip(start, end)), color=color)
         plt.plot(*rp_m, color='black', marker='x')
         mm = mean + rp * x_p.reshape(-1, 1)
-        _plot = plt.scatter(*mm.T,
-                            color=color, alpha=0.1, marker=marker)
-    _plot.set_label('random projected')
+        if scatter:
+            _plot = plt.scatter(*mm.T,
+                                color=color, alpha=0.1, marker=marker)
+    if scatter:
+        _plot.set_label('random projected')
     # for rp in RP.T:
     #     plt.plot(*list(zip(mean, mean + rp * 3)), c='black')
 
