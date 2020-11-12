@@ -1,3 +1,7 @@
+
+## Test 1
+
+
 ```
 python projectOK/test1.py
 ```
@@ -7,7 +11,7 @@ python projectOK/test1.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_9_1.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_10_1.png)
 
 
     Beginning Inversion.
@@ -20,68 +24,30 @@ python projectOK/test1.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_9_5.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_10_5.png)
 
 
     After Pre-Processing:
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_9_7.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_10_7.png)
 
 
     l2 reconstruction error: 0.886
 
+
+## Test 2
 
 
 ```
 python projectOK/test2.py
 ```
 
-    Testing reconstruction by matching statistics
-    of Gaussian Mixture Model in input space..
-    
-    Comment:
-    Statistics are matched, but data is deformed.
-    Not enough information given.
-    
-    Before:
+    ERROR:root:File `'projectOK/test2.py'` not found.
 
 
-    /usr/local/lib/python3.6/dist-packages/scipy/stats/_multivariate.py:660: RuntimeWarning: covariance is not positive-semidefinite.
-      out = random_state.multivariate_normal(mean, cov, size)
-
-
-
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_10_2.png)
-
-
-    Cross Entropy of A: 4.47373104095459
-    Cross Entropy of B: 10.691061973571777
-    Beginning Inversion.
-
-
-
-
-
-    
-
-
-
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_10_6.png)
-
-
-    After Pre-Processing:
-    Cross Entropy of B: 5.985135078430176
-    Cross Entropy of unperturbed B: 4.654342174530029
-
-
-
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_10_8.png)
-
-
-    l2 reconstruction error: 3.823
-
+## Test 3
 
 
 ```
@@ -101,11 +67,11 @@ python projectOK/test3.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_11_2.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_14_2.png)
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_11_3.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_14_3.png)
 
 
     Beginning Inversion.
@@ -118,7 +84,7 @@ python projectOK/test3.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_11_7.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_14_7.png)
 
 
     After Pre-Processing:
@@ -127,7 +93,7 @@ python projectOK/test3.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_11_9.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_14_9.png)
 
 
     l2 reconstruction error: 7.680
@@ -150,11 +116,11 @@ python projectOK/test3bigger.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_12_2.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_15_2.png)
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_12_3.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_15_3.png)
 
 
     Before:
@@ -170,7 +136,7 @@ python projectOK/test3bigger.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_12_7.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_15_7.png)
 
 
     After Pre-Processing:
@@ -179,11 +145,21 @@ python projectOK/test3bigger.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_12_9.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_15_9.png)
+
+
+
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_15_10.png)
+
+
+
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_15_11.png)
 
 
     l2 reconstruction error: 35.574
 
+
+## Test 4
 
 
 ```
@@ -200,7 +176,7 @@ python projectOK/test4.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_13_2.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_17_2.png)
 
 
     Before:
@@ -216,7 +192,7 @@ python projectOK/test4.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_13_6.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_17_6.png)
 
 
     After Pre-Processing:
@@ -225,11 +201,13 @@ python projectOK/test4.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_13_8.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_17_8.png)
 
 
     l2 reconstruction error: 1.083
 
+
+## Test 5
 
 
 ```
@@ -246,11 +224,11 @@ python projectOK/test5.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_14_2.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_19_2.png)
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_14_3.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_19_3.png)
 
 
     Before:
@@ -266,7 +244,7 @@ python projectOK/test5.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_14_7.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_19_7.png)
 
 
     After Pre-Processing:
@@ -275,11 +253,13 @@ python projectOK/test5.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_14_9.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_19_9.png)
 
 
     l2 reconstruction error: 1.945
 
+
+## Test 6
 
 
 ```
@@ -294,12 +274,10 @@ python projectOK/test6.py
 
     /usr/local/lib/python3.6/dist-packages/scipy/stats/_multivariate.py:660: RuntimeWarning: covariance is not positive-semidefinite.
       out = random_state.multivariate_normal(mean, cov, size)
-    /content/Thesis/utility.py:503: UserWarning: linewidths is ignored by contourf
-      alpha=alpha, linewidths=5, linestyles='solid')
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_15_2.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_21_2.png)
 
 
     Before:
@@ -315,7 +293,7 @@ python projectOK/test6.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_15_6.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_21_6.png)
 
 
     After Pre-Processing:
@@ -323,5 +301,5 @@ python projectOK/test6.py
 
 
 
-![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_15_8.png)
+![png](https://raw.githubusercontent.com/willisk/Thesis/master/figures/README/README_21_8.png)
 
