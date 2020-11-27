@@ -234,6 +234,10 @@ def loss_fn_wrapper(name, loss_stats, project, class_conditional):
     def _loss_fn(inputs, labels, m_target=m_target, v_target=v_target, project=project, loss_stats=loss_stats, class_conditional=class_conditional):
         X_proj = project(inputs, labels)
         m, v = get_stats(X_proj, labels, class_conditional)
+        print(inputs.shape)
+        print(X_proj.shape)
+        print(m.shape)
+        print(m_targets.shape)
         return loss_stats(m, v, m_target, v_target)
     return name, _loss_fn
 
