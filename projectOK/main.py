@@ -77,7 +77,7 @@ split_A = args.split_A
 
 
 # Neural Network
-model_name = "resnet34_CIF10"
+model_name = "resnet34"
 n_dims, n_classes = 3 * 32 * 32, 10
 
 nn_lr = args.nn_lr
@@ -131,14 +131,15 @@ B_val_loader = torch.utils.data.DataLoader(B_val, **dataloader_params)
 # ======= Neural Network =======
 from ext.cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
 from ext.cifar10pretrained.cifar10_download import main as download_resnet
-download_resnet()
-pretrained = True
-net = ResNet34(pretrained=pretrained)
+download = False
+if download:
+    download_resnet()
+net = ResNet34(pretrained=download)
 net.to(DEVICE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
 model_path = os.path.join(MODELDIR, f"{model_name}.pt")
-if not pretrained:
+if not download:
     utility.train(net, A_loader, criterion, optimizer,
                   model_path=model_path,
                   epochs=nn_steps,
@@ -217,31 +218,34 @@ def get_stats(inputs, labels, class_conditional):
     return inputs.mean(dim=0), inputs.var(dim=0)
 
 
-def loss_fn_wrapper(loss_stats, project, class_conditional):
+def loss_fn_wrapper(name, loss_stats, project, class_conditional):
+    stats_path = os.path.join(MODELDIR, "stats_{model_name}_{name}.pt")
     m_target, v_target = utility.collect_stats(
-        project, A_loader, n_classes, class_conditional)
+        project, A_loader, n_classes, class_conditional,
+        path=stats_path)
 
     def _loss_fn(inputs, labels):
         X_proj = project(inputs, labels)
         m, v = get_stats(X_proj, labels, class_conditional)
         return loss_stats(m, v, m_target, v_target)
-    return _loss_fn
+    return name, _loss_fn
 
 
 loss_stats = loss_di
 
-methods = {
-    "NN": loss_fn_wrapper(
+methods = [
+    loss_fn_wrapper(
+        name="NN",
         loss_stats=loss_stats,
         project=project_NN,
         class_conditional=False,
     ),
-}
+]
 
 # ======= Optimize =======
 metrics = defaultdict(dict)
 
-for method, loss_fn in methods.items():
+for method, loss_fn in methods:
     print("## Method:", method)
 
     preprocess, params = preprocessing_model()
