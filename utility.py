@@ -89,12 +89,14 @@ def expand_as_r(a, b):
 def net_accuracy(net, data_loader):
     total_count = 0.0
     total_correct = 0.0
-    with torch.no_grad():
-        for data in tqdm(data_loader):
+    with torch.no_grad(), tqdm(data_loader) as pbar:
+        for data in pbar:
             inputs, labels = data
             outputs = net(inputs)
             total_count += len(inputs)
             total_correct += count_correct(outputs, labels)
+            pbar.set_postfix(
+                accuracy=f"{total_correct / total_count * 100:.0f}%")
     return total_correct / total_count
 
 
@@ -134,26 +136,6 @@ def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, class_conditional=True, cap_g
     gamma = torch.clamp(n_a / n, max=cap_gamma)
     mean, var = exp_av_mean_var(m_a, v_a, m_b, v_b, gamma)
     return mean, var, n
-
-
-# def combine_mean_var_bn(mean_a, var_a, n_a, mean_b, var_b, n_b, momentum=0.1):
-#     n = n_a + n_b
-#     mean = (1 - momentum) * mean_a + (momentum) * mean_b
-#     # assert mean[n.squeeze() != 0].isfinite().all(), \
-#     #     "mean not finite \n{}".format(mean)
-#     # use biased var in train
-#     var = input.var([0, 2, 3], unbiased=False)
-#     n = input.numel() / input.size(1)
-#     with torch.no_grad():
-#         self.running_mean = exponential_average_factor * mean\
-#             + (1 - exponential_average_factor) * self.running_mean
-#         # update running_var with unbiased var
-#         self.running_var = exponential_average_factor * var * n / (n - 1)\
-#             + (1 - exponential_average_factor) * self.running_var
-#     var = (n_a * var_a
-#            + n_b * var_b
-#            + n_a * n_b / n * (mean_a - mean_b)**2) / n
-#     return mean, var, n
 
 
 def reduce_mean_var(means, vars, n):
@@ -325,7 +307,7 @@ def train(net, data_loader, criterion, optimizer,
     if USE_AMP:
         scaler = GradScaler()
 
-    TRACKING = False
+    TRACKING = None
     if plot:
         TRACKING = defaultdict(list)
 
@@ -339,7 +321,7 @@ def train(net, data_loader, criterion, optimizer,
             total_correct = 0.0
             grad_total = 0.0
 
-            for data in data_loader:
+            for i, data in enumerate(data_loader):
                 inputs, labels = data
 
                 optimizer.zero_grad()
@@ -368,6 +350,12 @@ def train(net, data_loader, criterion, optimizer,
                 total_count += batch_size
                 total_loss += loss.item() * batch_size
                 total_correct += count_correct(outputs, labels)
+                pbar.set_postfix(
+                    loss=total_loss / total_count,
+                    acc=f"{total_correct / total_count * 100:.0f}%",
+                    chkpt=saved_epoch,
+                    batch=f"{i}/{len(data_loader)}",
+                )
 
             loss = total_loss / total_count
             accuracy = total_correct / total_count
@@ -390,12 +378,6 @@ def train(net, data_loader, criterion, optimizer,
                     'net_state_dict': net.state_dict(),
                 }, save_path)
                 saved_epoch = epoch
-
-            pbar.set_postfix(
-                loss=loss,
-                acc=f"{accuracy*100:.0f}%",
-                chkpt=saved_epoch,
-            )
 
     print(flush=True, end='')
     net.eval()
