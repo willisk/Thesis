@@ -324,6 +324,7 @@ def train(net, data_loader, criterion, optimizer,
 
             for i, data in enumerate(data_loader):
                 inputs, labels = data
+                labels = labels.to(inputs.device)
 
                 optimizer.zero_grad()
                 if USE_AMP:

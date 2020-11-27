@@ -27,6 +27,14 @@ import statsnet
 import deepinversion
 import shared
 
+if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
+    import importlib
+    importlib.reload(datasets)
+    importlib.reload(statsnet)
+    importlib.reload(utility)
+    importlib.reload(deepinversion)
+    importlib.reload(shared)
+
 print("#", __doc__)
 
 cmaps = utility.categorical_colors(2)
@@ -46,16 +54,10 @@ parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
 parser.add_argument("-seed", type=int, default=333)
 
-if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
-    import importlib
-    importlib.reload(datasets)
-    importlib.reload(statsnet)
-    importlib.reload(utility)
-    importlib.reload(deepinversion)
-    importlib.reload(shared)
+if 'ipykernel_launcher' in sys.argv:
     args = parser.parse_args([])
     args.nn_width = 8
-    args.nn_verifier = True
+    # args.nn_verifier = True
     args.nn_steps = 2
     args.inv_steps = 2
 else:
