@@ -130,20 +130,23 @@ B_val_loader = torch.utils.data.DataLoader(B_val, **dataloader_params)
 
 # ======= Neural Network =======
 from ext.cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
-model_path = os.path.join(MODELDIR, f"{model_name}.pt")
-net = ResNet34()
+from ext.cifar10pretrained.cifar10_download import main as download_resnet
+download_resnet()
+pretrained = True
+net = ResNet34(pretrained=pretrained)
 net.to(DEVICE)
-
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
-utility.train(net, A_loader, criterion, optimizer,
-              model_path=model_path,
-              epochs=nn_steps,
-              resume_training=nn_resume_training,
-              reset=nn_reset_training,
-              plot=True,
-              use_drive=True,
-              )
+model_path = os.path.join(MODELDIR, f"{model_name}.pt")
+if not pretrained:
+    utility.train(net, A_loader, criterion, optimizer,
+                  model_path=model_path,
+                  epochs=nn_steps,
+                  resume_training=nn_resume_training,
+                  reset=nn_reset_training,
+                  plot=True,
+                  use_drive=True,
+                  )
 print("Dataset A ", end='')
 utility.print_net_accuracy(net, A_loader)
 
