@@ -212,9 +212,9 @@ def preprocessing_model():
     return preprocessing_fn, (M, b)
 
 
-def loss_di(X_proj_means, X_proj_vars, means_target, vars_target):
-    loss_mean = ((X_proj_means - means_target)**2).mean()
-    loss_var = ((X_proj_vars - vars_target)**2).mean()
+def loss_di(m, v, m_target, v_target):
+    loss_mean = ((m - m_target)**2).mean()
+    loss_var = ((v - v_target)**2).mean()
     return loss_mean + loss_var
 
 
@@ -231,7 +231,7 @@ def loss_fn_wrapper(name, loss_stats, project, class_conditional):
         project, A_loader, n_classes, class_conditional,
         path=stats_path)
 
-    def _loss_fn(inputs, labels, m_target=m_target, v_target=v_target, class_conditional=class_conditional):
+    def _loss_fn(inputs, labels, m_target=m_target, v_target=v_target, project=project, loss_stats=loss_stats, class_conditional=class_conditional):
         X_proj = project(inputs, labels)
         m, v = get_stats(X_proj, labels, class_conditional)
         return loss_stats(m, v, m_target, v_target)
