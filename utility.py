@@ -92,6 +92,7 @@ def net_accuracy(net, data_loader):
     with torch.no_grad(), tqdm(data_loader) as pbar:
         for data in pbar:
             inputs, labels = data
+            labels.to(inputs.device)
             outputs = net(inputs)
             total_count += len(inputs)
             total_correct += count_correct(outputs, labels)

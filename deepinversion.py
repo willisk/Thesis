@@ -115,6 +115,7 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
             METRICS = defaultdict(float)
 
             for inputs, labels in data_loader:
+                labels.to(inputs.device)
                 # inputs = inputs_orig
                 # if step == 1 and track_history_every:
                 #     history = [(inputs.detach().cpu().clone(), 0)]
