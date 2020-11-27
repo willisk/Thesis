@@ -432,6 +432,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional,
     with torch.no_grad(), tqdm(data_loader, desc="Batch") as pbar:
         for inputs, labels in pbar:
 
+            labels = labels.to(inputs.dtype)
             outputs = projection(inputs, labels).to(dtype)
 
             if class_conditional:
@@ -441,9 +442,9 @@ def collect_stats(projection, data_loader, n_classes, class_conditional,
                 m = torch.LongTensor([len(inputs)])
 
             mean, var, n = combine_mean_var(
-                mean or np.zeros_like(new_mean),
-                var or np.zeros_like(var),
-                n or np.zeros_like(m),
+                mean or torch.zeros_like(new_mean),
+                var or torch.zeros_like(var),
+                n or torch.zeros_like(m),
                 new_mean, new_var, m)
     print(flush=True, end='')
 
