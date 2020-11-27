@@ -16,9 +16,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 import time
 
-from tqdm.auto import tqdm, trange
-# if 'ipykernel_launcher' in sys.argv:
-#     from tqdm import tqdm_notebook as tqdm
+from tqdm.auto import tqdm
 
 
 class timer():
@@ -88,33 +86,42 @@ def expand_as_r(a, b):
     return a.reshape(shape)
 
 
-def net_accuracy(net, inputs, labels):
+def net_accuracy(net, data_loader):
+    total_count = 0.0
+    total_correct = 0.0
     with torch.no_grad():
-        predictions = torch.argmax(net(inputs), dim=1)
-    return (predictions == labels).to(torch.float).mean().item()
+        for data in data_loader:
+            inputs, labels = data
+            outputs = net(inputs)
+            total_count += len(inputs)
+            total_correct += count_correct(outputs, labels)
+    return total_correct / total_count
 
 
-def print_net_accuracy(net, inputs, labels):
-    accuracy = net_accuracy(net, inputs, labels)
+def print_net_accuracy(net, data_loader):
+    accuracy = net_accuracy(net, data_loader)
     print(f"net accuracy: {accuracy * 100:.1f}%")
 
-# def print_accuracy(X, Y, net, str_format=None):
-#     predictions = net.predict(X)
-#     accuracy = (predictions == Y).type(torch.float).mean()
-#     accuracy = f"{accuracy * 100:.0f}%"
-#     if str_format is None:
-#         print(f"Accuracy: {accuracy}")
-#     else:
-#         print(str_format.format(accuracy=accuracy))
+
+def net_accuracy_batch(net, inputs, labels):
+    with torch.no_grad():
+        outputs = net(inputs)
+        return count_correct(outputs, labels)
 
 
-def combine_mean_var(mean_a, var_a, n_a, mean_b, var_b, n_b):
-    n_a = expand_as_r(n_a, mean_a)
-    n_b = expand_as_r(n_b, mean_a)
-    mean_a = nan_to_zero(mean_a)
-    mean_b = nan_to_zero(mean_b)
-    var_a = nan_to_zero(var_a)
-    var_b = nan_to_zero(var_b)
+def print_net_accuracy_batch(net, inputs, labels):
+    accuracy = net_accuracy_batch(net, inputs, labels)
+    print(f"net accuracy: {accuracy * 100:.1f}%")
+
+
+def combine_mean_var(mean_a, var_a, n_a, mean_b, var_b, n_b, class_conditional=True):
+    if class_conditional:
+        n_a = expand_as_r(n_a, mean_a)
+        n_b = expand_as_r(n_b, mean_a)
+        mean_a = nan_to_zero(mean_a)
+        mean_b = nan_to_zero(mean_b)
+        var_a = nan_to_zero(var_a)
+        var_b = nan_to_zero(var_b)
     n = n_a + n_b
     mean = (n_a * mean_a + n_b * mean_b) / n
     # assert mean[n.squeeze() != 0].isfinite().all(), \
@@ -172,21 +179,18 @@ def batch_feature_mean_var(x, keep_dims=[1], unbiased=False):
     dims_collapse = list(range(len(x.shape)))
     for dim in keep_dims:
         dims_collapse.remove(dim)
-    if dims_collapse == []:
-        return x, torch.zeros_like(x)
+    assert dims_collapse != [], "dims to collapse are empty"
     mean = x.mean(dim=dims_collapse)
     var = x.var(dim=dims_collapse, unbiased=unbiased)
     return mean, var
 
 
-def c_mean_var(data, labels, num_classes=None, unbiased=False):
-    if num_classes is None:
-        num_classes = int(labels.max().item() + 1)
-    mean = torch.zeros(
-        (num_classes, data.shape[1]), dtype=data.dtype, device=data.device)
-    var = torch.ones(
-        (num_classes, data.shape[1]), dtype=data.dtype, device=data.device)
-    n = torch.zeros(num_classes, dtype=torch.long, device=data.device)
+def c_mean_var(data, labels, n_classes, unbiased=False):
+    mean = torch.zeros((n_classes, data.shape[1]),
+                       dtype=data.dtype, device=data.device)
+    var = torch.ones((n_classes, data.shape[1]),
+                     dtype=data.dtype, device=data.device)
+    n = torch.zeros(n_classes, dtype=torch.long, device=data.device)
 
     for c in labels.unique().to(torch.long):
         c_mask = labels == c
@@ -253,6 +257,20 @@ def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var
     )
 
 
+def save_load_path(path, use_drive=True):
+    if path is not None:
+        if use_drive:
+            save_path, load_path = search_drive(path)
+        else:
+            save_path, load_path = path, path
+        save_dir = os.path.dirname(save_path)
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+    else:
+        save_path, load_path = None, None
+    return save_path, load_path
+
+
 def search_drive(path):
     pwd = 'Thesis'
 
@@ -275,22 +293,13 @@ def search_drive(path):
 
 
 def train(net, data_loader, criterion, optimizer,
-          num_epochs=10, save_every=20,
+          epochs=10, save_every=20,
           model_path=None, use_drive=False,
           resume_training=False, reset=False,
           scheduler=None, plot=False):
     "Training Loop"
 
-    if model_path is not None:
-        if use_drive:
-            save_path, load_path = search_drive(model_path)
-        else:
-            save_path, load_path = model_path, model_path
-        save_dir = os.path.dirname(save_path)
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-    else:
-        save_path, load_path = None, None
+    save_path, load_path = save_load_path(model_path, use_drive)
 
     if load_path is not None and not reset and os.path.exists(load_path):
         checkpoint = torch.load(load_path)
@@ -319,7 +328,7 @@ def train(net, data_loader, criterion, optimizer,
 
     print("Beginning training.", flush=True)
 
-    with tqdm(range(init_epoch, init_epoch + num_epochs), desc="Epoch") as pbar:
+    with tqdm(range(init_epoch, init_epoch + epochs), desc="Epoch") as pbar:
         saved_epoch = 0
         for epoch in pbar:
             total_count = 0.0
@@ -373,7 +382,7 @@ def train(net, data_loader, criterion, optimizer,
             if save_path is not None \
                 and (save_every is not None
                      and epoch % save_every == 0
-                     or epoch == init_epoch + num_epochs - 1):
+                     or epoch == init_epoch + epochs - 1):
                 torch.save({
                     'epoch': epoch,
                     'net_state_dict': net.state_dict(),
@@ -417,6 +426,46 @@ def plot_metrics(metrics):
         acc_scaled = [y_min + a * (y_max - y_min) for a in accuracy]
         plt.plot(steps, acc_scaled, alpha=0.6, label='acc (scaled)')
     plt.legend()
+
+
+def collect_stats(projection, data_loader, n_classes, class_conditional,
+                  dtype=torch.double, path=None, use_drive=True):
+
+    save_path, load_path = save_load_path(path, use_drive=use_drive)
+    if load_path and os.path.exists(load_path):
+        chkpt = torch.load(load_path)
+        return chkpt['mean'], chkpt['var']
+
+    mean = var = n = None
+    print("Beginning tracking stats.", flush=True)
+
+    with torch.no_grad(), tqdm(data_loader, desc="Batch") as pbar:
+        for inputs, labels in pbar:
+
+            outputs = projection(inputs, labels).to(dtype)
+
+            if class_conditional:
+                new_mean, new_var, m = c_mean_var(outputs, labels, n_classes)
+            else:
+                new_mean, new_var = inputs.mean(dim=0), inputs.var(dim=0)
+                m = torch.LongTensor([len(inputs)])
+
+            mean, var, n = combine_mean_var(
+                mean or np.zeros_like(new_mean),
+                var or np.zeros_like(var),
+                n or np.zeros_like(m),
+                new_mean, new_var, m)
+    print(flush=True, end='')
+
+    mean, var = mean.to(torch.float), var.to(torch.float)
+
+    if save_path:
+        torch.save({
+            'mean': mean,
+            'var': var,
+        }, save_path)
+
+    return mean, var
 
 
 def learn_stats(stats_net, data_loader):
@@ -651,7 +700,7 @@ def plot_stats_mean_var(mean, var, colors=None):
         plt.scatter(m[0], m[1], color=c, edgecolors='k', marker='^')
 
 
-def plot_random_projections(RP, X, mean, Y=None, color='r', marker='o', scatter=True):
+def plot_random_projections(RP, X_proj, mean, Y=None, color='r', marker='o', scatter=True):
     if Y is None:
         _plot_random_projections(
             RP, X, mean=mean, color=color, marker=marker, scatter=scatter,)
@@ -661,20 +710,19 @@ def plot_random_projections(RP, X, mean, Y=None, color='r', marker='o', scatter=
             marker = ['+', 'd']
         # cmaps = categorical_colors(Y.max().item() + 1)
         for c, m in zip(Y.unique(), marker):
-            _plot_random_projections(RP, X[Y == c],
+            _plot_random_projections(RP, X_proj[Y == c],
                                      mean=mean[c],
                                      color=color,
                                      marker=m,
                                      scatter=scatter,)
 
 
-def _plot_random_projections(RP, X, mean, color='r', marker='o', scatter=True):
-    X_proj = (X - mean) @ RP
+def _plot_random_projections(RP, X_proj, mean, color='r', marker='o', scatter=True):
     for rp, x_p in zip(RP.T, X_proj.T):
         m, s = x_p.mean(), x_p.var().sqrt()
         rp_m = rp * m + mean
         start, end = rp_m - rp * s, rp_m + rp * s
-        plt.plot(*list(zip(start, end)), color=color)
+        # plt.plot(*list(zip(start, end)), color=color)
         plt.plot(*rp_m, color='black', marker='x')
         mm = mean + rp * x_p.reshape(-1, 1)
         if scatter:

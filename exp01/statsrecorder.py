@@ -22,8 +22,8 @@ class StatsRecorder:
             n_features = data.shape[1]
             shape = (n_classes, n_features)
 
-            self.mean = torch.zeros(shape)
-            self.var = torch.zeros(shape)
+            self.mean = torch.zeros(shape, dtype=data.dtype)
+            self.var = torch.zeros(shape, dtype=data.dtype)
             self.mean, self.var, self.n = utility.c_mean_var(
                 data, labels, n_classes)
 
@@ -51,10 +51,20 @@ stats = StatsRecorder(n_classes)
 data_shape = [n_features, 32, 32]
 data = [torch.empty([0] + data_shape)] * n_classes
 
-for i in range(300):
+dtype = torch.float
+print(f"{dtype=}")
+
+import torch.nn as nn
+bn_layer = nn.BatchNorm2d(n_features)
+bn_layer.train()
+
+for i in range(100):
     n_samples = torch.randint(10, 101, size=(1,)).item()
     new_data = torch.randn((n_samples, *data_shape)) * 10
     new_labels = torch.randint(n_classes, size=(n_samples,))
+
+    bn_layer(new_data)
+    new_data = new_data.to(dtype)
 
     # print("incoming data shape: ", new_data.shape)
 
@@ -90,18 +100,24 @@ for i in range(300):
             + "\nrecorded var: {}".format(stats.var[c]) \
             + "\nerror: {}".format(torch.norm(stats.var[c] - class_var))
 
-    print("assert {} passed".format(i))
+    # print("assert {} passed".format(i))
 
 
 mean, var = torch.empty_like(stats.mean), torch.empty_like(stats.mean)
+mean, var = mean.to(torch.double), var.to(torch.double)
 for c in range(n_classes):
+    data[c] = data[c].to(torch.double)
     mean[c], var[c] = utility.batch_feature_mean_var(data[c])
 
-print("cond mean error: ", torch.norm(stats.mean - mean))
-print("cond var error: ", torch.norm(stats.var - var))
+# stats.mean, stats.var = stats.mean.to(torch.float), stats.var.to(torch.float)
+print("cond mean error: ", torch.norm(stats.mean - mean).item())
+print("cond var error: ", torch.norm(stats.var - var).item())
 
 mean, var, _ = utility.reduce_mean_var(stats.mean, stats.var, stats.n)
 data = torch.cat(data)
 true_mean, true_var = utility.batch_feature_mean_var(data)
-print("reduced mean error: ", torch.norm(mean - true_mean))
-print("reduced var error: ", torch.norm(var - true_var))
+print("reduced mean error: ", torch.norm(mean - true_mean).item())
+print("reduced var error: ", torch.norm(var - true_var).item())
+
+print("bn mean error: ", torch.norm(bn_layer.running_mean - true_mean).item())
+print("bn var error: ", torch.norm(bn_layer.running_var - true_var).item())
