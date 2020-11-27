@@ -170,6 +170,7 @@ plt.legend()
 plt.show()
 
 
+
 # L2 Reconstruction Error
 Id = torch.eye(2)
 l2_err = (preprocessing(perturb(Id)) - Id).norm(2).item()

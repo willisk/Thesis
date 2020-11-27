@@ -79,7 +79,7 @@ criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=lr)
 utility.train(net, dataset.train_loader(), criterion, optimizer,
               model_path=model_path,
-              num_epochs=steps,
+              epochs=steps,
               #   resume_training=True,
               plot=True,
               )

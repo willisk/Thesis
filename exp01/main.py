@@ -36,10 +36,10 @@ LOGDIR = os.path.join(PWD, "exp01/runs")
 shared.init_summary_writer(log_dir=LOGDIR)
 # tb = shared.get_summary_writer("main")
 
-# dataset = datasets.Dataset2D(type=3)
-dataset = datasets.DatasetCifar10(
-    load_dataset=False
-)
+dataset = datasets.Dataset2D(type=3)
+# dataset = datasets.DatasetCifar10(
+#     load_dataset=False
+# )
 
 # stats_net = dataset.load_statsnet(resume_training=False, use_drive=True)
 stats_net = dataset.load_statsnet(net=ResNet34(),

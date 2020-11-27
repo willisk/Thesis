@@ -8,9 +8,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import utility
 import deepinversion
 
-import importlib
-importlib.reload(utility)
-importlib.reload(deepinversion)
+if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
+    import importlib
+    importlib.reload(utility)
+    importlib.reload(deepinversion)
 
 
 from functools import wraps

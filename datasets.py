@@ -24,23 +24,28 @@ sys.path.append(PWD)
 import nets
 import utility
 import statsnet
-import deepinversion
-if 'ipykernel_launcher' in sys.argv:
+if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
     import importlib
     importlib.reload(nets)
     importlib.reload(utility)
     importlib.reload(statsnet)
-    importlib.reload(deepinversion)
 
-training_params = {'num_epochs': 200}
-dataset_gen_params = {'batch_size': 64,
-                      'shuffle': True}
+default_training_params = {'epochs': 200}
+default_dataloader_params = {'batch_size': 64,
+                             'shuffle': True}
 
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self):
-        self.training_params = training_params
-        self.dataset_gen_params = dataset_gen_params
+    def __init__(self, training_params=None, dataloader_params=None, train_split=0.8):
+        self.training_params = training_params or default_training_params
+        self.dataloader_params = dataloader_params or default_dataloader_params
+
+        # length = len(self)
+        # split_count = (int(length * train_split),
+        #                int(length * (1 - train_split)))
+        # self.train_set, self.test_set = torch.utils.data.random_split(
+        #     self, split_count)
+        self.train_set = self
 
     def __len__(self):
         return len(self.X)
@@ -48,20 +53,31 @@ class Dataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         return self.X[index], self.Y[index]
 
+    def train_loader(self, val_split=0.0):
+        if val_split:
+            length = len(self.train_set)
+            split_count = (int(length * val_split),
+                           int(length * (1 - val_split)))
+            train_set, val_set = torch.utils.data.random_split(
+                self.train_set, split_count)
+            train_dataloader = torch.utils.data.DataLoader(
+                train_set, **self.dataloader_params)
+            val_dataloader = torch.utils.data.DataLoader(
+                val_set, **self.dataloader_params)
+            return train_dataloader, val_dataloader
+        return torch.utils.data.DataLoader(self.train_set, **self.dataloader_params)
+
+    def test_loader(self):
+        return torch.utils.data.DataLoader(self.test_set, **self.dataloader_params)
+
     def get_num_classes(self):
         if not hasattr(self, "num_classes"):
-            self.num_classes = max(self.Y).item() + 1
+            self.num_classes = self.Y.max().item() + 1
         return self.num_classes
 
     def print_accuracy(self, net):
         utility.print_net_accuracy(net,
                                    torch.Tensor(self.X), torch.Tensor(self.Y))
-
-    def train_loader(self):
-        return torch.utils.data.DataLoader(self, **self.dataset_gen_params)
-
-    def test_loader(self):
-        return torch.utils.data.DataLoader(self.test_set, **self.dataset_gen_params)
 
     def full(self):
         return self.X, self.Y
@@ -70,10 +86,8 @@ class Dataset(torch.utils.data.Dataset):
         return nn.CrossEntropyLoss(reduction=reduction)
 
     def pretrained_statsnet(self, net, name, resume_training=False, use_drive=False, input_shape=None):
-
-        # XXX lr should be in training params
         criterion = self.get_criterion()
-        optimizer = optim.Adam(net.parameters(), lr=0.01)
+        optimizer = optim.Adam(net.parameters(), lr=self.training_params['lr'])
 
         num_classes = self.get_num_classes()
 
@@ -106,7 +120,7 @@ class Dataset(torch.utils.data.Dataset):
             utility.train(net, data_loader, criterion, optimizer,
                           model_path=net_path, resume_training=resume_training,
                           use_drive=use_drive,
-                          ** self.training_params)
+                          epochs=self.training_params['epochs'])
             stats_net.enable_hooks()
 
             if not pretrained:
@@ -216,7 +230,7 @@ class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
         self.classes = np.array(['plane', 'car', 'bird', 'cat',
                                  'deer', 'dog', 'frog', 'horse', 'ship', 'truck'])
 
-        self.training_params['num_epochs'] = 50
+        self.training_params['epochs'] = 50
         self.training_params['save_every'] = 1
 
     def full(self):
@@ -304,7 +318,7 @@ class Dataset2D(Dataset):
         }
         super().__init__()
 
-        self.training_params['num_epochs'] = 500
+        self.training_params['epochs'] = 500
         # self.training_params['save_every'] = 1
 
         if type == 0:
@@ -386,7 +400,7 @@ class DatasetGMM(Dataset2D):
         # pylint: disable=bad-super-call
         super(Dataset2D, self).__init__()
 
-        self.training_params['num_epochs'] = 500
+        self.training_params['epochs'] = 500
 
         # # using equal weights for now
         # if weights is None:

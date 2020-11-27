@@ -5,15 +5,20 @@ import sys
 
 import argparse
 from collections import defaultdict
+from copy import copy
 
 import torch
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+import torchvision
+import torchvision.transforms as transforms
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATADIR = os.path.join(PWD, "data")
+MODELDIR = os.path.join(PWD, "models")
 sys.path.append(PWD)
 
 import utility
@@ -37,16 +42,8 @@ cmaps = utility.categorical_colors(2)
 
 # ======= Arg Parse =======
 parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
-parser.add_argument("-n_classes", type=int, default=10)
-parser.add_argument("-n_dims", type=int, default=20)
-parser.add_argument("-n_samples_A", type=int, default=500)
-parser.add_argument("-n_samples_B", type=int, default=100)
-parser.add_argument("-n_samples_valid", type=int, default=1000)
+parser.add_argument("-split_A", type=float, default=0.8)
 parser.add_argument("-perturb_strength", type=float, default=1.5)
-parser.add_argument("-g_modes", type=int, default=12)
-parser.add_argument("-g_scale_mean", type=float, default=2)
-parser.add_argument("-g_scale_cov", type=float, default=20)
-parser.add_argument("-g_mean_shift", type=float, default=0)
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-nn_width", type=int, default=16)
@@ -54,20 +51,14 @@ parser.add_argument("-nn_depth", type=int, default=4)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--nn_verifier", action="store_true")
-parser.add_argument("-n_random_projections", type=int, default=16)
 parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
 parser.add_argument("-seed", type=int, default=333)
 
 if 'ipykernel_launcher' in sys.argv:
     args = parser.parse_args([])
-    args.n_classes = 3
-    args.g_modes = 3
-    args.n_samples_A = 100
-    args.n_samples_B = 100
-    args.n_samples_valid = 100
     args.nn_width = 8
-    args.nn_verifier = True
+    # args.nn_verifier = True
 else:
     args = parser.parse_args()
 
@@ -81,31 +72,21 @@ torch.manual_seed(args.seed)
 
 # ======= Hyperparameters =======
 # Dataset
-n_classes = args.n_classes
-n_dims = args.n_dims
 perturb_strength = args.perturb_strength
+split_A = args.split_A
 
-# gmm
-n_modes = args.g_modes
-scale_mean = args.g_scale_mean
-scale_cov = args.g_scale_cov
-mean_shift = args.g_mean_shift
-n_samples_per_class_A = args.n_samples_A
-n_samples_per_class_B = args.n_samples_B
-n_samples_per_class_valid = args.n_samples_valid
 
 # Neural Network
 nn_lr = args.nn_lr
 nn_steps = args.nn_steps
 nn_width = args.nn_width
 nn_depth = args.nn_depth
+n_dims, n_classes = 3 * 32 * 32, 10
 nn_layer_dims = [n_dims] + [nn_width] * nn_depth + [n_classes]
 nn_resume_training = args.nn_resume_train
 nn_reset_training = args.nn_reset_train
 nn_verifier = args.nn_verifier
-
-# Random Projections
-n_random_projections = args.n_random_projections
+model_name = "resnet34_CIF10"
 
 # Inversion
 inv_lr = args.inv_lr
@@ -115,24 +96,7 @@ inv_steps = args.inv_steps
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f"Running on '{DEVICE}'")
 
-# ======= Create Dataset =======
-# Gaussian Mixture Model
-dataset = datasets.DatasetGMM(
-    n_dims=n_dims,
-    n_classes=n_classes,
-    n_modes=n_modes,
-    scale_mean=scale_mean,
-    scale_cov=scale_cov,
-    mean_shift=mean_shift,
-    n_samples_per_class=n_samples_per_class_A,
-    device=DEVICE,
-)
-
-X_A, Y_A = dataset.X, dataset.Y
-X_B, Y_B = dataset.sample(n_samples_per_class=n_samples_per_class_B)
-X_B_val, Y_B_val = dataset.sample(
-    n_samples_per_class=n_samples_per_class_valid)
-
+# ======= Perturbation =======
 perturb_matrix = (torch.eye(n_dims) + perturb_strength *
                   torch.randn((n_dims, n_dims))).to(DEVICE)
 perturb_shift = (perturb_strength * torch.randn(n_dims)).to(DEVICE)
@@ -142,46 +106,65 @@ def perturb(X):
     return X @ perturb_matrix + perturb_shift
 
 
-# perturbed Dataset B
-X_B_orig = X_B
-X_B = perturb(X_B_orig)
-X_B_val = perturb(X_B_val)
+# ======= Create Dataset =======
+cifar_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+transform_perturb = transforms.Compose([cifar_transform, perturb])
+dataloader_params = {'batch_size': 64,
+                     'shuffle': True}
+CIF10 = torchvision.datasets.CIFAR10(root=DATADIR, train=True,
+                                     download=True, transform=cifar_transform)
+n_A = int(len(CIF10) * split_A)
+A, B_orig = torch.utils.data.random_split(CIF10, (n_A, len(CIF10) - n_A))
+
+B = copy(B_orig)
+B.transform = transform_perturb
+B_val = torchvision.datasets.CIFAR10(root=DATADIR, train=False,
+                                     download=True, transform=cifar_transform)
+
+A_loader = torch.utils.data.DataLoader(A, **dataloader_params)
+B_loader = torch.utils.data.DataLoader(B, **dataloader_params)
+B_val_loader = torch.utils.data.DataLoader(B_val, **dataloader_params)
 
 # ======= Neural Network =======
-model_name = f"net_GMM_{'-'.join(map(repr, nn_layer_dims))}"
-model_path = os.path.join(PWD, f"models/{model_name}.pt")
-net = nets.FCNet(nn_layer_dims)
+from ext.cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
+model_path = os.path.join(MODELDIR, f"{model_name}.pt")
+net = ResNet34()
 net.to(DEVICE)
+
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
-utility.train(net, dataset.train_loader(), criterion, optimizer,
+utility.train(net, A_loader, criterion, optimizer,
               model_path=model_path,
-              num_epochs=nn_steps,
+              epochs=nn_steps,
               resume_training=nn_resume_training,
               reset=nn_reset_training,
               plot=True,
               use_drive=True,
               )
-utility.print_net_accuracy(net, X_A, Y_A)
+print("Dataset A ", end='')
+utility.print_net_accuracy(net, A_loader)
 
 if nn_verifier:
-    verifier_path = os.path.join(PWD, f"models/{model_name}_verifier.pt")
-    verifier_net = nets.FCNet(nn_layer_dims)
+    verifier_path = os.path.join(MODELDIR, f"{model_name}_verifier.pt")
+    verifier_net = ResNet34()
     verifier_net.to(DEVICE)
     optimizer = torch.optim.Adam(verifier_net.parameters(), lr=nn_lr)
-    utility.train(verifier_net, dataset.train_loader(), criterion, optimizer,
+    utility.train(verifier_net, A_loader, criterion, optimizer,
                   model_path=verifier_path,
-                  num_epochs=nn_steps,
+                  epochs=nn_steps,
                   resume_training=nn_resume_training,
                   reset=nn_reset_training,
                   )
-    print("verifier ", end='')
-    utility.print_net_accuracy(verifier_net, X_A, Y_A)
+    print("Dataset A verifier ", end='')
+    utility.print_net_accuracy(verifier_net, A_loader)
 
 
 # ======= NN Project =======
-net_layers = utility.get_child_modules(net, ignore_types=["activation"])
-layer_activations = [0] * len(net_layers)
+net_layers = utility.get_child_modules(
+    net, ignore_types=["activation", "loss"])
+layer_activations = [None] * len(net_layers)
 
 
 def layer_hook_wrapper(l):
@@ -194,75 +177,27 @@ for l, layer in enumerate(net_layers):
     layer.register_forward_hook(layer_hook_wrapper(l))
 
 
-def project_NN(X, _Y=None):
-    net(X)
+def project_NN(inputs, _labels):
+    net(inputs)
     return layer_activations[-1]
 
 
-def project_NN_all(X, _Y=None):
-    net(X)
+def project_NN_all(inputs, _labels):
+    net(inputs)
     return torch.cat(layer_activations, dim=1)
 
-
-# ======= Random Projections =======
-RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
-RP = RP / RP.norm(2, dim=0)
-
-mean_A, var_A = X_A.mean(dim=0), X_A.var(dim=0)
-mean_A_C, var_A_C, _ = utility.c_mean_var(X_A, Y_A)
-
-
-def project_RP(X, _Y=None):
-    return (X - mean_A) @ RP
-
-
-def project_RP_CC(X, Y):
-    X_proj_C = torch.empty((X.shape[0], n_random_projections), device=X.device)
-    for c in range(n_classes):
-        X_proj_C[Y == c] = (X[Y == c] - mean_A_C[c]) @ RP
-    return X_proj_C
-
-
-# Random ReLU Projections
-relu_bias = (torch.randn((1, n_random_projections), device=DEVICE)
-             * var_A.max().sqrt())
-relu_bias_C = (torch.randn((n_classes, n_random_projections), device=DEVICE)
-               * var_A_C.max(dim=1)[0].sqrt().reshape(-1, 1))
-
-
-def project_RP_relu(X, _Y=None):
-    return F.relu(project_RP(X) + relu_bias)
-
-
-def project_RP_relu_CC(X, Y):
-    return F.relu(project_RP_CC(X, Y) + relu_bias_C[Y])
-
-
-# ======= Combined =======
-def combine(project1, project2):
-    def _combined_fn(X, Y=None):
-        return torch.cat((project1(X, Y), project2(X, Y)), dim=1)
-    return _combined_fn
 
 # ======= Preprocessing Model =======
 
 
 def preprocessing_model():
-    A = torch.eye(n_dims, requires_grad=True, device=DEVICE)
+    M = torch.eye(n_dims, requires_grad=True, device=DEVICE)
     b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
 
     def preprocessing_fn(X):
-        return X @ A + b
-    return preprocessing_fn, (A, b)
+        return X @ M + b
 
-
-# ======= Loss Function =======
-def loss_frechet(X_proj_means, X_proj_vars, means_target, vars_target):
-    loss_mean = ((X_proj_means - means_target)**2).sum(dim=0).mean()
-    loss_var = (X_proj_vars + vars_target
-                - 2 * (X_proj_vars * vars_target).sqrt()
-                ).sum(dim=0).mean()
-    return loss_mean + loss_var
+    return preprocessing_fn, (M, b)
 
 
 def loss_di(X_proj_means, X_proj_vars, means_target, vars_target):
@@ -271,71 +206,31 @@ def loss_di(X_proj_means, X_proj_vars, means_target, vars_target):
     return loss_mean + loss_var
 
 
-def loss_fn_wrapper(loss_fn, project, class_conditional):
-    with torch.no_grad():
-        X_A_proj = project(X_A, Y_A)
+def get_stats(inputs, labels, class_conditional):
     if class_conditional:
-        A_proj_means, A_proj_vars, _ = utility.c_mean_var(X_A_proj, Y_A)
-    else:
-        A_proj_means, A_proj_vars = X_A.mean(dim=0), X_A.var(dim=0)
+        mean, var, _ = utility.c_mean_var(inputs, labels, n_classes)
+        return mean, var
+    return inputs.mean(dim=0), inputs.var(dim=0)
 
-    def _loss_fn(X, Y=Y_B, loss_fn=loss_fn, project=project, means_target=A_proj_means, vars_target=A_proj_vars, class_conditional=class_conditional):
-        X_proj = project(X, Y)
-        if class_conditional:
-            X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y)
-        else:
-            X_proj_means, X_proj_vars = X.mean(dim=0), X.var(dim=0)
-        return loss_fn(X_proj_means, X_proj_vars, means_target, vars_target)
+
+def loss_fn_wrapper(stats_loss_fn, project, class_conditional):
+    m_target, v_target = utility.collect_stats(
+        project, A_loader, n_classes, class_conditional)
+
+    def _loss_fn(inputs, labels):
+        X_proj = project(inputs, labels)
+        m, v = get_stats(X_proj, labels, class_conditional)
+        return stats_loss_fn(m, v, m_target, v_target)
     return _loss_fn
 
 
-loss_fn = loss_frechet
+stats_loss_fn = loss_di
 
 methods = {
     "NN": loss_fn_wrapper(
-        loss_fn=loss_fn,
+        stats_loss_fn=stats_loss_fn,
         project=project_NN,
         class_conditional=False,
-    ),
-    "NN CC": loss_fn_wrapper(
-        loss_fn=loss_fn,
-        project=project_NN,
-        class_conditional=True,
-    ),
-    "NN ALL": loss_fn_wrapper(
-        loss_fn=loss_fn,
-        project=project_NN_all,
-        class_conditional=False,
-    ),
-    "NN ALL CC": loss_fn_wrapper(
-        loss_fn=loss_fn,
-        project=project_NN_all,
-        class_conditional=True,
-    ),
-    "RP": loss_fn_wrapper(
-        loss_fn=loss_fn,
-        project=project_RP,
-        class_conditional=False,
-    ),
-    "RP CC": loss_fn_wrapper(
-        loss_fn=loss_fn,
-        project=project_RP_CC,
-        class_conditional=True,
-    ),
-    "RP ReLU": loss_fn_wrapper(
-        loss_fn=loss_fn,
-        project=project_RP_relu,
-        class_conditional=False,
-    ),
-    "RP ReLU CC": loss_fn_wrapper(
-        loss_fn=loss_fn,
-        project=project_RP_relu_CC,
-        class_conditional=True,
-    ),
-    "combined": loss_fn_wrapper(
-        loss_fn=loss_fn,
-        project=combine(project_NN_all, project_RP_CC),
-        class_conditional=True,
     ),
 }
 
@@ -349,7 +244,7 @@ for method, loss_fn in methods.items():
     optimizer = torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    deepinversion.deep_inversion(X_B,
+    deepinversion.deep_inversion(B_loader,
                                  loss_fn,
                                  optimizer,
                                  #    scheduler=scheduler,
@@ -361,68 +256,62 @@ for method, loss_fn in methods.items():
                                  )
 
     # ======= Result =======
-    X_B_proc = preprocess(X_B).detach()
-    X_B_val_proc = preprocess(X_B_val).detach()
+    B_transform = B.transform
+    B.transform = transforms.Compose([B.transform, preprocess])
+    B_val.transform = B.transform
 
     print("Results:")
 
     # Loss
-    loss = loss_fn(X_B_proc).item()
+    total_count = 0
+    total_loss = 0.0
+    with torch.no_grad():
+        for inputs, labels in B_loader:
+            bs = len(inputs)
+            total_loss = loss_fn(inputs, labels).item() * bs
+            total_count += bs
+    loss = total_loss / total_count
     print(f"\tloss: {loss:.3f}")
 
     # L2 Reconstruction Error
     Id = torch.eye(n_dims, device=DEVICE)
-    l2_err = (preprocess(perturb(Id)) - Id).norm(2).item()
-    print(f"\tl2 reconstruction error: {l2_err:.3f}")
-
-    # Cross Entropy
-    entropy = dataset.cross_entropy(X_B_proc, Y_B)
-    accuracy_val = utility.net_accuracy(
-        net, X_B_val_proc, Y_B_val)
-    print(f"\tcross entropy of B: {entropy:.3f}")
+    l2_err = (preprocess(perturb(Id)) - Id).norm(2).item() / Id.norm(2).item()
+    print(f"\trel. l2 reconstruction error: {l2_err:.3f}")
 
     # NN Accuracy
-    accuracy = utility.net_accuracy(net, X_B_proc, Y_B)
+    accuracy = utility.net_accuracy(net, B_loader)
+    accuracy_val = utility.net_accuracy(net, B_val_loader)
     print(f"\tnn accuracy: {accuracy * 100:.1f} %")
-    accuracy_val = utility.net_accuracy(
-        net, X_B_val_proc, Y_B_val)
     print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
-
-    if nn_verifier:
-        accuracy_ver = utility.net_accuracy(
-            verifier_net, X_B_val_proc, Y_B_val)
-        print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
 
     metrics[method]['loss'] = loss
     metrics[method]['l2-err'] = l2_err
     metrics[method]['acc'] = accuracy
     metrics[method]['acc(val)'] = accuracy_val
+
     if nn_verifier:
+        accuracy_ver = utility.net_accuracy(verifier_net, B_val_loader)
+        print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
         metrics[method]['acc(ver)'] = accuracy_ver
-    metrics[method]['c-entr'] = entropy
+
+    B.transform = B_transform
+    B_val.transform = B_transform
 
 
-print()
-print("# Summary")
+print("\n# Summary")
 print("=========")
 
-print()
-print("Data A")
-accuracy = utility.net_accuracy(net, X_A, Y_A)
-entropy = dataset.cross_entropy(X_A, Y_A).item()
-print(f"cross entropy: {entropy:.3f}")
+accuracy = utility.net_accuracy(net, A_loader)
+print("\nData A")
 print(f"nn accuracy: {accuracy * 100:.1f} %")
 
-print()
-print("perturbed Data B")
-accuracy = utility.net_accuracy(net, X_B, Y_B)
-accuracy_val = utility.net_accuracy(net, X_B_val, Y_B_val)
-entropy = dataset.cross_entropy(X_B, Y_B).item()
-print(f"cross entropy: {entropy:.3f}")
+accuracy = utility.net_accuracy(net, B_loader)
+accuracy_val = utility.net_accuracy(net, B_val_loader)
+print("\nperturbed Data B")
 print(f"nn accuracy: {accuracy * 100:.1f} %")
 print(f"nn accuracy B valid: {accuracy_val * 100:.1f} %")
 if nn_verifier:
-    accuracy_ver = utility.net_accuracy(verifier_net, X_B_val, Y_B_val)
+    accuracy_ver = utility.net_accuracy(verifier_net, B_val_loader)
     print(f"nn verifier accuracy: {accuracy_ver * 100:.1f} %")
 
 print()

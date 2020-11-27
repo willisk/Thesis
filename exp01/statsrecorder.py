@@ -12,6 +12,19 @@ importlib.reload(utility)
 
 # https://notmatthancock.github.io/2017/03/23/simple-batch-stat-updates.html
 
+# pylint: disable=no-member
+torch.manual_seed(0)
+
+n_classes = 3
+n_features = 5
+n_runs = 10
+assert_on = False
+dtype = torch.float
+cap_gamma = 1
+
+print(f"{dtype}")
+print(f"cap gamma {cap_gamma}")
+
 
 class StatsRecorder:
     def __init__(self, n_classes, data=None, labels=None):
@@ -38,19 +51,9 @@ class StatsRecorder:
             old_mean, old_var, n = self.mean, self.var, self.n
 
             self.mean, self.var, self.n = utility.combine_mean_var(old_mean, old_var, n,
-                                                                   new_mean, new_var, m)
+                                                                   new_mean, new_var, m,
+                                                                   cap_gamma=cap_gamma)
 
-
-# pylint: disable=no-member
-torch.manual_seed(0)
-
-n_classes = 3
-n_features = 5
-n_runs = 100
-assert_on = False
-dtype = torch.float
-
-print(f"{dtype}")
 
 stats = StatsRecorder(n_classes)
 
@@ -77,6 +80,9 @@ for i in range(n_runs):
         # print("data[{}].shape: ".format(c), data[c].shape)
 
     stats.update(new_data, new_labels)
+
+    if i % 10 == 0:
+        print(i)
 
     for c in range(n_classes):
         # data: [n_class] * [n_cc_batch, n_feature, 32, 32]

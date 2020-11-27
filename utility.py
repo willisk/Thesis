@@ -114,22 +114,25 @@ def print_net_accuracy_batch(net, inputs, labels):
     print(f"net accuracy: {accuracy * 100:.1f}%")
 
 
-def combine_mean_var(mean_a, var_a, n_a, mean_b, var_b, n_b, class_conditional=True):
-    if class_conditional:
-        n_a = expand_as_r(n_a, mean_a)
-        n_b = expand_as_r(n_b, mean_a)
-        mean_a = nan_to_zero(mean_a)
-        mean_b = nan_to_zero(mean_b)
-        var_a = nan_to_zero(var_a)
-        var_b = nan_to_zero(var_b)
-    n = n_a + n_b
-    mean = (n_a * mean_a + n_b * mean_b) / n
-    # assert mean[n.squeeze() != 0].isfinite().all(), \
-    #     "mean not finite \n{}".format(mean)
-    var = (n_a * var_a
-           + n_b * var_b
-           + n_a * n_b / n * (mean_a - mean_b)**2) / n
+def exp_av_mean_var(m_a, v_a, m_b, v_b, gamma):
+    mean = gamma * m_a + (1 - gamma) * m_b
+    var = (gamma * v_a
+           + (1 - gamma) * v_b
+           + gamma * (1 - gamma) * (m_a - m_b)**2)
+    return mean, var
 
+
+def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, class_conditional=True, cap_gamma=0.99):
+    if class_conditional:
+        n_a = expand_as_r(n_a, m_a)
+        n_b = expand_as_r(n_b, m_a)
+        m_a = nan_to_zero(m_a)
+        m_b = nan_to_zero(m_b)
+        v_a = nan_to_zero(v_a)
+        v_b = nan_to_zero(v_b)
+    n = n_a + n_b
+    gamma = torch.clamp(n_a / n, max=cap_gamma)
+    mean, var = exp_av_mean_var(m_a, v_a, m_b, v_b, gamma)
     return mean, var, n
 
 

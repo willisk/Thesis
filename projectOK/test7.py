@@ -64,35 +64,35 @@ X_B_orig, Y_B = dataset.sample(n_samples_per_class=100)
 X_B = perturb(X_B_orig)
 
 # ======= Random Projections =======
-n_projections = 3
+n_projections = 16
 RP = torch.randn((2, n_projections))
 RP = RP / RP.norm(2, dim=0)
 
 
-def project(X, Y):
+def project_RP(X, Y):
     X_proj_C = torch.empty((X.shape[0], n_projections))
     for c in range(n_classes):
-        X_proj_C[Y == c] = F.relu((X[Y == c] - means_A[c]) @ RP)
+        X_proj_C[Y == c] = (X[Y == c] - means_A[c]) @ RP
     return X_proj_C
 
-# # plot random projections
-# plt.scatter(X_A[Y_A == 0][:, 0], X_A[Y_A == 0][:, 1],
-#             c=cmaps[0], marker='+', alpha=0.4, label="Data A cl 0")
-# plt.scatter(X_A[Y_A == 1][:, 0], X_A[Y_A == 1][:, 1],
-#             c=cmaps[0], marker='d', alpha=0.4, label="Data A cl 1")
-# plt.scatter(X_B[Y_B == 0][:, 0], X_B[Y_B == 0][:, 1],
-#             c=cmaps[1], marker='+', alpha=0.4, label="Data B cl 0")
-# plt.scatter(X_B[Y_B == 1][:, 0], X_B[Y_B == 1][:, 1],
-#             c=cmaps[1], marker='d', alpha=0.4, label="Data B cl 1")
-# utility.plot_stats([X_A[Y_A == 0], X_B[Y_B == 0]])
-# utility.plot_stats([X_A[Y_A == 1], X_B[Y_B == 1]])
-# plt.legend()
 
-# plt.show()
+_, var_A_proj_C, _ = utility.c_mean_var(project_RP(X_A, Y_A), Y_A)
+bias_C = torch.randn((n_classes, n_projections)) * var_A_proj_C.sqrt() / 2
+
+
+def project_relu(X, Y):
+    # print("X", torch.isfinite(X).all())
+    # res = F.relu(project_RP(X, Y))
+    res = F.relu(project_RP(X, Y) + bias_C[Y])
+    # print("X_proj", torch.isfinite(res).all())
+    return res
+
+
+X_A_proj = project_relu(X_A, Y_A)
 
 
 plt.title("Data A")
-utility.plot_random_projections(RP, X_A, mean=means_A, Y=Y_A, marker='+')
+utility.plot_random_projections(RP, X_A_proj, mean=means_A, Y=Y_A, marker='+')
 plt.scatter(X_A[Y_A == 0][:, 0], X_A[Y_A == 0][:, 1],
             c=cmaps[0], marker='+', alpha=0.4, label="Data A cl 0")
 plt.scatter(X_A[Y_A == 1][:, 0], X_A[Y_A == 1][:, 1],
@@ -102,7 +102,8 @@ plt.legend()
 plt.show()
 
 plt.title("perturbed Data B")
-utility.plot_random_projections(RP, X_B, mean=means_A, Y=Y_B)
+utility.plot_random_projections(
+    RP, project_relu(X_B, Y_B), mean=means_A, Y=Y_B)
 plt.scatter(X_B[Y_B == 0][:, 0], X_B[Y_B == 0][:, 1],
             c=cmaps[1], marker='+', alpha=0.4, label="Data B cl 0")
 plt.scatter(X_B[Y_B == 1][:, 0], X_B[Y_B == 1][:, 1],
@@ -125,8 +126,6 @@ def preprocessing(X):
 
 
 # ======= Collect Projected Stats from A =======
-X_A_proj = project(X_A, Y_A)
-
 
 # collect stats
 # shape: [n_class, n_dims] = [2, 2]
@@ -135,29 +134,33 @@ A_proj_means, A_proj_vars, _ = utility.c_mean_var(X_A_proj, Y_A)
 
 # ======= Loss Function =======
 def loss_frechet(X, Y=Y_B):
-    X_proj = project(X, Y)
+    X_proj = project_relu(X, Y)
     X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y)
-    diff_mean = ((X_proj_means - A_proj_means)**2).sum(dim=0).mean()
+    diff_mean = ((X_proj_means - A_proj_means)**2).sum(dim=1).mean()
     diff_var = (X_proj_vars + A_proj_vars
-                - 2 * (X_proj_vars * A_proj_vars).sqrt()
-                ).sum(dim=0).mean()
+                # - 2 * (X_proj_vars * A_proj_vars).sqrt()
+                - 2 / np.sqrt(len(X_proj))
+                * (X_proj.unsqueeze(0) - X_proj_means.unsqueeze(1)).norm(2, dim=1)
+                / np.sqrt(len(X_A_proj))
+                * (X_A_proj.unsqueeze(0) - A_proj_means.unsqueeze(1)).norm(2, dim=1)
+                ).sum(dim=1).mean(dim=0)
     loss = (diff_mean + diff_var)
     return loss
 
 
 def loss_fn(X, Y=Y_B):
-    X_proj = project(X, Y)
+    X_proj = project_relu(X, Y)
     X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y)
     loss_mean = ((X_proj_means - A_proj_means)**2).mean()
     loss_var = ((X_proj_vars - A_proj_vars)**2).mean()
     return loss_mean + loss_var
 
 
-loss_fn = loss_frechet
+# loss_fn = loss_frechet
 
 # ======= Optimize =======
 lr = 0.1
-steps = 100
+steps = 300
 optimizer = torch.optim.Adam([A, b], lr=lr)
 
 history = deepinversion.deep_inversion(X_B,

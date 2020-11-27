@@ -77,84 +77,97 @@ def inversion_loss(stats_net, criterion, target_labels, hp,
 
 
 # @timing
-def deep_inversion(inputs, loss_fn, optimizer, steps=10,
+def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
                    pre_fn=None, scheduler=None,
-                   track_history_every=None, plot=False,
+                   #    track_history_every=None,
+                   plot=False,
+                   device='cpu',
                    ):
 
     # writer = shared.get_summary_writer()
-    USE_AMP = inputs.device.type == 'gpu'
+    USE_AMP = (device == 'gpu')
     if USE_AMP:
         scaler = GradScaler()
 
-    history = []
-    if track_history_every:
-        history = [(inputs.detach().cpu().clone(), 0)]
+    # history = []
 
     TRACKING = False
     if plot:
         TRACKING = defaultdict(list, steps=[])
 
-    def process_result(res, pbar):
+    def process_result(res, metrics):
         info = {}
         if isinstance(res, tuple):
             loss, info = res
-            if TRACKING:
-                for k, v in info.items():
-                    TRACKING[k].append(v)
+            for k, v in info.items():
+                metrics[k] += v
         else:
             loss = res
-        pbar.set_postfix(loss=loss.item(), **info)
+        metrics['loss'] += loss.item()
         return loss
 
     print("Beginning Inversion.", flush=True)
 
-    with tqdm(range(1, steps + 1), desc="Step") as pbar:
-        inputs_orig = inputs
+    with tqdm(range(1, steps + 1), desc="Epoch") as pbar:
+
+        METRICS = defaultdict(float)
+
         for step in pbar:
-            inputs = inputs_orig
+            for inputs, labels in data_loader:
+                # inputs = inputs_orig
+                # if step == 1 and track_history_every:
+                #     history = [(inputs.detach().cpu().clone(), 0)]
 
-            if pre_fn is not None:
-                inputs = pre_fn(inputs)
+                if pre_fn is not None:
+                    inputs = pre_fn(inputs)
 
-            optimizer.zero_grad()
+                optimizer.zero_grad()
 
-            if USE_AMP:
-                with autocast():
-                    res = loss_fn(inputs)
-                    loss = process_result(res, pbar)
-                scaler.scale(loss).backward()
-                grad_scale = scaler.get_scale()
-            else:
-                res = loss_fn(inputs)
-                loss = process_result(res, pbar)
-                loss.backward()
-                grad_scale = 1
+                if USE_AMP:
+                    with autocast():
+                        res = loss_fn(inputs, labels)
+                        loss = process_result(res, METRICS)
+                    scaler.scale(loss).backward()
+                    grad_scale = scaler.get_scale()
+                else:
+                    res = loss_fn(inputs, labels)
+                    loss = process_result(res, METRICS)
+                    loss.backward()
+                    grad_scale = 1
 
-            grad_total = 0.
+                grad_total = 0.
+                if TRACKING:
+                    for p_group in optimizer.param_groups:
+                        for i, param in enumerate(p_group['params']):
+                            # p_name = f"parpam_{'-'.join(map(str, param.shape))}"
+                            p_name = f'grad_{i}'
+                            p_grad = (param.grad / grad_scale).norm(2).item()
+                            grad_total += p_grad
+                            METRICS[p_name] += p_grad
+
+                if USE_AMP:
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    optimizer.step()
+
+                if scheduler is not None:
+                    scheduler.step(grad_total)
+
+            n_batches = len(data_loader)
+            for k in METRICS:
+                METRICS[k] /= n_batches
+
+            pbar.set_postfix(**METRICS)
+
             if TRACKING:
                 TRACKING['steps'].append(step)
-                TRACKING['loss'].append(loss.item())
-                for p_group in optimizer.param_groups:
-                    for i, param in enumerate(p_group['params']):
-                        # p_name = f"parpam_{'-'.join(map(str, param.shape))}"
-                        p_name = f'grad_{i}'
-                        p_grad = (param.grad / grad_scale).norm(2).item()
-                        grad_total += p_grad
-                        TRACKING[p_name].append(p_grad)
+                for k, v in METRICS.items():
+                    TRACKING[k].append(v)
 
-            if USE_AMP:
-                scaler.step(optimizer)
-                scaler.update()
-            else:
-                optimizer.step()
-
-            if scheduler is not None:
-                scheduler.step(grad_total)
-
-            if track_history_every and (
-                    step % track_history_every == 0 or step == steps):
-                history.append((inputs.detach().cpu().clone(), step))
+            # if track_history_every and (
+            #         step % track_history_every == 0 or step == steps):
+            #     history.append((inputs.detach().cpu().clone(), step))
 
     print(flush=True, end='')
 
@@ -163,4 +176,4 @@ def deep_inversion(inputs, loss_fn, optimizer, steps=10,
         plt.xlabel('Steps')
         plt.show()
 
-    return history
+    # return history
