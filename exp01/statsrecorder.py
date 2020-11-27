@@ -46,21 +46,25 @@ torch.manual_seed(0)
 
 n_classes = 3
 n_features = 5
+n_runs = 100
+assert_on = False
+dtype = torch.float
+
+print(f"{dtype}")
+
 stats = StatsRecorder(n_classes)
 
 data_shape = [n_features, 32, 32]
 data = [torch.empty([0] + data_shape)] * n_classes
 
-dtype = torch.float
-print(f"{dtype=}")
 
 import torch.nn as nn
 bn_layer = nn.BatchNorm2d(n_features)
 bn_layer.train()
 
-for i in range(100):
+for i in range(n_runs):
     n_samples = torch.randint(10, 101, size=(1,)).item()
-    new_data = torch.randn((n_samples, *data_shape)) * 10
+    new_data = torch.randn((n_samples, *data_shape))
     new_labels = torch.randint(n_classes, size=(n_samples,))
 
     bn_layer(new_data)
@@ -82,23 +86,24 @@ for i in range(100):
         # utility.assert_mean_var(class_mean, class_var,
         #                         stats.mean[c], stats.var[c], stats.n)
 
-        assert stats.mean[stats.n.squeeze() != 0].isfinite().all(), \
-            "recorded mean has invalid entries"
-        assert stats.mean[c].shape == class_mean.shape
-        assert torch.allclose(stats.mean[c], class_mean, equal_nan=True), \
-            "class {}".format(c) \
-            + "\nclass mean: {}".format(class_mean) \
-            + "\nrecorded mean: {}".format(stats.mean[c]) \
-            + "\nerror: {}".format(torch.norm(stats.mean[c] - class_mean))
+        if assert_on:
+            assert stats.mean[stats.n.squeeze() != 0].isfinite().all(), \
+                "recorded mean has invalid entries"
+            assert stats.mean[c].shape == class_mean.shape
+            assert torch.allclose(stats.mean[c], class_mean, equal_nan=True), \
+                "class {}".format(c) \
+                + "\nclass mean: {}".format(class_mean) \
+                + "\nrecorded mean: {}".format(stats.mean[c]) \
+                + "\nerror: {}".format(torch.norm(stats.mean[c] - class_mean))
 
-        assert stats.var[c].shape == class_var.shape
-        assert stats.var[stats.n.squeeze() != 0].isfinite().all(), \
-            "recorded var has invalid entries"
-        assert torch.allclose(stats.var[c], class_var, equal_nan=True), \
-            "class {}".format(c) \
-            + "\nclass var: {}".format(class_var) \
-            + "\nrecorded var: {}".format(stats.var[c]) \
-            + "\nerror: {}".format(torch.norm(stats.var[c] - class_var))
+            assert stats.var[c].shape == class_var.shape
+            assert stats.var[stats.n.squeeze() != 0].isfinite().all(), \
+                "recorded var has invalid entries"
+            assert torch.allclose(stats.var[c], class_var, equal_nan=True), \
+                "class {}".format(c) \
+                + "\nclass var: {}".format(class_var) \
+                + "\nrecorded var: {}".format(stats.var[c]) \
+                + "\nerror: {}".format(torch.norm(stats.var[c] - class_var))
 
     # print("assert {} passed".format(i))
 
@@ -109,12 +114,13 @@ for c in range(n_classes):
     data[c] = data[c].to(torch.double)
     mean[c], var[c] = utility.batch_feature_mean_var(data[c])
 
+data = torch.cat(data)
+print("n_samples", len(data))
 # stats.mean, stats.var = stats.mean.to(torch.float), stats.var.to(torch.float)
 print("cond mean error: ", torch.norm(stats.mean - mean).item())
 print("cond var error: ", torch.norm(stats.var - var).item())
 
 mean, var, _ = utility.reduce_mean_var(stats.mean, stats.var, stats.n)
-data = torch.cat(data)
 true_mean, true_var = utility.batch_feature_mean_var(data)
 print("reduced mean error: ", torch.norm(mean - true_mean).item())
 print("reduced var error: ", torch.norm(var - true_var).item())
