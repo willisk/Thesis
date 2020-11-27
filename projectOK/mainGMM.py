@@ -11,7 +11,6 @@ import torch.nn.functional as F
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
@@ -23,17 +22,7 @@ import deepinversion
 import shared
 import nets
 
-if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
-    import importlib
-    importlib.reload(datasets)
-    importlib.reload(statsnet)
-    importlib.reload(utility)
-    importlib.reload(deepinversion)
-    importlib.reload(shared)
-
 print("#", __doc__)
-
-cmaps = utility.categorical_colors(2)
 
 # ======= Arg Parse =======
 parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
@@ -59,7 +48,17 @@ parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
 parser.add_argument("-seed", type=int, default=333)
 
-if 'ipykernel_launcher' in sys.argv:
+use_drive = True
+
+cmaps = utility.categorical_colors(2)
+
+if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
+    import importlib
+    importlib.reload(datasets)
+    importlib.reload(statsnet)
+    importlib.reload(utility)
+    importlib.reload(deepinversion)
+    importlib.reload(shared)
     args = parser.parse_args([])
     args.n_classes = 3
     args.g_modes = 3
@@ -68,6 +67,7 @@ if 'ipykernel_launcher' in sys.argv:
     args.n_samples_valid = 100
     args.nn_width = 8
     args.nn_verifier = True
+    use_drive = False
 else:
     args = parser.parse_args()
 
@@ -160,7 +160,7 @@ utility.train(net, dataset.train_loader(), criterion, optimizer,
               resume_training=nn_resume_training,
               reset=nn_reset_training,
               plot=True,
-              use_drive=True,
+              use_drive=use_drive,
               )
 utility.print_net_accuracy_batch(net, X_A, Y_A)
 
@@ -266,74 +266,74 @@ def preprocessing_model():
 #     return loss_mean + loss_var
 
 
-def loss_di(X_proj_means, X_proj_vars, means_target, vars_target):
-    loss_mean = ((X_proj_means - means_target)**2).mean()
-    loss_var = ((X_proj_vars - vars_target)**2).mean()
+def loss_di(m, v, m_target, v_target):
+    loss_mean = ((m - m_target)**2).mean()
+    loss_var = ((v - v_target)**2).mean()
     return loss_mean + loss_var
 
 
-def loss_fn_wrapper(loss_fn, project, class_conditional):
+def get_stats(inputs, labels, class_conditional):
+    if class_conditional:
+        mean, var, _ = utility.c_mean_var(inputs, labels, n_classes)
+        return mean, var
+    return inputs.mean(dim=0), inputs.var(dim=0)
+
+
+def loss_fn_wrapper(loss_stats, project, class_conditional):
     with torch.no_grad():
         X_A_proj = project(X_A, Y_A)
-    if class_conditional:
-        A_proj_means, A_proj_vars, _ = utility.c_mean_var(X_A, Y_A, n_classes)
-    else:
-        A_proj_means, A_proj_vars = X_A.mean(dim=0), X_A.var(dim=0)
+        A_proj_means, A_proj_vars = get_stats(X_A_proj, Y_A, class_conditional)
 
-    def _loss_fn(X, Y=Y_B, loss_fn=loss_fn, project=project, means_target=A_proj_means, vars_target=A_proj_vars, class_conditional=class_conditional):
+    def _loss_fn(X, Y=Y_B, means_target=A_proj_means, vars_target=A_proj_vars, class_conditional=class_conditional):
         X_proj = project(X, Y)
-        if class_conditional:
-            X_proj_means, X_proj_vars, _ = utility.c_mean_var(
-                X_proj, Y, n_classes)
-        else:
-            X_proj_means, X_proj_vars = X.mean(dim=0), X.var(dim=0)
-        return loss_fn(X_proj_means, X_proj_vars, means_target, vars_target)
+        X_proj_means, X_proj_vars = get_stats(X_proj, Y, class_conditional)
+        return loss_stats(X_proj_means, X_proj_vars, means_target, vars_target)
     return _loss_fn
 
 
 methods = {
     "NN": loss_fn_wrapper(
-        loss_fn=loss_di,
+        loss_stats=loss_di,
         project=project_NN,
         class_conditional=False,
     ),
     "NN CC": loss_fn_wrapper(
-        loss_fn=loss_di,
+        loss_stats=loss_di,
         project=project_NN,
         class_conditional=True,
     ),
     "NN ALL": loss_fn_wrapper(
-        loss_fn=loss_di,
+        loss_stats=loss_di,
         project=project_NN_all,
         class_conditional=False,
     ),
     "NN ALL CC": loss_fn_wrapper(
-        loss_fn=loss_di,
+        loss_stats=loss_di,
         project=project_NN_all,
         class_conditional=True,
     ),
     "RP": loss_fn_wrapper(
-        loss_fn=loss_di,
+        loss_stats=loss_di,
         project=project_RP,
         class_conditional=False,
     ),
     "RP CC": loss_fn_wrapper(
-        loss_fn=loss_di,
+        loss_stats=loss_di,
         project=project_RP_CC,
         class_conditional=True,
     ),
     "RP ReLU": loss_fn_wrapper(
-        loss_fn=loss_di,
+        loss_stats=loss_di,
         project=project_RP_relu,
         class_conditional=False,
     ),
     "RP ReLU CC": loss_fn_wrapper(
-        loss_fn=loss_di,
+        loss_stats=loss_di,
         project=project_RP_relu_CC,
         class_conditional=True,
     ),
     "combined": loss_fn_wrapper(
-        loss_fn=loss_di,
+        loss_stats=loss_di,
         project=combine(project_NN_all, project_RP_CC),
         class_conditional=True,
     ),

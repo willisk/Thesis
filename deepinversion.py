@@ -93,7 +93,7 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
 
     TRACKING = False
     if plot:
-        TRACKING = defaultdict(list, steps=[])
+        TRACKING = defaultdict(list)
 
     def process_result(res, metrics):
         info = {}
@@ -110,9 +110,10 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
 
     with tqdm(range(1, steps + 1), desc="Epoch") as pbar:
 
-        METRICS = defaultdict(float)
-
         for step in pbar:
+
+            METRICS = defaultdict(float)
+
             for inputs, labels in data_loader:
                 # inputs = inputs_orig
                 # if step == 1 and track_history_every:
@@ -161,7 +162,6 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
             pbar.set_postfix(**METRICS)
 
             if TRACKING:
-                TRACKING['steps'].append(step)
                 for k, v in METRICS.items():
                     TRACKING[k].append(v)
 
@@ -173,7 +173,6 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
 
     if TRACKING:
         utility.plot_metrics(TRACKING)
-        plt.xlabel('Steps')
         plt.show()
 
     # return history

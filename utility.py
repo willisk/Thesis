@@ -106,7 +106,7 @@ def print_net_accuracy(net, data_loader):
 def net_accuracy_batch(net, inputs, labels):
     with torch.no_grad():
         outputs = net(inputs)
-        return count_correct(outputs, labels)
+        return count_correct(outputs, labels) / len(inputs)
 
 
 def print_net_accuracy_batch(net, inputs, labels):
@@ -122,7 +122,7 @@ def exp_av_mean_var(m_a, v_a, m_b, v_b, gamma):
     return mean, var
 
 
-def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, class_conditional=True, cap_gamma=0.99):
+def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, class_conditional=True, cap_gamma=1):
     if class_conditional:
         n_a = expand_as_r(n_a, m_a)
         n_b = expand_as_r(n_b, m_a)
@@ -327,7 +327,7 @@ def train(net, data_loader, criterion, optimizer,
 
     TRACKING = False
     if plot:
-        TRACKING = defaultdict(list, steps=[])
+        TRACKING = defaultdict(list)
 
     print("Beginning training.", flush=True)
 
@@ -377,7 +377,6 @@ def train(net, data_loader, criterion, optimizer,
                 scheduler.step(grad_norm)
 
             if TRACKING:
-                TRACKING['steps'].append(epoch)
                 TRACKING['loss'].append(loss)
                 TRACKING['accuracy'].append(accuracy)
                 TRACKING['grad'].append(grad_norm)
@@ -402,18 +401,20 @@ def train(net, data_loader, criterion, optimizer,
     net.eval()
 
     if TRACKING:
-        plot_metrics(TRACKING)
-        plt.xlabel('Epochs')
+        plot_metrics(TRACKING, step_start=init_epoch)
+        plt.xlabel('epochs')
         plt.show()
 
     return TRACKING
 
 
-def plot_metrics(metrics):
-    steps = metrics.pop('steps')
+def plot_metrics(metrics, step_start=1):
+    steps = range(step_start, len(metrics.values()[0]))
+
     accuracy = None
     if 'accuracy' in metrics:
         accuracy = metrics.pop('accuracy')
+
     for key, val in metrics.items():
         plt.plot(steps, val, label=key)
 
@@ -424,10 +425,12 @@ def plot_metrics(metrics):
     buffer = 0.1 * (y_max - y_min)
     plt.gca().set_ylim([y_min - buffer, y_max + buffer])
 
-    plt.title('Metrics')
     if accuracy:
         acc_scaled = [y_min + a * (y_max - y_min) for a in accuracy]
-        plt.plot(steps, acc_scaled, alpha=0.6, label='acc (scaled)')
+        plt.plot(steps, acc_scaled, alpha=0.6, label='acc(scaled)')
+
+    plt.title('metrics')
+    plt.xlabel('steps')
     plt.legend()
 
 

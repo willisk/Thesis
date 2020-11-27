@@ -28,14 +28,6 @@ import deepinversion
 import shared
 import nets
 
-if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
-    import importlib
-    importlib.reload(datasets)
-    importlib.reload(statsnet)
-    importlib.reload(utility)
-    importlib.reload(deepinversion)
-    importlib.reload(shared)
-
 print("#", __doc__)
 
 cmaps = utility.categorical_colors(2)
@@ -55,10 +47,18 @@ parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
 parser.add_argument("-seed", type=int, default=333)
 
-if 'ipykernel_launcher' in sys.argv:
+if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
+    import importlib
+    importlib.reload(datasets)
+    importlib.reload(statsnet)
+    importlib.reload(utility)
+    importlib.reload(deepinversion)
+    importlib.reload(shared)
     args = parser.parse_args([])
     args.nn_width = 8
-    # args.nn_verifier = True
+    args.nn_verifier = True
+    args.nn_steps = 2
+    args.inv_steps = 2
 else:
     args = parser.parse_args()
 
@@ -77,16 +77,17 @@ split_A = args.split_A
 
 
 # Neural Network
+model_name = "resnet34_CIF10"
+n_dims, n_classes = 3 * 32 * 32, 10
+
 nn_lr = args.nn_lr
 nn_steps = args.nn_steps
 nn_width = args.nn_width
 nn_depth = args.nn_depth
-n_dims, n_classes = 3 * 32 * 32, 10
 nn_layer_dims = [n_dims] + [nn_width] * nn_depth + [n_classes]
 nn_resume_training = args.nn_resume_train
 nn_reset_training = args.nn_reset_train
 nn_verifier = args.nn_verifier
-model_name = "resnet34_CIF10"
 
 # Inversion
 inv_lr = args.inv_lr
@@ -213,22 +214,22 @@ def get_stats(inputs, labels, class_conditional):
     return inputs.mean(dim=0), inputs.var(dim=0)
 
 
-def loss_fn_wrapper(stats_loss_fn, project, class_conditional):
+def loss_fn_wrapper(loss_stats, project, class_conditional):
     m_target, v_target = utility.collect_stats(
         project, A_loader, n_classes, class_conditional)
 
     def _loss_fn(inputs, labels):
         X_proj = project(inputs, labels)
         m, v = get_stats(X_proj, labels, class_conditional)
-        return stats_loss_fn(m, v, m_target, v_target)
+        return loss_stats(m, v, m_target, v_target)
     return _loss_fn
 
 
-stats_loss_fn = loss_di
+loss_stats = loss_di
 
 methods = {
     "NN": loss_fn_wrapper(
-        stats_loss_fn=stats_loss_fn,
+        loss_stats=loss_stats,
         project=project_NN,
         class_conditional=False,
     ),
