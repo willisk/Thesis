@@ -126,6 +126,8 @@ def exp_av_mean_var(m_a, v_a, m_b, v_b, gamma):
 
 
 def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, class_conditional=True, cap_gamma=1):
+    for x in [m_a, v_a, n_a, m_b, v_b, n_b]:
+        print(x.device)
     if class_conditional:
         n_a = expand_as_r(n_a, m_a)
         n_b = expand_as_r(n_b, m_a)
