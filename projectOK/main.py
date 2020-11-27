@@ -206,8 +206,8 @@ def preprocessing_model():
     b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
 
     def preprocessing_fn(X):
-        X = X.flatten()
-        return (X @ M + b).reshape(3, 32, 32)
+        X = X.reshape(-1, 3 * 32 * 32)
+        return (X @ M + b).reshape(-1, 3, 32, 32)
 
     return preprocessing_fn, (M, b)
 
@@ -231,7 +231,7 @@ def loss_fn_wrapper(name, loss_stats, project, class_conditional):
         project, A_loader, n_classes, class_conditional,
         path=stats_path)
 
-    def _loss_fn(inputs, labels):
+    def _loss_fn(inputs, labels, m_target=m_target, v_target=v_target, class_conditional=class_conditional):
         X_proj = project(inputs, labels)
         m, v = get_stats(X_proj, labels, class_conditional)
         return loss_stats(m, v, m_target, v_target)
