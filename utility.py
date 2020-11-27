@@ -443,11 +443,12 @@ def collect_stats(projection, data_loader, n_classes, class_conditional,
                 new_mean, new_var = inputs.mean(dim=0), inputs.var(dim=0)
                 m = torch.LongTensor([len(inputs)]).to(inputs.device)
 
-            mean, var, n = combine_mean_var(
-                mean or torch.zeros_like(new_mean),
-                var or torch.zeros_like(new_var),
-                n or torch.zeros_like(m),
-                new_mean, new_var, m)
+            if mean is None:
+                mean = torch.zeros_like(new_mean)
+                var = torch.zeros_like(new_var)
+                n = torch.zeros_like(m)
+            mean, var, n = combine_mean_var(mean, var, n,
+                                            new_mean, new_var, m)
     print(flush=True, end='')
 
     mean, var = mean.to(torch.float), var.to(torch.float)
