@@ -206,7 +206,8 @@ def preprocessing_model():
     b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
 
     def preprocessing_fn(X):
-        return X @ M + b
+        X = X.flatten()
+        return (X @ M + b).reshape(3, 32, 32)
 
     return preprocessing_fn, (M, b)
 
