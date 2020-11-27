@@ -155,7 +155,7 @@ if not download:
                   use_drive=True,
                   )
 print("Dataset A ", end='')
-utility.print_net_accuracy(net, A_loader)
+# utility.print_net_accuracy(net, A_loader)
 
 if nn_verifier:
     verifier_path = os.path.join(MODELDIR, f"{model_name}_verifier.pt")

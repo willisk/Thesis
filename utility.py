@@ -443,7 +443,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional,
 
             mean, var, n = combine_mean_var(
                 mean or torch.zeros_like(new_mean),
-                var or torch.zeros_like(var),
+                var or torch.zeros_like(new_var),
                 n or torch.zeros_like(m),
                 new_mean, new_var, m)
     print(flush=True, end='')
