@@ -26,7 +26,6 @@ import datasets
 import statsnet
 import deepinversion
 import shared
-import nets
 
 print("#", __doc__)
 

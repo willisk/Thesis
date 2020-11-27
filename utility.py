@@ -90,7 +90,7 @@ def net_accuracy(net, data_loader):
     total_count = 0.0
     total_correct = 0.0
     with torch.no_grad():
-        for data in data_loader:
+        for data in tqdm(data_loader):
             inputs, labels = data
             outputs = net(inputs)
             total_count += len(inputs)
