@@ -107,9 +107,14 @@ def perturb(X):
 
 
 # ======= Create Dataset =======
+def to_device(X):
+    return X.to(DEVICE)
+
+
 cifar_transform = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    to_device])
 transform_perturb = transforms.Compose([cifar_transform, perturb])
 dataloader_params = {'batch_size': 64,
                      'shuffle': True}
