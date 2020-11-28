@@ -9,8 +9,10 @@ import torch
 import torch.nn as nn
 from torch.cuda.amp import autocast, GradScaler
 
-import itertools
+import inspect
 from functools import reduce, wraps
+
+import itertools
 from itertools import product
 from collections import defaultdict
 from collections.abc import Iterable
@@ -417,6 +419,54 @@ def plot_metrics(metrics, step_start=1):
     plt.title('metrics')
     plt.xlabel('steps')
     plt.legend()
+
+
+def debug(func):
+
+    parameters = inspect.signature(func).parameters
+    argnames = [p.name for p in parameters.values()]
+    defaults = {
+        k: v.default
+        for k, v in parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
+
+    @wraps(func)
+    def print_tensor(t, test=False):
+        if isinstance(t, torch.Tensor):
+            shape = tuple(t.shape)
+            if shape == () or shape == (1,):
+                contents = f"{t.item()}, "
+                shape = ""
+            else:
+                contents = ""
+                shape = f"shape={shape}"
+            dtype = f", dtype={t.dtype}" if t.dtype != torch.float else ""
+            device = f", device={t.device.type}" if t.device.type != 'cpu' else ""
+            print(
+                f"tensor({contents}{shape}{dtype}{device})")
+        else:
+            print(t)
+
+    def _func(*args, **kwargs):
+        print(f"\nCALL to {func.__name__}()")
+        for argtype, params in [
+            ("args", zip(argnames, args)),
+            ("kwargs", kwargs.items()),
+            ("defaults", {k: v
+                          for k, v in defaults.items()
+                          if k not in kwargs}.items())]:
+            if params:
+                print(f"{argtype}:")
+            for argname, arg in params:
+                print(f"- {argname}: ", end='')
+                print_tensor(arg)
+        out = func(*args, **kwargs)
+        if out:
+            print("returned: ", end='')
+            print_tensor(out, True)
+        return out
+    return _func
 
 
 def collect_stats(projection, data_loader, n_classes, class_conditional,

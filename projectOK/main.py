@@ -35,6 +35,8 @@ if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
     importlib.reload(deepinversion)
     importlib.reload(shared)
 
+from utility import debug
+
 print("#", __doc__)
 
 cmaps = utility.categorical_colors(2)
@@ -228,7 +230,7 @@ def loss_fn_wrapper(name, loss_stats, project, class_conditional):
         if class_conditional:
             m, v = utility.c_mean_var(inputs, labels, n_classes)
         else:
-            m, v = inputs.mean(dim=0), inputs.var(dim=0)
+            m, v = X_proj.mean(dim=0), X_proj.var(dim=0)
         return loss_stats(m, v, m_target, v_target)
     return name, _loss_fn
 
