@@ -101,6 +101,7 @@ def net_accuracy(net, data_loader):
             total_correct += count_correct(outputs, labels)
             pbar.set_postfix(
                 accuracy=f"{total_correct / total_count * 100:.0f}%", refresh=False)
+            pbar.update(0)
     return total_correct / total_count
 
 
@@ -318,9 +319,9 @@ def train(net, data_loader, criterion, optimizer,
 
     print("Beginning training.", flush=True)
 
-    with tqdm(range(init_epoch, init_epoch + epochs), desc="Epoch") as pbar:
+    with tqdm(total=epochs, desc="Epoch") as pbar:
         saved_epoch = 0
-        for epoch in pbar:
+        for epoch in range(init_epoch, init_epoch + epochs):
             total_count = 0.0
             total_loss = 0.0
             total_correct = 0.0
