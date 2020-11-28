@@ -2,6 +2,8 @@ import shared
 import utility
 import importlib
 importlib.reload(utility)
+from utility import debug
+
 
 from collections import defaultdict
 
@@ -77,7 +79,8 @@ def inversion_loss(stats_net, criterion, target_labels, hp,
 
 
 # @timing
-def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
+def deep_inversion(data_loader, loss_fn, optimizer,
+                   steps=10,
                    pre_fn=None, scheduler=None,
                    #    track_history_every=None,
                    plot=False,
@@ -85,7 +88,7 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
 
     # writer = shared.get_summary_writer()
     device = optimizer.param_groups[0]['params'][0].device
-    USE_AMP = (device == 'gpu')
+    USE_AMP = (device.type == 'gpu')
     if USE_AMP:
         scaler = GradScaler()
 
@@ -115,25 +118,31 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
             METRICS = defaultdict(float)
             total_count = 0
 
-            for inputs, labels in data_loader:
-                bs = len(inputs)
-                inputs, labels = inputs.to(device), labels.to(device)
+            for data in data_loader:
+                if isinstance(data, tuple):
+                    inputs, labels = data
+                    data = (inputs.to(device), labels.to(device))
+                    bs = len(inputs)
+                else:
+                    data = data.to(device)
+                    bs = len(data)
+
                 # if step == 1 and track_history_every:
                 #     history = [(inputs.detach().cpu().clone(), 0)]
 
                 if pre_fn is not None:
-                    inputs = pre_fn(inputs)
+                    data = pre_fn(data)
 
                 optimizer.zero_grad()
 
                 if USE_AMP:
                     with autocast():
-                        res = loss_fn(inputs, labels)
+                        res = loss_fn(data)
                         loss = process_result(res, METRICS)
                     scaler.scale(loss).backward()
                     grad_scale = scaler.get_scale()
                 else:
-                    res = loss_fn(inputs, labels)
+                    res = loss_fn(data)
                     loss = process_result(res, METRICS)
                     loss.backward()
                     grad_scale = 1

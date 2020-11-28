@@ -41,13 +41,14 @@ torch.manual_seed(3)
 # ======= Create Dataset =======
 # Gaussian Mixture Model
 
+n_classes = 2
 dataset = datasets.DatasetGMM(
     n_dims=2,
     n_modes=5,
     scale_mean=6,
     scale_cov=3,
     mean_shift=20,
-    n_classes=2,
+    n_classes=n_classes,
     n_samples_per_class=100,
 )
 
@@ -98,12 +99,12 @@ def preprocessing(X):
 # ======= Collect Stats from A =======
 # collect stats
 # shape: [n_class, n_dims] = [2, 2]
-A_means, A_vars, _ = utility.c_mean_var(X_A, Y_A)
+A_means, A_vars, _ = utility.c_mean_var(X_A, Y_A, n_classes)
 
 
 # ======= Loss Function =======
 def loss_frechet(X, Y=Y_B):
-    X_means, X_vars, _ = utility.c_mean_var(X, Y)
+    X_means, X_vars, _ = utility.c_mean_var(X, Y, n_classes)
     diff_mean = ((X_means - A_means)**2).sum(dim=0).mean()
     diff_var = (X_vars + A_vars - 2 * (X_vars * A_vars).sqrt()
                 ).sum(dim=0).mean()
@@ -114,7 +115,7 @@ def loss_frechet(X, Y=Y_B):
 def loss_fn(X, Y=Y_B):
     # log likelihood * 2 - const:
     # diff_mean = (((X_means - A_means)**2 / X_vars.detach())).sum(dim=0)
-    X_means, X_vars, _ = utility.c_mean_var(X, Y)
+    X_means, X_vars, _ = utility.c_mean_var(X, Y, n_classes)
     diff_mean = ((X_means - A_means)**2)
     diff_var = torch.abs(X_vars - A_vars).sqrt()
     loss = diff_mean.mean() + diff_var.mean()
@@ -136,16 +137,16 @@ optimizer = torch.optim.Adam([A, b], lr=lr)
 # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
 
-history = deepinversion.deep_inversion(X_B,
-                                       loss_fn,
-                                       optimizer,
-                                       #    scheduler=scheduler,
-                                       steps=steps,
-                                       pre_fn=preprocessing,
-                                       #    track_history=True,
-                                       #    track_history_every=10,
-                                       plot=True,
-                                       )
+deepinversion.deep_inversion([X_B],
+                             loss_fn,
+                             optimizer,
+                             #    scheduler=scheduler,
+                             steps=steps,
+                             pre_fn=preprocessing,
+                             #    track_history=True,
+                             #    track_history_every=10,
+                             plot=True,
+                             )
 
 # x_history, steps = zip(*history)
 # for x in x_history[30:]:
@@ -168,7 +169,6 @@ utility.plot_stats([X_A[Y_A == 0], X_B_proc[Y_B == 0]])
 utility.plot_stats([X_A[Y_A == 1], X_B_proc[Y_B == 1]])
 plt.legend()
 plt.show()
-
 
 
 # L2 Reconstruction Error

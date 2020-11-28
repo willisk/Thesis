@@ -116,7 +116,7 @@ def project(X):
 
 with torch.no_grad():
     X_A_proj = project(X_A)
-A_proj_means, A_proj_vars, _ = utility.c_mean_var(X_A_proj, Y_A)
+A_proj_means, A_proj_vars, _ = utility.c_mean_var(X_A_proj, Y_A, n_classes)
 
 # ======= Preprocessing Model =======
 A = torch.eye((2), requires_grad=True)
@@ -130,7 +130,7 @@ def preprocessing(X):
 # ======= Loss Function =======
 def loss_frechet(X, Y=Y_B):
     X_proj = project(X)
-    X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y)
+    X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y, n_classes)
     diff_mean = ((X_proj_means - A_proj_means)**2).sum(dim=0).mean()
     diff_var = (X_proj_vars + A_proj_vars
                 - 2 * (X_proj_vars * A_proj_vars).sqrt()
@@ -141,7 +141,7 @@ def loss_frechet(X, Y=Y_B):
 
 def loss_fn(X, Y=Y_B):
     X_proj = project(X)
-    X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y)
+    X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y, n_classes)
     loss_mean = ((X_proj_means - A_proj_means)**2).mean()
     loss_var = ((X_proj_vars - A_proj_vars)**2).mean()
     return loss_mean + loss_var
@@ -155,16 +155,16 @@ steps = 400
 optimizer = torch.optim.Adam([A, b], lr=lr)
 # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-history = deepinversion.deep_inversion(X_B,
-                                       loss_fn,
-                                       optimizer,
-                                       #    scheduler=scheduler,
-                                       steps=steps,
-                                       pre_fn=preprocessing,
-                                       #    track_history=True,
-                                       #    track_history_every=10,
-                                       plot=True,
-                                       )
+deepinversion.deep_inversion([X_B],
+                             loss_fn,
+                             optimizer,
+                             #    scheduler=scheduler,
+                             steps=steps,
+                             pre_fn=preprocessing,
+                             #    track_history=True,
+                             #    track_history_every=10,
+                             plot=True,
+                             )
 
 # for x, step in zip(*zip(*history)):
 #     utility.plot_stats(x, colors=['r'] * len(history))

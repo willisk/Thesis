@@ -63,16 +63,20 @@ RP = torch.randn((2, n_projections))
 RP = RP / RP.norm(2, dim=0)
 
 
+def project(X):
+    return (X - mean_A) @ RP
+
+
 # plot random projections
 print("Before:")
 print("Cross Entropy of A:", gmm.cross_entropy(X_A).item())
 print("Cross Entropy of B:", gmm.cross_entropy(X_B).item())
-utility.plot_random_projections(RP, X_A, mean=mean_A)
+utility.plot_random_projections(RP, project(X_A), mean=mean_A)
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
 plt.legend()
 plt.show()
 
-utility.plot_random_projections(RP, X_B, mean=mean_A)
+utility.plot_random_projections(RP, project(X_B), mean=mean_A)
 plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="perturbed Data B")
 plt.legend()
 plt.show()
@@ -85,10 +89,6 @@ b = torch.zeros((2), requires_grad=True)
 
 def preprocessing(X):
     return X @ A + b
-
-
-def project(X):
-    return (X - mean_A) @ RP
 
 
 # ======= Collect Projected Stats from A =======
@@ -114,7 +114,7 @@ steps = 400
 optimizer = torch.optim.Adam([A, b], lr=lr)
 # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-deepinversion.deep_inversion(X_B,
+deepinversion.deep_inversion([X_B],
                              loss_fn,
                              optimizer,
                              #  scheduler=scheduler,

@@ -45,6 +45,7 @@ plt.show()
 A = torch.eye(2, requires_grad=True)
 b = torch.zeros((2), requires_grad=True)
 
+from utility import debug
 
 def preprocessing(X):
     return X @ A + b
@@ -57,7 +58,7 @@ def loss_fn(X):
 
 optimizer = torch.optim.Adam([A, b], lr=0.1)
 
-deepinversion.deep_inversion(X_B,
+deepinversion.deep_inversion([X_B],
                              loss_fn,
                              optimizer,
                              steps=200,

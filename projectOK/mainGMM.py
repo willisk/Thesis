@@ -30,6 +30,8 @@ if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
     importlib.reload(deepinversion)
     importlib.reload(shared)
 
+from utility import debug
+
 print("#", __doc__)
 
 # ======= Arg Parse =======
@@ -197,12 +199,14 @@ for l, layer in enumerate(net_layers):
     layer.register_forward_hook(layer_hook_wrapper(l))
 
 
-def project_NN(X, _Y=None):
+def project_NN(data):
+    X, Y = data
     net(X)
     return layer_activations[-1]
 
 
-def project_NN_all(X, _Y=None):
+def project_NN_all(data):
+    X, Y = data
     net(X)
     return torch.cat(layer_activations, dim=1)
 
@@ -215,11 +219,13 @@ mean_A, var_A = X_A.mean(dim=0), X_A.var(dim=0)
 mean_A_C, var_A_C, _ = utility.c_mean_var(X_A, Y_A, n_classes)
 
 
-def project_RP(X, _Y=None):
+def project_RP(data):
+    X, Y = data
     return (X - mean_A) @ RP
 
 
-def project_RP_CC(X, Y):
+def project_RP_CC(data):
+    X, Y = data
     X_proj_C = torch.empty((X.shape[0], n_random_projections), device=X.device)
     for c in range(n_classes):
         X_proj_C[Y == c] = (X[Y == c] - mean_A_C[c]) @ RP
@@ -233,19 +239,20 @@ relu_bias_C = (torch.randn((n_classes, n_random_projections), device=DEVICE)
                * var_A_C.max(dim=1)[0].sqrt().reshape(-1, 1))
 
 
-def project_RP_relu(X, _Y=None):
-    return F.relu(project_RP(X) + relu_bias)
+def project_RP_relu(data):
+    return F.relu(project_RP(data) + relu_bias)
 
 
-def project_RP_relu_CC(X, Y):
-    return F.relu(project_RP_CC(X, Y) + relu_bias_C[Y])
+def project_RP_relu_CC(data):
+    X, Y = data
+    return F.relu(project_RP_CC(data) + relu_bias_C[Y])
 
 # ======= Combined =======
 
 
 def combine(project1, project2):
-    def _combined_fn(X, Y=None):
-        return torch.cat((project1(X, Y), project2(X, Y)), dim=1)
+    def _combined_fn(data):
+        return torch.cat((project1(data), project2(data)), dim=1)
     return _combined_fn
 
 # ======= Preprocessing Model =======
@@ -284,11 +291,12 @@ def get_stats(inputs, labels, class_conditional):
 
 def loss_fn_wrapper(loss_stats, project, class_conditional):
     with torch.no_grad():
-        X_A_proj = project(X_A, Y_A)
+        X_A_proj = project((X_A, Y_A))
         A_proj_means, A_proj_vars = get_stats(X_A_proj, Y_A, class_conditional)
 
-    def _loss_fn(X, Y=Y_B, means_target=A_proj_means, vars_target=A_proj_vars, class_conditional=class_conditional):
-        X_proj = project(X, Y)
+    def _loss_fn(data, means_target=A_proj_means, vars_target=A_proj_vars, class_conditional=class_conditional):
+        X, Y = data
+        X_proj = project(data)
         X_proj_means, X_proj_vars = get_stats(X_proj, Y, class_conditional)
         return loss_stats(X_proj_means, X_proj_vars, means_target, vars_target)
     return _loss_fn
@@ -342,6 +350,7 @@ methods = {
     ),
 }
 
+
 # ======= Optimize =======
 metrics = defaultdict(dict)
 
@@ -349,15 +358,21 @@ for method, loss_fn in methods.items():
     print("## Method:", method)
 
     preprocess, params = preprocessing_model()
+
+    def pre_fn(data):
+        X, Y = data
+        return (preprocess(X), Y)
+
     optimizer = torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    deepinversion.deep_inversion([(X_B, Y_B)],
+    DATA_B = (X_B, Y_B)
+    deepinversion.deep_inversion([DATA_B],
                                  loss_fn,
                                  optimizer,
                                  #    scheduler=scheduler,
                                  steps=inv_steps,
-                                 pre_fn=preprocess,
+                                 pre_fn=pre_fn,
                                  #    track_history=True,
                                  #    track_history_every=10,
                                  plot=True,
@@ -370,12 +385,12 @@ for method, loss_fn in methods.items():
     print("Results:")
 
     # Loss
-    loss = loss_fn(X_B_proc).item()
+    loss = loss_fn(DATA_B).item()
     print(f"\tloss: {loss:.3f}")
 
     # L2 Reconstruction Error
     Id = torch.eye(n_dims, device=DEVICE)
-    l2_err = (preprocess(perturb(Id)) - Id).norm(2).item()
+    l2_err = (preprocess(perturb(Id)) - Id).norm(2).item() / Id.norm(2).item()
     print(f"\tl2 reconstruction error: {l2_err:.3f}")
 
     # Cross Entropy

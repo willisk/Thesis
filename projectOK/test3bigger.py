@@ -67,12 +67,12 @@ RP = RP / RP.norm(2, dim=0)
 
 
 # plot random projections
-utility.plot_random_projections(RP, X_A, mean=mean_A)
+utility.plot_random_projections(RP, project(X_A), mean=mean_A)
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
 plt.legend()
 plt.show()
 
-utility.plot_random_projections(RP, X_B, mean=mean_A)
+utility.plot_random_projections(RP, project(X_B), mean=mean_A)
 plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="perturbed Data B")
 plt.legend()
 plt.show()
@@ -116,15 +116,15 @@ lr = 0.1
 steps = 600
 optimizer = torch.optim.Adam([A, b], lr=lr)
 
-history = deepinversion.deep_inversion(X_B,
-                                       loss_fn,
-                                       optimizer,
-                                       steps=steps,
-                                       pre_fn=preprocessing,
-                                       #    track_history=True,
-                                       #    track_history_every=10,
-                                       plot=True,
-                                       )
+deepinversion.deep_inversion([X_B],
+                             loss_fn,
+                             optimizer,
+                             steps=steps,
+                             pre_fn=preprocessing,
+                             #    track_history=True,
+                             #    track_history_every=10,
+                             plot=True,
+                             )
 
 # for x, step in zip(*zip(*history)):
 #     utility.plot_stats(x, colors=['r'] * len(history))
@@ -146,7 +146,7 @@ plt.show()
 
 
 utility.plot_random_projections(
-    RP, X_A, mean=mean_A, color=cmaps[0], scatter=False)
+    RP, project(X_A), mean=mean_A, color=cmaps[0], scatter=False)
 plt.scatter(X_A[:, 0], X_A[:, 1],
             c=cmaps[0], label="Data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
@@ -154,7 +154,7 @@ plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
 plt.legend()
 plt.show()
 utility.plot_random_projections(
-    RP, X_B_proc, mean=mean_A, color=cmaps[1], scatter=False)
+    RP, project(X_B_proc), mean=mean_A, color=cmaps[1], scatter=False)
 plt.scatter(X_A[:, 0], X_A[:, 1],
             c=cmaps[0], label="Data A", alpha=0.4)
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],

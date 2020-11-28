@@ -49,7 +49,7 @@ dataset = datasets.DatasetGMM(
 
 X_A, Y_A = dataset.X, dataset.Y
 # mean_A = X_A.mean(dim=0)
-means_A, _, _ = utility.c_mean_var(X_A, Y_A)
+means_A, _, _ = utility.c_mean_var(X_A, Y_A, n_classes)
 
 # perturbed Dataset B
 perturb_matrix = torch.eye(2) + 1 * torch.randn((2, 2))
@@ -76,7 +76,7 @@ def project_RP(X, Y):
     return X_proj_C
 
 
-_, var_A_proj_C, _ = utility.c_mean_var(project_RP(X_A, Y_A), Y_A)
+_, var_A_proj_C, _ = utility.c_mean_var(project_RP(X_A, Y_A), Y_A, n_classes)
 bias_C = torch.randn((n_classes, n_projections)) * var_A_proj_C.sqrt() / 2
 
 
@@ -129,13 +129,13 @@ def preprocessing(X):
 
 # collect stats
 # shape: [n_class, n_dims] = [2, 2]
-A_proj_means, A_proj_vars, _ = utility.c_mean_var(X_A_proj, Y_A)
+A_proj_means, A_proj_vars, _ = utility.c_mean_var(X_A_proj, Y_A, n_classes)
 
 
 # ======= Loss Function =======
 def loss_frechet(X, Y=Y_B):
     X_proj = project_relu(X, Y)
-    X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y)
+    X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y, n_classes)
     diff_mean = ((X_proj_means - A_proj_means)**2).sum(dim=1).mean()
     diff_var = (X_proj_vars + A_proj_vars
                 # - 2 * (X_proj_vars * A_proj_vars).sqrt()
@@ -150,7 +150,7 @@ def loss_frechet(X, Y=Y_B):
 
 def loss_fn(X, Y=Y_B):
     X_proj = project_relu(X, Y)
-    X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y)
+    X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y, n_classes)
     loss_mean = ((X_proj_means - A_proj_means)**2).mean()
     loss_var = ((X_proj_vars - A_proj_vars)**2).mean()
     return loss_mean + loss_var
@@ -163,15 +163,15 @@ lr = 0.1
 steps = 300
 optimizer = torch.optim.Adam([A, b], lr=lr)
 
-history = deepinversion.deep_inversion(X_B,
-                                       loss_fn,
-                                       optimizer,
-                                       steps=steps,
-                                       pre_fn=preprocessing,
-                                       #    track_history=True,
-                                       #    track_history_every=10,
-                                       plot=True,
-                                       )
+deepinversion.deep_inversion([X_B],
+                             loss_fn,
+                             optimizer,
+                             steps=steps,
+                             pre_fn=preprocessing,
+                             #    track_history=True,
+                             #    track_history_every=10,
+                             plot=True,
+                             )
 
 # for x, step in zip(*zip(*history)):
 #     utility.plot_stats(x, colors=['r'] * len(history))

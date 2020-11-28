@@ -469,7 +469,7 @@ def debug(func):
                 print(f"- {argname}: ", end='')
                 print_tensor(arg)
         out = func(*args, **kwargs)
-        if out:
+        if out is not None:
             print("returned: ", end='')
             print_tensor(out, True)
         return out
@@ -756,7 +756,7 @@ def plot_stats_mean_var(mean, var, colors=None):
 def plot_random_projections(RP, X_proj, mean, Y=None, color='r', marker='o', scatter=True):
     if Y is None:
         _plot_random_projections(
-            RP, X, mean=mean, color=color, marker=marker, scatter=scatter,)
+            RP, X_proj, mean=mean, color=color, marker=marker, scatter=scatter,)
     else:
         n_classes = len(mean)
         if n_classes == 2:
@@ -775,11 +775,11 @@ def _plot_random_projections(RP, X_proj, mean, color='r', marker='o', scatter=Tr
         m, s = x_p.mean(), x_p.var().sqrt()
         rp_m = rp * m + mean
         start, end = rp_m - rp * s, rp_m + rp * s
-        # plt.plot(*list(zip(start, end)), color=color)
+        plt.plot(*list(zip(start, end)), color=color)
         plt.plot(*rp_m, color='black', marker='x')
-        mm = mean + rp * x_p.reshape(-1, 1)
         if scatter:
-            _plot = plt.scatter(*mm.T,
+            X_proj_abs = mean + rp * x_p.reshape(-1, 1)
+            _plot = plt.scatter(*X_proj_abs.T,
                                 color=color, alpha=0.1, marker=marker)
     if scatter:
         _plot.set_label('random projected')
@@ -799,7 +799,7 @@ def print_tabular(data, row_name="", spacing=2):
             print('-' * len(line))
 
 
-def get_child_modules(net, ignore_types=[]):
+def get_child_modules(net, ignore_types=['activation', 'loss']):
     all_layers = []
     for layer in net.children():
         if "container" in layer.__module__:

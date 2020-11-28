@@ -92,7 +92,7 @@ lr = 0.1
 steps = 400
 optimizer = torch.optim.Adam([A, b], lr=lr)
 
-deepinversion.deep_inversion(X_B,
+deepinversion.deep_inversion([X_B],
                              loss_fn,
                              optimizer,
                              steps=steps,
