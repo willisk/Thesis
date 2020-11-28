@@ -113,6 +113,7 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
         for step in pbar:
 
             METRICS = defaultdict(float)
+            total_count = 0
 
             for inputs, labels in data_loader:
                 inputs, labels = inputs.to(device), labels.to(device)
@@ -156,11 +157,11 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
                 if scheduler is not None:
                     scheduler.step(grad_total)
 
-            n_batches = len(data_loader)
-            for k in METRICS:
-                METRICS[k] /= n_batches
-
-            pbar.set_postfix(**METRICS)
+                bs = len(inputs)
+                total_count += bs
+                for k in METRICS:
+                    METRICS[k] *= bs / total_count
+                pbar.set_postfix(**METRICS)
 
             if TRACKING:
                 for k, v in METRICS.items():
