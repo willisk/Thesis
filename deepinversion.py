@@ -93,7 +93,7 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
 
     TRACKING = False
     if plot:
-        TRACKING = defaultdict(list)
+        TRACKING = defaultdict(list, loss=[])
 
     def process_result(res, metrics):
         info = {}
@@ -110,14 +110,14 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
 
     with tqdm(range(1, steps + 1), desc="Epoch") as pbar:
 
-        for step in pbar:
+        for _ in pbar:
 
             METRICS = defaultdict(float)
             total_count = 0
 
             for inputs, labels in data_loader:
+                bs = len(inputs)
                 inputs, labels = inputs.to(device), labels.to(device)
-                # inputs = inputs_orig
                 # if step == 1 and track_history_every:
                 #     history = [(inputs.detach().cpu().clone(), 0)]
 
@@ -139,12 +139,12 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
                     grad_scale = 1
 
                 grad_total = 0.
-                if TRACKING:
+                if True:
                     for p_group in optimizer.param_groups:
                         for i, param in enumerate(p_group['params']):
                             # p_name = f"parpam_{'-'.join(map(str, param.shape))}"
                             p_name = f'grad_{i}'
-                            p_grad = (param.grad / grad_scale).norm(2).item()
+                            p_grad = (param.grad.norm(2) / grad_scale).item()
                             grad_total += p_grad
                             METRICS[p_name] += p_grad
 
@@ -157,7 +157,6 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
                 if scheduler is not None:
                     scheduler.step(grad_total)
 
-                bs = len(inputs)
                 total_count += bs
                 for k in METRICS:
                     METRICS[k] *= bs / total_count

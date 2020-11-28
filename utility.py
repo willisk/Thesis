@@ -317,7 +317,7 @@ def train(net, data_loader, criterion, optimizer,
 
     TRACKING = None
     if plot:
-        TRACKING = defaultdict(list)
+        TRACKING = defaultdict(list, loss=[])
 
     print("Beginning training.", flush=True)
 
@@ -366,6 +366,8 @@ def train(net, data_loader, criterion, optimizer,
                     refresh=False,
                 )
                 pbar.update(0)
+                if i == 2:
+                    break
 
             loss = total_loss / total_count
             accuracy = total_correct / total_count
@@ -401,7 +403,7 @@ def train(net, data_loader, criterion, optimizer,
 
 
 def plot_metrics(metrics, step_start=1):
-    steps = range(step_start, len(metrics.values()[0]))
+    steps = range(step_start, len(metrics['loss']) + 1)
 
     accuracy = None
     if 'accuracy' in metrics:
