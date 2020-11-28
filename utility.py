@@ -359,9 +359,10 @@ def train(net, data_loader, criterion, optimizer,
                     loss=total_loss / total_count,
                     acc=f"{total_correct / total_count * 100:.0f}%",
                     chkpt=saved_epoch,
-                    batch=f"{i}/{len(data_loader)}",
+                    batch=f"{i + 1}/{len(data_loader)}",
                     refresh=False,
                 )
+                pbar.update(epoch)
 
             loss = total_loss / total_count
             accuracy = total_correct / total_count
