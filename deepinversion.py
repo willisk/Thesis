@@ -161,7 +161,7 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
                 total_count += bs
                 for k in METRICS:
                     METRICS[k] *= bs / total_count
-                pbar.set_postfix(**METRICS)
+                pbar.set_postfix(**METRICS, refresh=False)
 
             if TRACKING:
                 for k, v in METRICS.items():

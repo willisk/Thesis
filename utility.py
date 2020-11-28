@@ -100,7 +100,7 @@ def net_accuracy(net, data_loader):
             total_count += len(inputs)
             total_correct += count_correct(outputs, labels)
             pbar.set_postfix(
-                accuracy=f"{total_correct / total_count * 100:.0f}%")
+                accuracy=f"{total_correct / total_count * 100:.0f}%", refresh=False)
     return total_correct / total_count
 
 
@@ -360,6 +360,7 @@ def train(net, data_loader, criterion, optimizer,
                     acc=f"{total_correct / total_count * 100:.0f}%",
                     chkpt=saved_epoch,
                     batch=f"{i}/{len(data_loader)}",
+                    refresh=False,
                 )
 
             loss = total_loss / total_count
