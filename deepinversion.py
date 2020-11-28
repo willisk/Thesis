@@ -81,10 +81,10 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
                    pre_fn=None, scheduler=None,
                    #    track_history_every=None,
                    plot=False,
-                   device='cpu',
                    ):
 
     # writer = shared.get_summary_writer()
+    device = next(next(optimizer.param_groups)['params']).device
     USE_AMP = (device == 'gpu')
     if USE_AMP:
         scaler = GradScaler()
@@ -115,7 +115,7 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
             METRICS = defaultdict(float)
 
             for inputs, labels in data_loader:
-                labels = labels.to(inputs.device)
+                inputs, labels = inputs.to(device), labels.to(device)
                 # inputs = inputs_orig
                 # if step == 1 and track_history_every:
                 #     history = [(inputs.detach().cpu().clone(), 0)]

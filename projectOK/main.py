@@ -56,7 +56,6 @@ parser.add_argument("-seed", type=int, default=333)
 
 if 'ipykernel_launcher' in sys.argv:
     args = parser.parse_args([])
-    args.nn_width = 8
     # args.nn_verifier = True
     args.nn_steps = 2
     args.inv_steps = 2
@@ -218,26 +217,18 @@ def loss_di(m, v, m_target, v_target):
     return loss_mean + loss_var
 
 
-def get_stats(inputs, labels, class_conditional):
-    if class_conditional:
-        mean, var, _ = utility.c_mean_var(inputs, labels, n_classes)
-        return mean, var
-    return inputs.mean(dim=0), inputs.var(dim=0)
-
-
 def loss_fn_wrapper(name, loss_stats, project, class_conditional):
-    stats_path = os.path.join(MODELDIR, "stats_{model_name}_{name}.pt")
+    stats_path = os.path.join(MODELDIR, f"stats_{model_name}_{name}.pt")
     m_target, v_target = utility.collect_stats(
         project, A_loader, n_classes, class_conditional,
-        path=stats_path)
+        path=stats_path, device=DEVICE)
 
     def _loss_fn(inputs, labels, m_target=m_target, v_target=v_target, project=project, loss_stats=loss_stats, class_conditional=class_conditional):
         X_proj = project(inputs, labels)
-        m, v = get_stats(X_proj, labels, class_conditional)
-        print(inputs.shape)
-        print(X_proj.shape)
-        print(m.shape)
-        print(m_target.shape)
+        if class_conditional:
+            m, v = utility.c_mean_var(inputs, labels, n_classes)
+        else:
+            m, v = inputs.mean(dim=0), inputs.var(dim=0)
         return loss_stats(m, v, m_target, v_target)
     return name, _loss_fn
 

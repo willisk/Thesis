@@ -18,6 +18,8 @@ import time
 
 from tqdm.auto import tqdm
 
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 
 class timer():
     def __init__(self):
@@ -90,9 +92,8 @@ def net_accuracy(net, data_loader):
     total_count = 0.0
     total_correct = 0.0
     with torch.no_grad(), tqdm(data_loader) as pbar:
-        for data in pbar:
-            inputs, labels = data
-            labels = labels.to(inputs.device)
+        for inputs, labels in pbar:
+            inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
             outputs = net(inputs)
             total_count += len(inputs)
             total_correct += count_correct(outputs, labels)
@@ -282,7 +283,7 @@ def train(net, data_loader, criterion, optimizer,
           epochs=10, save_every=20,
           model_path=None, use_drive=False,
           resume_training=False, reset=False,
-          scheduler=None, plot=False):
+          scheduler=None, plot=False, device=DEVICE):
     "Training Loop"
 
     save_path, load_path = save_load_path(model_path, use_drive)
@@ -304,7 +305,8 @@ def train(net, data_loader, criterion, optimizer,
 
     net.train()
 
-    USE_AMP = next(net.parameters()).device.type == 'gpu'
+    device = next(net.parameters()).device
+    USE_AMP = device.type == 'gpu'
     if USE_AMP:
         scaler = GradScaler()
 
@@ -322,9 +324,8 @@ def train(net, data_loader, criterion, optimizer,
             total_correct = 0.0
             grad_total = 0.0
 
-            for i, data in enumerate(data_loader):
-                inputs, labels = data
-                labels = labels.to(inputs.device)
+            for i, (inputs, labels) in enumerate(data_loader):
+                inputs, labels = inputs.to(device), labels.to(device)
 
                 optimizer.zero_grad()
                 if USE_AMP:
@@ -377,7 +378,7 @@ def train(net, data_loader, criterion, optimizer,
                      or epoch == init_epoch + epochs - 1):
                 torch.save({
                     'epoch': epoch,
-                    'net_state_dict': net.state_dict(),
+                    'net_state_dict': net.to('cpu').state_dict(),
                 }, save_path)
                 saved_epoch = epoch
 
@@ -419,11 +420,11 @@ def plot_metrics(metrics, step_start=1):
 
 
 def collect_stats(projection, data_loader, n_classes, class_conditional,
-                  dtype=torch.double, path=None, use_drive=True):
+                  device='cpu', path=None, use_drive=True):
 
     save_path, load_path = save_load_path(path, use_drive=use_drive)
     if load_path and os.path.exists(load_path):
-        chkpt = torch.load(load_path)
+        chkpt = torch.load(load_path, map_location=torch.device(device))
         return chkpt['mean'], chkpt['var']
 
     mean = var = n = None
@@ -431,15 +432,16 @@ def collect_stats(projection, data_loader, n_classes, class_conditional,
 
     with torch.no_grad(), tqdm(data_loader, desc="Batch") as pbar:
         for inputs, labels in pbar:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
 
-            labels = labels.to(inputs.device)
-            outputs = projection(inputs, labels).to(dtype)
+            outputs = projection(inputs, labels).to(torch.double)
 
             if class_conditional:
                 new_mean, new_var, m = c_mean_var(outputs, labels, n_classes)
             else:
-                new_mean, new_var = inputs.mean(dim=0), inputs.var(dim=0)
-                m = torch.LongTensor([len(inputs)]).to(inputs.device)
+                new_mean, new_var = outputs.mean(dim=0), outputs.var(dim=0)
+                m = torch.LongTensor([len(inputs)]).to(device)
 
             if mean is None:
                 mean = torch.zeros_like(new_mean)
@@ -453,8 +455,8 @@ def collect_stats(projection, data_loader, n_classes, class_conditional,
 
     if save_path:
         torch.save({
-            'mean': mean,
-            'var': var,
+            'mean': mean.to('cpu'),
+            'var': var.to('cpu'),
         }, save_path)
 
     return mean, var
