@@ -22,6 +22,14 @@ import deepinversion
 import shared
 import nets
 
+if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
+    import importlib
+    importlib.reload(datasets)
+    importlib.reload(statsnet)
+    importlib.reload(utility)
+    importlib.reload(deepinversion)
+    importlib.reload(shared)
+
 print("#", __doc__)
 
 # ======= Arg Parse =======
@@ -52,13 +60,7 @@ use_drive = True
 
 cmaps = utility.categorical_colors(2)
 
-if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
-    import importlib
-    importlib.reload(datasets)
-    importlib.reload(statsnet)
-    importlib.reload(utility)
-    importlib.reload(deepinversion)
-    importlib.reload(shared)
+if 'ipykernel_launcher' in sys.argv:
     args = parser.parse_args([])
     args.n_classes = 3
     args.g_modes = 3
