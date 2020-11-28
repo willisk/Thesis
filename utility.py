@@ -304,6 +304,8 @@ def train(net, data_loader, criterion, optimizer,
             return
     else:
         print("No Checkpoint found / Reset.")
+        if save_path:
+            print("Path: " + save_path)
         init_epoch = 1
 
     net.train()
@@ -477,6 +479,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional,
 
     save_path, load_path = save_load_path(path, use_drive=use_drive)
     if load_path and os.path.exists(load_path):
+        print(f"Loading stats from {load_path}.")
         chkpt = torch.load(load_path, map_location=torch.device(device))
         return chkpt['mean'], chkpt['var']
 
@@ -511,6 +514,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional,
             'mean': mean.to('cpu'),
             'var': var.to('cpu'),
         }, save_path)
+        print(f"Saving stats at {load_path}.")
 
     return mean, var
 
