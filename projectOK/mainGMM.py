@@ -64,10 +64,11 @@ if 'ipykernel_launcher' in sys.argv:
     args = parser.parse_args([])
     args.n_classes = 3
     args.g_modes = 3
-    args.n_samples_A = 100
+    args.n_samples_A = 1000
     args.n_samples_B = 100
     args.n_samples_valid = 100
-    args.nn_width = 8
+    args.nn_width = 16
+    args.nn_reset = True
     args.nn_verifier = True
     use_drive = False
 else:
