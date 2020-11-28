@@ -84,7 +84,7 @@ def deep_inversion(data_loader, loss_fn, optimizer, steps=10,
                    ):
 
     # writer = shared.get_summary_writer()
-    device = next(next(optimizer.param_groups)['params']).device
+    device = next(optimizer.param_groups)['params'][0].device
     USE_AMP = (device == 'gpu')
     if USE_AMP:
         scaler = GradScaler()
