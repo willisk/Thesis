@@ -281,10 +281,11 @@ def loss_di(m, v, m_target, v_target):
     loss_var = ((v - v_target)**2).mean()
     return loss_mean + loss_var
 
-# def loss_di(m, v, m_target, v_target):
-#     loss_mean = (m - m_target).norm(2)
-#     loss_var = (v - v_target).norm(2)
-#     return loss_mean + loss_var
+
+def loss_di2(m, v, m_target, v_target):
+    loss_mean = (m - m_target).norm(2)
+    loss_var = (v - v_target).norm(2)
+    return loss_mean + loss_var
 
 
 # def loss_frechet(X_proj_means, X_proj_vars, means_target, vars_target):
