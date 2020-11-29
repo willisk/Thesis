@@ -151,6 +151,7 @@ def perturb(X):
 X_B_orig = X_B
 X_B = perturb(X_B_orig)
 X_B_val = perturb(X_B_val)
+DATA_A = (X_A.to(DEVICE), Y_A.to(DEVICE))
 
 # ======= Neural Network =======
 model_name = f"net_GMM_{'-'.join(map(repr, nn_layer_dims))}"
@@ -159,7 +160,7 @@ net = nets.FCNet(nn_layer_dims)
 net.to(DEVICE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
-utility.train(net, dataset.train_loader(), criterion, optimizer,
+utility.train(net, [DATA_A], criterion, optimizer,
               model_path=model_path,
               epochs=nn_steps,
               resume_training=nn_resume_training,
@@ -174,7 +175,7 @@ if nn_verifier:
     verifier_net = nets.FCNet(nn_layer_dims)
     verifier_net.to(DEVICE)
     optimizer = torch.optim.Adam(verifier_net.parameters(), lr=nn_lr)
-    utility.train(verifier_net, dataset.train_loader(), criterion, optimizer,
+    utility.train(verifier_net, [DATA_A], criterion, optimizer,
                   model_path=verifier_path,
                   epochs=nn_steps,
                   resume_training=nn_resume_training,
@@ -379,7 +380,6 @@ for method, loss_fn in methods.items():
     optimizer = torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    DATA_B = (X_B.to(DEVICE), Y_B.to(DEVICE))
     deepinversion.deep_inversion([DATA_B],
                                  loss_fn,
                                  optimizer,
