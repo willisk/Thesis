@@ -234,6 +234,7 @@ def project_RP_CC(data):
     print(X.dtype)
     print(mean_A_C.dtype)
     print(X_proj_C.dtype)
+    print(RP.dtype)
     for c in range(n_classes):
         X_proj_C[Y == c] = (X[Y == c] - mean_A_C[c]) @ RP
     return X_proj_C
