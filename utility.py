@@ -377,7 +377,7 @@ def train(net, data_loader, criterion, optimizer,
 
             loss = total_loss / total_count
             accuracy = total_correct / total_count
-            grad_norm = grad_total / total_count
+            grad_norm = grad_total #/ total_count
 
             if scheduler is not None:
                 scheduler.step(grad_norm)
