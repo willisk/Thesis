@@ -70,7 +70,7 @@ if 'ipykernel_launcher' in sys.argv:
     args.n_samples_B = 100
     args.n_samples_valid = 100
     args.nn_width = 16
-    args.nn_reset_train = True
+    # args.nn_reset_train = True
     # args.nn_verifier = True
     args.nn_steps = 500
     args.inv_steps = 500
@@ -153,7 +153,6 @@ def perturb(X):
 X_B_orig = X_B
 X_B = perturb(X_B_orig)
 X_B_val = perturb(X_B_val)
-DATA_A = (X_A.to(DEVICE), Y_A.to(DEVICE))
 
 # ======= Neural Network =======
 model_name = f"net_GMM_{'-'.join(map(repr, nn_layer_dims))}"
@@ -162,6 +161,7 @@ net = nets.FCNet(nn_layer_dims)
 net.to(DEVICE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
+DATA_A = (X_A.to(DEVICE), Y_A.to(DEVICE))
 utility.train(net, [DATA_A], criterion, optimizer,
               model_path=model_path,
               epochs=nn_steps,
@@ -281,6 +281,11 @@ def loss_di(m, v, m_target, v_target):
     loss_var = ((v - v_target)**2).mean()
     return loss_mean + loss_var
 
+# def loss_di(m, v, m_target, v_target):
+#     loss_mean = (m - m_target).norm(2)
+#     loss_var = (v - v_target).norm(2)
+#     return loss_mean + loss_var
+
 
 # def loss_frechet(X_proj_means, X_proj_vars, means_target, vars_target):
 #     loss_mean = ((X_proj_means - means_target)**2).sum(dim=0).mean()
@@ -298,9 +303,9 @@ def loss_frechet(m, v, m_target, v_target):
 
 def get_stats(inputs, labels, class_conditional):
     if class_conditional:
-        mean, var, _ = utility.c_mean_var(inputs, labels, n_classes)
-        return mean, var
-    return inputs.mean(dim=0), inputs.var(dim=0)
+        mean, std = utility.c_mean_std(inputs, labels, n_classes)
+        return mean, std
+    return inputs.mean(dim=0), inputs.std(dim=0)
 
 
 def loss_fn_wrapper(loss_stats, project, class_conditional):
@@ -320,96 +325,96 @@ def loss_fn_wrapper(loss_stats, project, class_conditional):
 loss_stats = loss_di
 
 methods = {
-    "NN f": loss_fn_wrapper(
-        loss_stats=loss_frechet,
-        project=project_NN,
-        class_conditional=False,
-    ),
-    "NN CC f": loss_fn_wrapper(
-        loss_stats=loss_frechet,
-        project=project_NN,
-        class_conditional=True,
-    ),
-    "NN ALL f": loss_fn_wrapper(
-        loss_stats=loss_frechet,
-        project=project_NN_all,
-        class_conditional=False,
-    ),
-    "NN ALL CC f": loss_fn_wrapper(
-        loss_stats=loss_frechet,
-        project=project_NN_all,
-        class_conditional=True,
-    ),
-    "RP f": loss_fn_wrapper(
-        loss_stats=loss_frechet,
-        project=project_RP,
-        class_conditional=False,
-    ),
-    "RP CC f": loss_fn_wrapper(
-        loss_stats=loss_frechet,
-        project=project_RP_CC,
-        class_conditional=True,
-    ),
-    "RP ReLU f": loss_fn_wrapper(
-        loss_stats=loss_frechet,
-        project=project_RP_relu,
-        class_conditional=False,
-    ),
-    "RP ReLU CC f": loss_fn_wrapper(
-        loss_stats=loss_frechet,
-        project=project_RP_relu_CC,
-        class_conditional=True,
-    ),
-    "combined f": loss_fn_wrapper(
-        loss_stats=loss_frechet,
-        project=combine(project_NN_all, project_RP_CC),
-        class_conditional=True,
-    ),
-    # "NN": loss_fn_wrapper(
+    # "NN f": loss_fn_wrapper(
     #     loss_stats=loss_stats,
     #     project=project_NN,
     #     class_conditional=False,
     # ),
-    # "NN CC": loss_fn_wrapper(
+    # "NN CC f": loss_fn_wrapper(
     #     loss_stats=loss_stats,
     #     project=project_NN,
     #     class_conditional=True,
     # ),
-    # "NN ALL": loss_fn_wrapper(
+    # "NN ALL f": loss_fn_wrapper(
     #     loss_stats=loss_stats,
     #     project=project_NN_all,
     #     class_conditional=False,
     # ),
-    # "NN ALL CC": loss_fn_wrapper(
+    # "NN ALL CC f": loss_fn_wrapper(
     #     loss_stats=loss_stats,
     #     project=project_NN_all,
     #     class_conditional=True,
     # ),
-    # "RP": loss_fn_wrapper(
+    # "RP f": loss_fn_wrapper(
     #     loss_stats=loss_stats,
     #     project=project_RP,
     #     class_conditional=False,
     # ),
-    # "RP CC": loss_fn_wrapper(
+    # "RP CC f": loss_fn_wrapper(
     #     loss_stats=loss_stats,
     #     project=project_RP_CC,
     #     class_conditional=True,
     # ),
-    # "RP ReLU": loss_fn_wrapper(
+    # "RP ReLU f": loss_fn_wrapper(
     #     loss_stats=loss_stats,
     #     project=project_RP_relu,
     #     class_conditional=False,
     # ),
-    # "RP ReLU CC": loss_fn_wrapper(
+    # "RP ReLU CC f": loss_fn_wrapper(
     #     loss_stats=loss_stats,
     #     project=project_RP_relu_CC,
     #     class_conditional=True,
     # ),
-    # "combined": loss_fn_wrapper(
+    # "combined f": loss_fn_wrapper(
     #     loss_stats=loss_stats,
     #     project=combine(project_NN_all, project_RP_CC),
     #     class_conditional=True,
     # ),
+    "NN": loss_fn_wrapper(
+        loss_stats=loss_stats,
+        project=project_NN,
+        class_conditional=False,
+    ),
+    "NN CC": loss_fn_wrapper(
+        loss_stats=loss_stats,
+        project=project_NN,
+        class_conditional=True,
+    ),
+    "NN ALL": loss_fn_wrapper(
+        loss_stats=loss_stats,
+        project=project_NN_all,
+        class_conditional=False,
+    ),
+    "NN ALL CC": loss_fn_wrapper(
+        loss_stats=loss_stats,
+        project=project_NN_all,
+        class_conditional=True,
+    ),
+    "RP": loss_fn_wrapper(
+        loss_stats=loss_stats,
+        project=project_RP,
+        class_conditional=False,
+    ),
+    "RP CC": loss_fn_wrapper(
+        loss_stats=loss_stats,
+        project=project_RP_CC,
+        class_conditional=True,
+    ),
+    "RP ReLU": loss_fn_wrapper(
+        loss_stats=loss_stats,
+        project=project_RP_relu,
+        class_conditional=False,
+    ),
+    "RP ReLU CC": loss_fn_wrapper(
+        loss_stats=loss_stats,
+        project=project_RP_relu_CC,
+        class_conditional=True,
+    ),
+    "combined": loss_fn_wrapper(
+        loss_stats=loss_stats,
+        project=combine(project_NN_all, project_RP_CC),
+        class_conditional=True,
+    ),
 }
 
 
@@ -473,12 +478,12 @@ for method, loss_fn in methods.items():
             verifier_net, X_B_val_proc, Y_B_val)
         print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
 
-    metrics[method]['loss'] = loss
-    metrics[method]['l2-err'] = l2_err
     metrics[method]['acc'] = accuracy
     metrics[method]['acc(val)'] = accuracy_val
     if nn_verifier:
         metrics[method]['acc(ver)'] = accuracy_ver
+    metrics[method]['l2-err'] = l2_err
+    metrics[method]['loss'] = loss
     metrics[method]['c-entr'] = entropy
 
 

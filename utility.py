@@ -165,6 +165,15 @@ def nan_to_zero(x):
     return x
 
 
+def batch_feature_mean_std(x, keep_dims=[1], unbiased=False):
+    dims_collapse = list(range(len(x.shape)))
+    for dim in keep_dims:
+        dims_collapse.remove(dim)
+    assert dims_collapse != [], "dims to collapse are empty"
+    mean = x.mean(dim=dims_collapse)
+    std = x.std(dim=dims_collapse, unbiased=unbiased)
+    return mean, std
+
 def batch_feature_mean_var(x, keep_dims=[1], unbiased=False):
     dims_collapse = list(range(len(x.shape)))
     for dim in keep_dims:
@@ -174,6 +183,18 @@ def batch_feature_mean_var(x, keep_dims=[1], unbiased=False):
     var = x.var(dim=dims_collapse, unbiased=unbiased)
     return mean, var
 
+
+def c_mean_std(data, labels, n_classes, unbiased=False):
+    mean = torch.zeros((n_classes, data.shape[1]),
+                       dtype=data.dtype, device=data.device)
+    std = torch.ones((n_classes, data.shape[1]),
+                     dtype=data.dtype, device=data.device)
+    for c in labels.unique().to(torch.long):
+        c_mask = labels == c
+        mean[c], std[c] = batch_feature_mean_std(
+            data[c_mask], unbiased=unbiased)
+
+    return mean, std
 
 def c_mean_var(data, labels, n_classes, unbiased=False):
     mean = torch.zeros((n_classes, data.shape[1]),
