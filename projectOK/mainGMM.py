@@ -162,15 +162,14 @@ net = nets.FCNet(nn_layer_dims)
 net.to(DEVICE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
-g1 = utility.train(net, [DATA_A], criterion, optimizer,
-                   model_path=model_path,
-                   epochs=nn_steps,
-                   resume_training=nn_resume_training,
-                   reset=nn_reset_training,
-                   plot=True,
-                   use_drive=use_drive,
-                   )
-torch.save(g1, os.path.join(PWD, f"models/{model_name}_g1.pt"))
+utility.train(net, [DATA_A], criterion, optimizer,
+              model_path=model_path,
+              epochs=nn_steps,
+              resume_training=nn_resume_training,
+              reset=nn_reset_training,
+              plot=True,
+              use_drive=use_drive,
+              )
 utility.print_net_accuracy_batch(net, X_A, Y_A)
 
 if nn_verifier:
@@ -421,17 +420,16 @@ for method, loss_fn in methods.items():
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
     DATA_B = (X_B.to(DEVICE), Y_B.to(DEVICE))
-    g2 = deepinversion.deep_inversion([DATA_B],
-                                      loss_fn,
-                                      optimizer,
-                                      #    scheduler=scheduler,
-                                      steps=inv_steps,
-                                      pre_fn=pre_fn,
-                                      #    track_history=True,
-                                      #    track_history_every=10,
-                                      plot=True,
-                                      )
-    torch.save(g2, os.path.join(PWD, f"models/{model_name}_g2.pt"))
+    deepinversion.deep_inversion([DATA_B],
+                                 loss_fn,
+                                 optimizer,
+                                 #    scheduler=scheduler,
+                                 steps=inv_steps,
+                                 pre_fn=pre_fn,
+                                 #    track_history=True,
+                                 #    track_history_every=10,
+                                 plot=True,
+                                 )
 
     # ======= Result =======
     X_B_proc = preprocess(X_B).detach()
