@@ -425,7 +425,7 @@ for method, loss_fn in methods.items():
     accuracy = utility.net_accuracy_batch(net, X_B_proc, Y_B)
     print(f"\tnn accuracy: {accuracy * 100:.1f} %")
     accuracy_val = utility.net_accuracy_batch(
-        net, X_B_val_proc, Y_B)
+        net, X_B_val_proc, Y_B_val)
     print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
 
     if nn_verifier:
