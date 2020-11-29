@@ -313,47 +313,47 @@ def loss_fn_wrapper(loss_stats, project, class_conditional):
 loss_stats = loss_di
 
 methods = {
-    "NN": loss_fn_wrapper(
+    "NN f": loss_fn_wrapper(
         loss_stats=loss_frechet,
         project=project_NN,
         class_conditional=False,
     ),
-    "NN CC": loss_fn_wrapper(
+    "NN CC f": loss_fn_wrapper(
         loss_stats=loss_frechet,
         project=project_NN,
         class_conditional=True,
     ),
-    "NN ALL": loss_fn_wrapper(
+    "NN ALL f": loss_fn_wrapper(
         loss_stats=loss_frechet,
         project=project_NN_all,
         class_conditional=False,
     ),
-    "NN ALL CC": loss_fn_wrapper(
+    "NN ALL CC f": loss_fn_wrapper(
         loss_stats=loss_frechet,
         project=project_NN_all,
         class_conditional=True,
     ),
-    "RP": loss_fn_wrapper(
+    "RP f": loss_fn_wrapper(
         loss_stats=loss_frechet,
         project=project_RP,
         class_conditional=False,
     ),
-    "RP CC": loss_fn_wrapper(
+    "RP CC f": loss_fn_wrapper(
         loss_stats=loss_frechet,
         project=project_RP_CC,
         class_conditional=True,
     ),
-    "RP ReLU": loss_fn_wrapper(
+    "RP ReLU f": loss_fn_wrapper(
         loss_stats=loss_frechet,
         project=project_RP_relu,
         class_conditional=False,
     ),
-    "RP ReLU CC": loss_fn_wrapper(
+    "RP ReLU CC f": loss_fn_wrapper(
         loss_stats=loss_frechet,
         project=project_RP_relu_CC,
         class_conditional=True,
     ),
-    "combined": loss_fn_wrapper(
+    "combined f": loss_fn_wrapper(
         loss_stats=loss_frechet,
         project=combine(project_NN_all, project_RP_CC),
         class_conditional=True,
