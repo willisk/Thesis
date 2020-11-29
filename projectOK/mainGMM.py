@@ -313,31 +313,31 @@ def loss_fn_wrapper(loss_stats, project, class_conditional):
 loss_stats = loss_di
 
 methods = {
-    # "NN": loss_fn_wrapper(
-    #     loss_stats=loss_frechet,
-    #     project=project_NN,
-    #     class_conditional=False,
-    # ),
-    # "NN CC": loss_fn_wrapper(
-    #     loss_stats=loss_frechet,
-    #     project=project_NN,
-    #     class_conditional=True,
-    # ),
-    # "NN ALL": loss_fn_wrapper(
-    #     loss_stats=loss_frechet,
-    #     project=project_NN_all,
-    #     class_conditional=False,
-    # ),
-    # "NN ALL CC": loss_fn_wrapper(
-    #     loss_stats=loss_frechet,
-    #     project=project_NN_all,
-    #     class_conditional=True,
-    # ),
-    # "RP": loss_fn_wrapper(
-    #     loss_stats=loss_frechet,
-    #     project=project_RP,
-    #     class_conditional=False,
-    # ),
+    "NN": loss_fn_wrapper(
+        loss_stats=loss_frechet,
+        project=project_NN,
+        class_conditional=False,
+    ),
+    "NN CC": loss_fn_wrapper(
+        loss_stats=loss_frechet,
+        project=project_NN,
+        class_conditional=True,
+    ),
+    "NN ALL": loss_fn_wrapper(
+        loss_stats=loss_frechet,
+        project=project_NN_all,
+        class_conditional=False,
+    ),
+    "NN ALL CC": loss_fn_wrapper(
+        loss_stats=loss_frechet,
+        project=project_NN_all,
+        class_conditional=True,
+    ),
+    "RP": loss_fn_wrapper(
+        loss_stats=loss_frechet,
+        project=project_RP,
+        class_conditional=False,
+    ),
     "RP CC": loss_fn_wrapper(
         loss_stats=loss_frechet,
         project=project_RP_CC,
