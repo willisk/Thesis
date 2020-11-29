@@ -318,7 +318,6 @@ def train(net, data_loader, criterion, optimizer,
     net.train()
 
     device = next(net.parameters()).device
-    print(f"train device {device}, {device.type}")
     USE_AMP = device.type == 'cuda'
     if USE_AMP:
         scaler = GradScaler()

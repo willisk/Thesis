@@ -70,7 +70,7 @@ if 'ipykernel_launcher' in sys.argv:
     args.n_samples_B = 100
     args.n_samples_valid = 100
     args.nn_width = 16
-    args.nn_reset = True
+    args.nn_reset_train = True
     # args.nn_verifier = True
     args.nn_steps = 500
     args.inv_steps = 500
@@ -170,6 +170,7 @@ g1 = utility.train(net, [DATA_A], criterion, optimizer,
                    plot=True,
                    use_drive=use_drive,
                    )
+torch.save(g1, os.path.join(PWD, f"models/{model_name}_g1.pt"))
 utility.print_net_accuracy_batch(net, X_A, Y_A)
 
 if nn_verifier:
@@ -385,6 +386,7 @@ for method, loss_fn in methods.items():
                                       #    track_history_every=10,
                                       plot=True,
                                       )
+    torch.save(g2, os.path.join(PWD, f"models/{model_name}_g2.pt"))
 
     # ======= Result =======
     X_B_proc = preprocess(X_B).detach()
