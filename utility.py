@@ -413,7 +413,7 @@ def train(net, data_loader, criterion, optimizer,
     return TRACKING
 
 
-def sgm(x, sh=10000):
+def sgm(x, sh=1):
     return np.exp(np.log(x + sh).sum() / len(x)) - sh
 
 def plot_metrics(metrics, step_start=1):
@@ -426,7 +426,9 @@ def plot_metrics(metrics, step_start=1):
     for key, val in metrics.items():
         plt.plot(steps, val, label=key)
 
-    vals = np.array(sum(metrics.values(), []))
+    vals = np.nan_to_num(np.array(sum(metrics.values(), [])), nan=10000)
+    # sgm_m = sgm(vals, sh=vals.max())
+    # sgm_s = sgm(np.abs(vals - sgm_m), sh=vals.max())
     sgm_m = sgm(vals)
     sgm_s = sgm(np.abs(vals - sgm_m))
     y_min, y_max = min(vals), max(vals)
@@ -441,7 +443,6 @@ def plot_metrics(metrics, step_start=1):
     plt.title('metrics')
     plt.xlabel('steps')
     plt.legend()
-
 
 def debug(func):
 
