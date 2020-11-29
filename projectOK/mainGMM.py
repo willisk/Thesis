@@ -212,7 +212,7 @@ def project_NN(data):
 def project_NN_all(data):
     X, Y = data
     net(X)
-    return torch.cat(layer_activations, dim=1)
+    return torch.cat([X] + layer_activations, dim=1)
 
 
 # ======= Random Projections =======
