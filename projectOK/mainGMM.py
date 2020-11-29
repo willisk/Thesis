@@ -161,7 +161,7 @@ net.to(DEVICE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
 utility.train(net, [DATA_A], criterion, optimizer,
-              model_path=model_path,
+              #   model_path=model_path,
               epochs=nn_steps,
               resume_training=nn_resume_training,
               reset=nn_reset_training,
@@ -373,8 +373,7 @@ for method, loss_fn in methods.items():
 
     def pre_fn(data):
         X, Y = data
-        with torch.no_grad():
-            data = (preprocess(X), Y)
+        data = (preprocess(X), Y)
         return data
 
     optimizer = torch.optim.Adam(params, lr=inv_lr)

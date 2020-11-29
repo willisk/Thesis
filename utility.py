@@ -354,7 +354,7 @@ def train(net, data_loader, criterion, optimizer,
                     grad_scale = 1
 
                 for param in net.parameters():
-                    grad_total += (param.grad / grad_scale).norm(2).item()
+                    grad_total += (param.grad.norm(2) / grad_scale).item()
 
                 if USE_AMP:
                     scaler.step(optimizer)
@@ -377,7 +377,7 @@ def train(net, data_loader, criterion, optimizer,
 
             loss = total_loss / total_count
             accuracy = total_correct / total_count
-            grad_norm = grad_total #/ total_count
+            grad_norm = grad_total  # / total_count
 
             if scheduler is not None:
                 scheduler.step(grad_norm)

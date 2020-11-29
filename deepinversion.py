@@ -102,7 +102,6 @@ def deep_inversion(data_loader, loss_fn, optimizer,
         TRACKING = defaultdict(list, loss=[])
 
     def process_result(res, metrics):
-        info = {}
         if isinstance(res, tuple):
             loss, info = res
             for k, v in info.items():
@@ -153,9 +152,7 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                 grad_total = 0.
                 if True:
                     for p_group in optimizer.param_groups:
-                        print(p_group)
                         for i, param in enumerate(p_group['params']):
-                            print(i, param)
                             # p_name = f"parpam_{'-'.join(map(str, param.shape))}"
                             p_name = f'grad_{i}'
                             p_grad = (param.grad.norm(2) / grad_scale).item()
