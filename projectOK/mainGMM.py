@@ -182,6 +182,7 @@ if nn_verifier:
                   epochs=nn_steps,
                   resume_training=nn_resume_training,
                   reset=nn_reset_training,
+                  use_drive=use_drive,
                   )
     print("verifier ", end='')
     utility.print_net_accuracy_batch(verifier_net, X_A, Y_A)
@@ -281,11 +282,17 @@ def loss_di(m, v, m_target, v_target):
     return loss_mean + loss_var
 
 
-def loss_frechet(X_proj_means, X_proj_vars, means_target, vars_target):
-    loss_mean = ((X_proj_means - means_target)**2).sum(dim=0).mean()
-    loss_var = (X_proj_vars + vars_target
-                - 2 * (X_proj_vars * vars_target).sqrt()
-                ).sum(dim=0).mean()
+# def loss_frechet(X_proj_means, X_proj_vars, means_target, vars_target):
+#     loss_mean = ((X_proj_means - means_target)**2).sum(dim=0).mean()
+#     loss_var = (X_proj_vars + vars_target
+#                 - 2 * (X_proj_vars * vars_target).sqrt()
+#                 ).sum(dim=0).mean()
+#     return loss_mean + loss_var
+
+def loss_frechet(m, v, m_target, v_target):
+    loss_mean = ((m - m_target)**2).mean()
+    # loss_mean = ((X_proj_means - means_target)**2).sum(dim=0).mean()
+    loss_var = (v + v_target - 2 * (v * v_target).sqrt()).mean()
     return loss_mean + loss_var
 
 
@@ -358,51 +365,51 @@ methods = {
         project=combine(project_NN_all, project_RP_CC),
         class_conditional=True,
     ),
-    "NN": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_NN,
-        class_conditional=False,
-    ),
-    "NN CC": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_NN,
-        class_conditional=True,
-    ),
-    "NN ALL": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_NN_all,
-        class_conditional=False,
-    ),
-    "NN ALL CC": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_NN_all,
-        class_conditional=True,
-    ),
-    "RP": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_RP,
-        class_conditional=False,
-    ),
-    "RP CC": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_RP_CC,
-        class_conditional=True,
-    ),
-    "RP ReLU": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_RP_relu,
-        class_conditional=False,
-    ),
-    "RP ReLU CC": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_RP_relu_CC,
-        class_conditional=True,
-    ),
-    "combined": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=combine(project_NN_all, project_RP_CC),
-        class_conditional=True,
-    ),
+    # "NN": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_NN,
+    #     class_conditional=False,
+    # ),
+    # "NN CC": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_NN,
+    #     class_conditional=True,
+    # ),
+    # "NN ALL": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_NN_all,
+    #     class_conditional=False,
+    # ),
+    # "NN ALL CC": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_NN_all,
+    #     class_conditional=True,
+    # ),
+    # "RP": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_RP,
+    #     class_conditional=False,
+    # ),
+    # "RP CC": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_RP_CC,
+    #     class_conditional=True,
+    # ),
+    # "RP ReLU": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_RP_relu,
+    #     class_conditional=False,
+    # ),
+    # "RP ReLU CC": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_RP_relu_CC,
+    #     class_conditional=True,
+    # ),
+    # "combined": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=combine(project_NN_all, project_RP_CC),
+    #     class_conditional=True,
+    # ),
 }
 
 
