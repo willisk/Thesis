@@ -414,6 +414,9 @@ def train(net, data_loader, criterion, optimizer,
     return TRACKING
 
 
+def sgm(x, sh=10000):
+    return np.exp(np.log(x + sh).sum() / len(x)) - sh
+
 def plot_metrics(metrics, step_start=1):
     steps = range(step_start, len(metrics['loss']) + 1)
 
@@ -424,10 +427,11 @@ def plot_metrics(metrics, step_start=1):
     for key, val in metrics.items():
         plt.plot(steps, val, label=key)
 
-    vals = sum(metrics.values(), [])
-    mean, std = np.mean(vals), np.std(vals)
+    vals = np.array(sum(metrics.values(), []))
+    sgm_m = sgm(vals)
+    sgm_s = sgm(np.abs(vals - sgm_m))
     y_min, y_max = min(vals), max(vals)
-    y_min, y_max = max(y_min, mean - std), min(y_max, mean + std)
+    y_min, y_max = max(y_min, sgm_m - sgm_s), min(y_max, sgm_m + sgm_s)
     buffer = 0.1 * (y_max - y_min)
     plt.gca().set_ylim([y_min - buffer, y_max + buffer])
 

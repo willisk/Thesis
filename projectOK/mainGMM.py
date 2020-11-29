@@ -71,7 +71,9 @@ if 'ipykernel_launcher' in sys.argv:
     args.n_samples_valid = 100
     args.nn_width = 16
     args.nn_reset = True
-    args.nn_verifier = True
+    # args.nn_verifier = True
+    args.nn_steps = 500
+    args.inv_steps = 500
     use_drive = False
 else:
     args = parser.parse_args()
@@ -160,14 +162,14 @@ net = nets.FCNet(nn_layer_dims)
 net.to(DEVICE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
-utility.train(net, [DATA_A], criterion, optimizer,
-              model_path=model_path,
-              epochs=nn_steps,
-              resume_training=nn_resume_training,
-              reset=nn_reset_training,
-              plot=True,
-              use_drive=use_drive,
-              )
+g1 = utility.train(net, [DATA_A], criterion, optimizer,
+                   model_path=model_path,
+                   epochs=nn_steps,
+                   resume_training=nn_resume_training,
+                   reset=nn_reset_training,
+                   plot=True,
+                   use_drive=use_drive,
+                   )
 utility.print_net_accuracy_batch(net, X_A, Y_A)
 
 if nn_verifier:
@@ -227,7 +229,8 @@ def project_RP(data):
 
 def project_RP_CC(data):
     X, Y = data
-    X_proj_C = torch.empty((X.shape[0], n_random_projections), device=X.device)
+    X_proj_C = torch.empty((X.shape[0], n_random_projections),
+                           dtype=X.dtype, device=X.device)
     for c in range(n_classes):
         X_proj_C[Y == c] = (X[Y == c] - mean_A_C[c]) @ RP
     return X_proj_C
@@ -269,14 +272,6 @@ def preprocessing_model():
 
 
 # ======= Loss Function =======
-# def loss_frechet(X_proj_means, X_proj_vars, means_target, vars_target):
-#     loss_mean = ((X_proj_means - means_target)**2).sum(dim=0).mean()
-#     loss_var = (X_proj_vars + vars_target
-#                 - 2 * (X_proj_vars * vars_target).sqrt()
-#                 ).sum(dim=0).mean()
-#     return loss_mean + loss_var
-
-
 def loss_di(m, v, m_target, v_target):
     loss_mean = ((m - m_target)**2).mean()
     loss_var = ((v - v_target)**2).mean()
@@ -315,51 +310,51 @@ def loss_fn_wrapper(loss_stats, project, class_conditional):
 loss_stats = loss_di
 
 methods = {
-    "NN": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_NN,
-        class_conditional=False,
-    ),
-    "NN CC": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_NN,
-        class_conditional=True,
-    ),
-    "NN ALL": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_NN_all,
-        class_conditional=False,
-    ),
+    # "NN": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_NN,
+    #     class_conditional=False,
+    # ),
+    # "NN CC": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_NN,
+    #     class_conditional=True,
+    # ),
+    # "NN ALL": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_NN_all,
+    #     class_conditional=False,
+    # ),
     "NN ALL CC": loss_fn_wrapper(
         loss_stats=loss_stats,
         project=project_NN_all,
         class_conditional=True,
     ),
-    "RP": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_RP,
-        class_conditional=False,
-    ),
-    "RP CC": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_RP_CC,
-        class_conditional=True,
-    ),
-    "RP ReLU": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_RP_relu,
-        class_conditional=False,
-    ),
-    "RP ReLU CC": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=project_RP_relu_CC,
-        class_conditional=True,
-    ),
-    "combined": loss_fn_wrapper(
-        loss_stats=loss_stats,
-        project=combine(project_NN_all, project_RP_CC),
-        class_conditional=True,
-    ),
+    # "RP": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_RP,
+    #     class_conditional=False,
+    # ),
+    # "RP CC": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_RP_CC,
+    #     class_conditional=True,
+    # ),
+    # "RP ReLU": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_RP_relu,
+    #     class_conditional=False,
+    # ),
+    # "RP ReLU CC": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=project_RP_relu_CC,
+    #     class_conditional=True,
+    # ),
+    # "combined": loss_fn_wrapper(
+    #     loss_stats=loss_stats,
+    #     project=combine(project_NN_all, project_RP_CC),
+    #     class_conditional=True,
+    # ),
 }
 
 
@@ -380,16 +375,16 @@ for method, loss_fn in methods.items():
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
     DATA_B = (X_B.to(DEVICE), Y_B.to(DEVICE))
-    deepinversion.deep_inversion([DATA_B],
-                                 loss_fn,
-                                 optimizer,
-                                 #    scheduler=scheduler,
-                                 steps=inv_steps,
-                                 pre_fn=pre_fn,
-                                 #    track_history=True,
-                                 #    track_history_every=10,
-                                 plot=True,
-                                 )
+    g2 = deepinversion.deep_inversion([DATA_B],
+                                      loss_fn,
+                                      optimizer,
+                                      #    scheduler=scheduler,
+                                      steps=inv_steps,
+                                      pre_fn=pre_fn,
+                                      #    track_history=True,
+                                      #    track_history_every=10,
+                                      plot=True,
+                                      )
 
     # ======= Result =======
     X_B_proc = preprocess(X_B).detach()

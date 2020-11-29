@@ -189,3 +189,4 @@ def deep_inversion(data_loader, loss_fn, optimizer,
         plt.show()
 
     # return history
+    return TRACKING
