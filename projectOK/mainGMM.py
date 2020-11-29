@@ -231,6 +231,9 @@ def project_RP_CC(data):
     X, Y = data
     X_proj_C = torch.empty((X.shape[0], n_random_projections),
                            dtype=X.dtype, device=X.device)
+    print(X.dtype)
+    print(mean_A_C.dtype)
+    print(X_proj.dtype)
     for c in range(n_classes):
         X_proj_C[Y == c] = (X[Y == c] - mean_A_C[c]) @ RP
     return X_proj_C
