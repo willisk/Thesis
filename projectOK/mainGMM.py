@@ -161,7 +161,7 @@ net.to(DEVICE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
 utility.train(net, [DATA_A], criterion, optimizer,
-              #   model_path=model_path,
+              model_path=model_path,
               epochs=nn_steps,
               resume_training=nn_resume_training,
               reset=nn_reset_training,
