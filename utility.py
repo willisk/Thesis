@@ -282,12 +282,19 @@ def search_drive(path):
     return save_path, load_path
 
 
+def valid_data_loader(data_loader):
+    return isinstance(data_loader, torch.utils.data.DataLoader) or isinstance(data_loader, list)
+
+
 def train(net, data_loader, criterion, optimizer,
           epochs=10, save_every=20,
           model_path=None, use_drive=False,
           resume_training=False, reset=False,
-          scheduler=None, plot=False, device=DEVICE):
+          scheduler=None, plot=False):
     "Training Loop"
+
+    assert valid_data_loader(
+        data_loader), f"invalid data_loader: {data_loader}"
 
     save_path, load_path = save_load_path(model_path, use_drive)
 
@@ -329,7 +336,7 @@ def train(net, data_loader, criterion, optimizer,
             total_correct = 0.0
             grad_total = 0.0
 
-            for i, (inputs, labels) in enumerate(data_loader):
+            for i_batch, (inputs, labels) in enumerate(data_loader):
                 inputs, labels = inputs.to(device), labels.to(device)
 
                 optimizer.zero_grad()
@@ -362,12 +369,10 @@ def train(net, data_loader, criterion, optimizer,
                     loss=total_loss / total_count,
                     acc=f"{total_correct / total_count * 100:.0f}%",
                     chkpt=saved_epoch,
-                    batch=f"{i + 1}/{len(data_loader)}",
+                    batch=f"{i_batch + 1}/{len(data_loader)}",
                     refresh=False,
                 )
                 pbar.update(0)
-                if i == 2:
-                    break
 
             loss = total_loss / total_count
             accuracy = total_correct / total_count
@@ -390,6 +395,12 @@ def train(net, data_loader, criterion, optimizer,
                     'net_state_dict': net.to('cpu').state_dict(),
                 }, save_path)
                 saved_epoch = epoch
+
+            pbar.set_postfix(
+                loss=total_loss / total_count,
+                acc=f"{total_correct / total_count * 100:.0f}%",
+                chkpt=saved_epoch,
+            )
 
     print(flush=True, end='')
     net.eval()
@@ -788,6 +799,7 @@ def _plot_random_projections(RP, X_proj, mean, color='r', marker='o', scatter=Tr
 
 
 def print_tabular(data, row_name="", spacing=2):
+    print()
     headers = list(next(iter(data.values())).keys())
     row_data = [[row_name] + headers] + [[m] + [f"{data[m][h]:.2f}" for h in headers]
                                          for m in data.keys()]

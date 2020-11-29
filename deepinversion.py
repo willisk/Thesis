@@ -86,6 +86,9 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                    plot=False,
                    ):
 
+    assert utility.valid_data_loader(
+        data_loader), f"invalid data_loader: {data_loader}"
+
     # writer = shared.get_summary_writer()
     device = optimizer.param_groups[0]['params'][0].device
     USE_AMP = (device.type == 'gpu')
