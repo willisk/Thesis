@@ -233,7 +233,7 @@ def project_RP_CC(data):
                            dtype=X.dtype, device=X.device)
     print(X.dtype)
     print(mean_A_C.dtype)
-    print(X_proj.dtype)
+    print(X_proj_C.dtype)
     for c in range(n_classes):
         X_proj_C[Y == c] = (X[Y == c] - mean_A_C[c]) @ RP
     return X_proj_C
@@ -313,31 +313,31 @@ def loss_fn_wrapper(loss_stats, project, class_conditional):
 loss_stats = loss_di
 
 methods = {
-    # "NN": loss_fn_wrapper(
-    #     loss_stats=loss_frechet,
-    #     project=project_NN,
-    #     class_conditional=False,
-    # ),
-    # "NN CC": loss_fn_wrapper(
-    #     loss_stats=loss_frechet,
-    #     project=project_NN,
-    #     class_conditional=True,
-    # ),
-    # "NN ALL": loss_fn_wrapper(
-    #     loss_stats=loss_frechet,
-    #     project=project_NN_all,
-    #     class_conditional=False,
-    # ),
-    # "NN ALL CC": loss_fn_wrapper(
-    #     loss_stats=loss_frechet,
-    #     project=project_NN_all,
-    #     class_conditional=True,
-    # ),
-    # "RP": loss_fn_wrapper(
-    #     loss_stats=loss_frechet,
-    #     project=project_RP,
-    #     class_conditional=False,
-    # ),
+    "NN": loss_fn_wrapper(
+        loss_stats=loss_frechet,
+        project=project_NN,
+        class_conditional=False,
+    ),
+    "NN CC": loss_fn_wrapper(
+        loss_stats=loss_frechet,
+        project=project_NN,
+        class_conditional=True,
+    ),
+    "NN ALL": loss_fn_wrapper(
+        loss_stats=loss_frechet,
+        project=project_NN_all,
+        class_conditional=False,
+    ),
+    "NN ALL CC": loss_fn_wrapper(
+        loss_stats=loss_frechet,
+        project=project_NN_all,
+        class_conditional=True,
+    ),
+    "RP": loss_fn_wrapper(
+        loss_stats=loss_frechet,
+        project=project_RP,
+        class_conditional=False,
+    ),
     "RP CC": loss_fn_wrapper(
         loss_stats=loss_frechet,
         project=project_RP_CC,
