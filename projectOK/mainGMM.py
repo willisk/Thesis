@@ -312,7 +312,7 @@ def loss_fn_wrapper(loss_stats, project, class_conditional):
     return _loss_fn
 
 
-loss_stats = loss_frechet
+loss_stats = loss_di
 
 methods = {
     "NN": loss_fn_wrapper(
