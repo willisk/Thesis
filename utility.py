@@ -393,7 +393,7 @@ def train(net, data_loader, criterion, optimizer,
                      or epoch == init_epoch + epochs - 1):
                 torch.save({
                     'epoch': epoch,
-                    'net_state_dict': state_dict(),
+                    'net_state_dict': net.state_dict(),
                 }, save_path)
                 saved_epoch = epoch
 
