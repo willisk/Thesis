@@ -174,6 +174,7 @@ def batch_feature_mean_std(x, keep_dims=[1], unbiased=False):
     std = x.std(dim=dims_collapse, unbiased=unbiased)
     return mean, std
 
+
 def batch_feature_mean_var(x, keep_dims=[1], unbiased=False):
     dims_collapse = list(range(len(x.shape)))
     for dim in keep_dims:
@@ -195,6 +196,7 @@ def c_mean_std(data, labels, n_classes, unbiased=False):
             data[c_mask], unbiased=unbiased)
 
     return mean, std
+
 
 def c_mean_var(data, labels, n_classes, unbiased=False):
     mean = torch.zeros((n_classes, data.shape[1]),
@@ -437,6 +439,7 @@ def train(net, data_loader, criterion, optimizer,
 def sgm(x, sh=1):
     return np.exp(np.log(x + sh).sum() / len(x)) - sh
 
+
 def plot_metrics(metrics, step_start=1):
     steps = range(step_start, len(metrics['loss']) + 1)
 
@@ -464,6 +467,7 @@ def plot_metrics(metrics, step_start=1):
     plt.title('metrics')
     plt.xlabel('steps')
     plt.legend()
+
 
 def debug(func):
 
