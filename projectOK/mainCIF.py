@@ -174,7 +174,9 @@ utility.train(net, DATA_A, criterion, optimizer,
               plot=True,
               use_drive=True,
               )
-accuracy_A = utility.net_accuracy(net, DATA_A)
+# accuracy_A = utility.net_accuracy(net, DATA_A)
+accuracy_A = 0.99
+print("USING DUMMY ACCURACY")
 print(f"net accuracy: {accuracy_A * 100:.1f}%")
 
 net_n_params = sum(p.numel() for p in net.parameters()
