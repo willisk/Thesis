@@ -517,14 +517,18 @@ def debug(func):
     return _func
 
 
-def collect_stats(projection, data_loader, n_classes, class_conditional,
+def collect_stats(projection, data_loader, n_classes, class_conditional, std=False,
                   device='cpu', path=None, use_drive=True):
 
     save_path, load_path = save_load_path(path, use_drive=use_drive)
     if load_path and os.path.exists(load_path):
         print(f"Loading stats from {load_path}.")
         chkpt = torch.load(load_path, map_location=torch.device(device))
-        return chkpt['mean'], chkpt['var']
+        mean, var = chkpt['mean'], chkpt['var']
+        if std:
+            var = var.sqrt()
+        mean, var = mean.to(torch.float), var.to(torch.float)
+        return mean, var
 
     mean = var = n = None
     print("Beginning tracking stats.", flush=True)
@@ -550,14 +554,16 @@ def collect_stats(projection, data_loader, n_classes, class_conditional,
                                             new_mean, new_var, m)
     print(flush=True, end='')
 
-    mean, var = mean.to(torch.float), var.to(torch.float)
-
     if save_path:
         torch.save({
             'mean': mean.to('cpu'),
             'var': var.to('cpu'),
         }, save_path)
         print(f"Saving stats at {load_path}.")
+
+    if std:
+        var = var.sqrt()
+    mean, var = mean.to(torch.float), var.to(torch.float)
 
     return mean, var
 

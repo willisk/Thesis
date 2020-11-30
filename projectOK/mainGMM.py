@@ -189,8 +189,8 @@ if nn_verifier:
 
 
 # ======= NN Project =======
-net_layers = utility.get_child_modules(net, ignore_types=["activation"])
-layer_activations = [0] * len(net_layers)
+net_layers = utility.get_child_modules(net)
+layer_activations = [None] * len(net_layers)
 
 
 def layer_hook_wrapper(l):
@@ -219,8 +219,8 @@ def project_NN_all(data):
 RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
 RP = RP / RP.norm(2, dim=0)
 
-mean_A, var_A = X_A.mean(dim=0), X_A.var(dim=0)
-mean_A_C, var_A_C, _ = utility.c_mean_var(X_A, Y_A, n_classes)
+mean_A, std_A = X_A.mean(dim=0), X_A.std(dim=0)
+mean_A_C, std_A_C = utility.c_mean_std(X_A, Y_A, n_classes)
 
 
 def project_RP(data):
@@ -242,9 +242,9 @@ def project_RP_CC(data):
 
 # Random ReLU Projections
 relu_bias = (torch.randn((1, n_random_projections), device=DEVICE)
-             * var_A.max().sqrt())
+             * std_A.max())
 relu_bias_C = (torch.randn((n_classes, n_random_projections), device=DEVICE)
-               * var_A_C.max(dim=1)[0].sqrt().reshape(-1, 1))
+               * std_A_C.max(dim=1)[0].reshape(-1, 1))
 
 
 def project_RP_relu(data):
@@ -267,39 +267,19 @@ def combine(project1, project2):
 
 
 def preprocessing_model():
-    A = torch.eye(n_dims, requires_grad=True, device=DEVICE)
+    M = torch.eye(n_dims, requires_grad=True, device=DEVICE)
     b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
 
     def preprocessing_fn(X):
-        return X @ A + b
-    return preprocessing_fn, (A, b)
+        return X @ M + b
+    return preprocessing_fn, (M, b)
 
 
 # ======= Loss Function =======
-def loss_di(m, v, m_target, v_target):
-    loss_mean = ((m - m_target)**2).mean()
-    loss_var = ((v - v_target)**2).mean()
-    return loss_mean + loss_var
-
-
-def loss_di2(m, v, m_target, v_target):
-    loss_mean = (m - m_target).norm(2)
-    loss_var = (v - v_target).norm(2)
-    return loss_mean + loss_var
-
-
-# def loss_frechet(X_proj_means, X_proj_vars, means_target, vars_target):
-#     loss_mean = ((X_proj_means - means_target)**2).sum(dim=0).mean()
-#     loss_var = (X_proj_vars + vars_target
-#                 - 2 * (X_proj_vars * vars_target).sqrt()
-#                 ).sum(dim=0).mean()
-#     return loss_mean + loss_var
-
-def loss_frechet(m, v, m_target, v_target):
-    loss_mean = ((m - m_target)**2).mean()
-    # loss_mean = ((X_proj_means - means_target)**2).sum(dim=0).mean()
-    loss_var = (v + v_target - 2 * (v * v_target).sqrt()).mean()
-    return loss_mean + loss_var
+def loss_stats(m_a, s_a, m_b, s_b):
+    loss_mean = ((m_a - m_b)**2).mean()
+    loss_std = ((s_a - s_b)**2).mean()
+    return loss_mean + loss_std
 
 
 def get_stats(inputs, labels, class_conditional):
@@ -309,65 +289,54 @@ def get_stats(inputs, labels, class_conditional):
     return inputs.mean(dim=0), inputs.std(dim=0)
 
 
-def loss_fn_wrapper(loss_stats, project, class_conditional):
+def loss_fn_wrapper(project, class_conditional):
     with torch.no_grad():
         X_A_proj = project((X_A, Y_A))
-        A_proj_means, A_proj_vars = get_stats(X_A_proj, Y_A, class_conditional)
+        m_a, s_a = get_stats(X_A_proj, Y_A, class_conditional)
 
-    def _loss_fn(data, means_target=A_proj_means, vars_target=A_proj_vars, class_conditional=class_conditional):
+    def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
         assert isinstance(data, tuple), f"data is not a tuple {data}"
         X, Y = data
         X_proj = project(data)
-        X_proj_means, X_proj_vars = get_stats(X_proj, Y, class_conditional)
-        return loss_stats(X_proj_means, X_proj_vars, means_target, vars_target)
+        m_b, s_b = get_stats(X_proj, Y, class_conditional)
+        return loss_stats(m_a, s_a, m_b, s_b)
     return _loss_fn
 
 
-loss_stats = loss_di
-
 methods = {
     "NN": loss_fn_wrapper(
-        loss_stats=loss_stats,
         project=project_NN,
         class_conditional=False,
     ),
     "NN CC": loss_fn_wrapper(
-        loss_stats=loss_stats,
         project=project_NN,
         class_conditional=True,
     ),
     "NN ALL": loss_fn_wrapper(
-        loss_stats=loss_stats,
         project=project_NN_all,
         class_conditional=False,
     ),
     "NN ALL CC": loss_fn_wrapper(
-        loss_stats=loss_stats,
         project=project_NN_all,
         class_conditional=True,
     ),
     "RP": loss_fn_wrapper(
-        loss_stats=loss_stats,
         project=project_RP,
         class_conditional=False,
     ),
     "RP CC": loss_fn_wrapper(
-        loss_stats=loss_stats,
         project=project_RP_CC,
         class_conditional=True,
     ),
     "RP ReLU": loss_fn_wrapper(
-        loss_stats=loss_stats,
         project=project_RP_relu,
         class_conditional=False,
     ),
     "RP ReLU CC": loss_fn_wrapper(
-        loss_stats=loss_stats,
         project=project_RP_relu_CC,
         class_conditional=True,
     ),
     "combined": loss_fn_wrapper(
-        loss_stats=loss_stats,
         project=combine(project_NN_all, project_RP_CC),
         class_conditional=True,
     ),
@@ -415,7 +384,7 @@ for method, loss_fn in methods.items():
     # L2 Reconstruction Error
     Id = torch.eye(n_dims, device=DEVICE)
     l2_err = (preprocess(perturb(Id)) - Id).norm(2).item() / Id.norm(2).item()
-    print(f"\tl2 reconstruction error: {l2_err:.3f}")
+    print(f"\trel. l2 reconstruction error: {l2_err:.3f}")
 
     # Cross Entropy
     entropy = dataset.cross_entropy(X_B_proc, Y_B)
@@ -423,9 +392,9 @@ for method, loss_fn in methods.items():
 
     # NN Accuracy
     accuracy = utility.net_accuracy_batch(net, X_B_proc, Y_B)
-    print(f"\tnn accuracy: {accuracy * 100:.1f} %")
     accuracy_val = utility.net_accuracy_batch(
         net, X_B_val_proc, Y_B_val)
+    print(f"\tnn accuracy: {accuracy * 100:.1f} %")
     print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
 
     if nn_verifier:
