@@ -561,7 +561,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
             'mean': mean.to('cpu'),
             'var': var.to('cpu'),
         }, save_path)
-        print(f"Saving stats at {load_path}.")
+        print(f"Saving stats in {load_path}.")
 
     if std:
         var = var.sqrt()

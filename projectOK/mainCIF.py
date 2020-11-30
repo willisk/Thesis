@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATADIR = os.path.join(PWD, "data")
-MODELDIR = os.path.join(PWD, "models")
+MODELDIR = os.path.join(PWD, "models/CIFAR10")
 sys.path.append(PWD)
 
 import utility
@@ -232,8 +232,18 @@ def project_NN_all(data):
 RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
 RP = RP / RP.norm(2, dim=0)
 
-mean_A, std_A = X_A.mean(dim=0), X_A.std(dim=0)
-mean_A_C, std_A_C = utility.c_mean_std(X_A, Y_A, n_classes)
+
+def identity(data): return data[0]
+
+
+path = os.path.join(MODELDIR, "stats_inputs.pt")
+path_cc = os.path.join(MODELDIR, "stats_inputs-CC.pt")
+mean_A, std_A = utility.collect_stats(
+    identity, DATA_A, n_classes, class_conditional=False,
+    std=True, path=path, device=DEVICE)
+mean_A_C, std_A_C = utility.collect_stats(
+    identity, DATA_A, n_classes, class_conditional=True,
+    std=True, path=path_cc, device=DEVICE)
 
 
 def project_RP(data):
