@@ -536,17 +536,14 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
     print("Beginning tracking stats.", flush=True)
 
     with torch.no_grad(), tqdm(data_loader, desc="Batch") as pbar:
-        for inputs, labels in pbar:
-            inputs = inputs.to(device)
-            labels = labels.to(device)
-
-            outputs = projection(inputs, labels).double()
+        for data in pbar:
+            outputs = projection(data).double()
 
             if class_conditional:
                 new_mean, new_var, m = c_mean_var(outputs, labels, n_classes)
             else:
                 new_mean, new_var = outputs.mean(dim=0), outputs.var(dim=0)
-                m = torch.LongTensor([len(inputs)]).to(device)
+                m = torch.LongTensor([len(outputs)]).to(device)
 
             if mean is None:
                 mean = torch.zeros_like(new_mean)
