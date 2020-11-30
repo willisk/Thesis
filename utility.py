@@ -537,13 +537,14 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
 
     with torch.no_grad(), tqdm(data_loader, desc="Batch") as pbar:
         for data in pbar:
+            inputs, labels = data
             outputs = projection(data).double()
 
             if class_conditional:
                 new_mean, new_var, m = c_mean_var(outputs, labels, n_classes)
             else:
                 new_mean, new_var = outputs.mean(dim=0), outputs.var(dim=0)
-                m = torch.LongTensor([len(outputs)]).to(device)
+                m = torch.LongTensor([len(inputs)]).to(device)
 
             if mean is None:
                 mean = torch.zeros_like(new_mean)
