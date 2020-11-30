@@ -115,14 +115,27 @@ def perturb(X):
 # def to_device(X):
 #     return X.to(DEVICE)
 
+from PIL import Image
+
+
 class CIFAR10(torchvision.datasets.CIFAR10):
     def __init__(self, *args, device='cpu', **kwargs):
         super(CIFAR10, self).__init__(*args, **kwargs)
-        self.data = transforms.ToTensor()(self.data)
-        self.data = transforms.Normalize(
-            (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(self.data)
-        self.data = self.data.to(device)
-        self.targets = self.targets.to(device)
+
+        self.img_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ])
+
+    def __getitem__(self, index):
+        img, target = self.data[index], self.targets[index]
+        img = self.img_transform(Image.fromarray(img))
+        img, target = img.to(DEVICE), torch.tensor(target).to(DEVICE)
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        return img, target
 
 
 dataloader_params = {'batch_size': 64,
@@ -149,16 +162,15 @@ net = ResNet34(pretrained=download)
 net.to(DEVICE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
-model_path = os.path.join(MODELDIR, f"{model_name}.pt")
-if not download:
-    utility.train(net, DATA_A, criterion, optimizer,
-                  model_path=model_path,
-                  epochs=nn_steps,
-                  resume_training=nn_resume_training,
-                  reset=nn_reset_training,
-                  plot=True,
-                  use_drive=True,
-                  )
+model_path = os.path.join(MODELDIR, f"net_{model_name}.pt")
+utility.train(net, DATA_A, criterion, optimizer,
+              model_path=model_path,
+              epochs=nn_steps,
+              resume_training=nn_resume_training,
+              reset=nn_reset_training,
+              plot=True,
+              use_drive=True,
+              )
 accuracy_A = utility.net_accuracy(net, DATA_A)
 print(f"net accuracy: {accuracy_A * 100:.1f}%")
 
@@ -168,7 +180,7 @@ net_n_params = sum(p.numel() for p in net.parameters()
 print(f"net parameters {net_n_params}")
 
 if nn_verifier:
-    verifier_path = os.path.join(MODELDIR, f"{model_name}_verifier.pt")
+    verifier_path = os.path.join(MODELDIR, f"net_{model_name}_verifier.pt")
     verifier_net = ResNet34()
     verifier_net.to(DEVICE)
     optimizer = torch.optim.Adam(verifier_net.parameters(), lr=nn_lr)
@@ -290,7 +302,7 @@ def get_stats(inputs, labels, class_conditional):
 def loss_fn_wrapper(name, project, class_conditional):
     stats_path = os.path.join(MODELDIR, f"stats_{model_name}_{name}.pt")
     m_a, s_a = utility.collect_stats(
-        project, DATA_A, n_classes, class_conditional, 
+        project, DATA_A, n_classes, class_conditional,
         std=True, path=stats_path, device=DEVICE)
 
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):

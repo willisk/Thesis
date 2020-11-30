@@ -93,6 +93,7 @@ def expand_as_r(a, b):
 def net_accuracy(net, data_loader):
     total_count = 0.0
     total_correct = 0.0
+    print(flush=True)
     with torch.no_grad(), tqdm(data_loader) as pbar:
         for inputs, labels in pbar:
             inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
@@ -166,7 +167,7 @@ def nan_to_zero(x):
 
 
 def batch_feature_mean_std(x, keep_dims=[1], unbiased=False):
-    dims_collapse = list(range(len(x.shape)))
+    dims_collapse = list(range(x.ndim))
     for dim in keep_dims:
         dims_collapse.remove(dim)
     assert dims_collapse != [], "dims to collapse are empty"
@@ -176,7 +177,8 @@ def batch_feature_mean_std(x, keep_dims=[1], unbiased=False):
 
 
 def batch_feature_mean_var(x, keep_dims=[1], unbiased=False):
-    dims_collapse = list(range(len(x.shape)))
+    # dims_collapse = list(range(len(x.shape)))
+    dims_collapse = list(range(x.ndim))
     for dim in keep_dims:
         dims_collapse.remove(dim)
     assert dims_collapse != [], "dims to collapse are empty"
@@ -527,7 +529,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
         mean, var = chkpt['mean'], chkpt['var']
         if std:
             var = var.sqrt()
-        mean, var = mean.to(torch.float), var.to(torch.float)
+        mean, var = mean.float(), var.float()
         return mean, var
 
     mean = var = n = None
@@ -538,7 +540,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
             inputs = inputs.to(device)
             labels = labels.to(device)
 
-            outputs = projection(inputs, labels).to(torch.double)
+            outputs = projection(inputs, labels).double()
 
             if class_conditional:
                 new_mean, new_var, m = c_mean_var(outputs, labels, n_classes)
@@ -563,7 +565,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
 
     if std:
         var = var.sqrt()
-    mean, var = mean.to(torch.float), var.to(torch.float)
+    mean, var = mean.float(), var.float()
 
     return mean, var
 
