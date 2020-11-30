@@ -54,6 +54,7 @@ parser.add_argument("-nn_depth", type=int, default=4)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--nn_verifier", action="store_true")
+parser.add_argument("-n_random_projections", type=int, default=256)
 parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
 parser.add_argument("-seed", type=int, default=333)
@@ -93,6 +94,8 @@ nn_resume_training = args.nn_resume_train
 nn_reset_training = args.nn_reset_train
 nn_verifier = args.nn_verifier
 
+# Random Projections
+n_random_projections = args.n_random_projections
 # Inversion
 inv_lr = args.inv_lr
 inv_steps = args.inv_steps
@@ -223,7 +226,7 @@ def project_NN_all(data):
 
 
 # ======= Random Projections =======
-n_random_projections = net_n_params
+# n_random_projections = net_n_params
 RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
 RP = RP / RP.norm(2, dim=0)
 
