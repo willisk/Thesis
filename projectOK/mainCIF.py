@@ -12,7 +12,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-import torchvision
+import torchvision.datasets.CIFAR10 as CIFAR10
 import torchvision.transforms as transforms
 
 import numpy as np
@@ -41,7 +41,6 @@ from utility import debug
 
 print("#", __doc__)
 
-cmaps = utility.categorical_colors(2)
 
 # ======= Arg Parse =======
 parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
@@ -115,36 +114,18 @@ def perturb(X):
 
 
 # ======= Create Dataset =======
-# def to_device(X):
-#     return X.to(DEVICE)
-
-from PIL import Image
-
-
-class CIFAR10(torchvision.datasets.CIFAR10):
-    def __init__(self, *args, device='cpu', **kwargs):
-        super(CIFAR10, self).__init__(*args, **kwargs)
-
-        self.img_transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-        ])
-
-    def __getitem__(self, index):
-        img, target = self.data[index], self.targets[index]
-        img = self.img_transform(Image.fromarray(img))
-        img, target = img.to(DEVICE), torch.tensor(target).to(DEVICE)
-
-        if self.transform is not None:
-            img = self.transform(img)
-
-        return img, target
-
+img_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+])
 
 dataloader_params = {'batch_size': 64,
                      'shuffle': True}
-CIF10 = CIFAR10(root=DATADIR, device=DEVICE, train=True, download=True)
-B_val = CIFAR10(root=DATADIR, device=DEVICE, train=False, download=True)
+
+CIF10 = CIFAR10(root=DATADIR, device=DEVICE, train=True,
+                transform=img_transform, download=True)
+B_val = CIFAR10(root=DATADIR, device=DEVICE, train=False,
+                transform=img_transform, download=True)
 
 n_A = int(len(CIF10) * split_A)
 n_B = len(CIF10) - n_A
@@ -154,6 +135,31 @@ A, B = torch.utils.data.random_split(CIF10, (n_A, n_B))
 DATA_A = DataLoader(A, **dataloader_params)
 DATA_B = DataLoader(B, **dataloader_params)
 DATA_B_val = DataLoader(B_val, **dataloader_params)
+
+
+# ======= Neural Network =======
+from functools import wraps
+
+
+def get_stats(inputs, labels, class_conditional):
+    if class_conditional:
+        return utility.c_mean_std(inputs, labels, n_classes)
+    return inputs.mean(dim=0), inputs.std(dim=0)
+
+
+def choice_CC(project_fn):
+    """Wrapper to get stats from projected space"""
+    @wraps(project_fn)
+    def stats_projected(data, class_conditional):
+        inputs, labels = data
+        outputs = project_fn(data)
+        if isinstance(outputs, list):
+            means, stds = zip(*[get_stats(x, labels, class_conditional)
+                                for x in outputs])
+            return torch.cat(means, dim=1), torch.cat(stds, dim=1)
+        return get_stats(outputs, labels, class_conditional)
+    return stats_projected
+
 
 # ======= Neural Network =======
 from ext.cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
@@ -215,16 +221,31 @@ for l, layer in enumerate(net_layers):
     layer.register_forward_hook(layer_hook_wrapper(l))
 
 
+@choice_CC
 def project_NN(data):
     inputs, labels = data
     net(inputs)
     return layer_activations[-1]
 
+    means, stds = zip(*[get_stats(x, class_conditional) for x in outputs])
 
-def project_NN_all(data):
+
+l = [
+    (torch.empty((5, 3)), torch.empty((5, 3))),
+    (torch.empty((5, 10)), torch.empty((5, 10))),
+    (torch.empty((5, 7)), torch.empty((5, 7))),
+]
+m, v = zip(*l)
+print(torch.cat(m, dim=1).shape)
+print(torch.cat(v, dim=1).shape)
+
+
+def project_NN_all(data, class_conditional):
     inputs, labels = data
     net(inputs)
-    return torch.cat([inputs] + layer_activations, dim=1)
+    outputs = [inputs] + layer_activations
+    means, stds = zip(*[get_stats(x, class_conditional) for x in outputs])
+    return torch.cat(means), torch.cat(stds)
 
 
 # ======= Random Projections =======
@@ -246,11 +267,13 @@ mean_A_C, std_A_C = utility.collect_stats(
     std=True, path=path_cc, device=DEVICE)
 
 
+@ get_stats
 def project_RP(data):
     X, Y = data
     return (X - mean_A) @ RP
 
 
+@ get_stats
 def project_RP_CC(data):
     X, Y = data
     X_proj_C = None
@@ -270,10 +293,12 @@ relu_bias_C = (torch.randn((n_classes, n_random_projections), device=DEVICE)
                * std_A_C.max(dim=1)[0].reshape(-1, 1))
 
 
+@ get_stats(False)
 def project_RP_relu(data):
     return F.relu(project_RP(data) + relu_bias)
 
 
+@ get_stats(True)
 def project_RP_relu_CC(data):
     X, Y = data
     return F.relu(project_RP_CC(data) + relu_bias_C[Y])
@@ -307,25 +332,25 @@ def loss_stats(m_a, s_a, m_b, s_b):
     return loss_mean + loss_std
 
 
-def get_stats(inputs, labels, class_conditional):
-    if class_conditional:
-        mean, std = utility.c_mean_std(inputs, labels, n_classes)
-        return mean, std
-    return inputs.mean(dim=0), inputs.std(dim=0)
-
-
 def loss_fn_wrapper(name, project, class_conditional):
+    name = name.replace(' ', '-')
     stats_path = os.path.join(MODELDIR, f"stats_{model_name}_{name}.pt")
     m_a, s_a = utility.collect_stats(
         project, DATA_A, n_classes, class_conditional,
         std=True, path=stats_path, device=DEVICE)
 
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
-        assert isinstance(data, tuple), f"data is not a tuple {data}"
         inputs, labels = data
-        X_proj = project(data)
-        m_b, s_b = get_stats(X_proj, labels, class_conditional)
-        return loss_stats(m_a, s_a, m_b, s_b)
+        outputs = project(data)
+        m, s = utility.get_stats(outputs, labels, class_conditional)
+        if isinstance(outputs, list):
+            means, stds = zip(*[get_stats(x, labels, class_conditional)
+                                for x in outputs])
+            m, s = torch.cat(means, dim=1), torch.cat(stds, dim=1)
+        else:
+            m, s = get_stats
+        
+        return loss_stats(m_a, s_a, m, s)
     return name, _loss_fn
 
 
@@ -385,13 +410,17 @@ metrics = defaultdict(dict)
 for method, loss_fn in methods:
     print("## Method:", method)
 
-    B.transform = perturb
+    B.transform = img_transform
+
     preprocess, params = preprocessing_model()
 
     def pre_fn(data):
-        X, Y = data
-        data = (preprocess(X), Y)
-        return data
+        inputs, labels = data
+        inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
+        with torch.no_grad:
+            inputs = perturb(inputs)
+        inputs = preprocess(inputs)
+        return (inputs, labels)
 
     optimizer = torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
@@ -409,7 +438,7 @@ for method, loss_fn in methods:
 
     # ======= Result =======
     print("Results:")
-    invert_transform = transforms.Compose([perturb, preprocess])
+    invert_transform = transforms.Compose([img_transform, perturb, preprocess])
     B.transform = invert_transform
     B_val.transform = invert_transform
 

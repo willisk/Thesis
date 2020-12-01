@@ -121,13 +121,6 @@ def deep_inversion(data_loader, loss_fn, optimizer,
             total_count = 0
 
             for data in data_loader:
-                if isinstance(data, tuple):
-                    inputs, labels = data
-                    data = (inputs.to(device), labels.to(device))
-                    bs = len(inputs)
-                else:
-                    data = data.to(device)
-                    bs = len(data)
 
                 # if step == 1 and track_history_every:
                 #     history = [(inputs.detach().cpu().clone(), 0)]
@@ -168,9 +161,9 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                 if scheduler is not None:
                     scheduler.step(grad_total)
 
-                total_count += bs
-                for k in METRICS:
-                    METRICS[k] *= bs / total_count
+                # total_count += bs
+                # for k in METRICS:
+                #     METRICS[k] *= bs / total_count
                 pbar.set_postfix(**METRICS, refresh=False)
                 pbar.update(0)
 

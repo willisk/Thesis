@@ -132,21 +132,21 @@ def exp_av_mean_var(m_a, v_a, m_b, v_b, gamma):
 
 def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, class_conditional=True, cap_gamma=1):
     if class_conditional:
-        n_a = expand_as_r(n_a, m_a)
-        n_b = expand_as_r(n_b, m_a)
-        m_a = nan_to_zero(m_a)
-        m_b = nan_to_zero(m_b)
-        v_a = nan_to_zero(v_a)
-        v_b = nan_to_zero(v_b)
+        # n_a = expand_as_r(n_a, m_a)
+        # n_b = expand_as_r(n_b, m_a)
+        m_a = nan_to(m_a, 0)
+        m_b = nan_to(m_b, 0)
+        v_a = nan_to(v_a, 1)
+        v_b = nan_to(v_b, 1)
     n = n_a + n_b
-    gamma = torch.clamp(n_a / n, max=cap_gamma)
+    gamma = torch.clamp(n_a / n, max=cap_gamma).expand_as(m_a)
     mean, var = exp_av_mean_var(m_a, v_a, m_b, v_b, gamma)
     return mean, var, n
 
 
 def reduce_mean_var(means, vars, n):
     mean, var, n = reduce(lambda x, y: combine_mean_var(
-        *x, *y), zip(means, vars, n))
+        *x, *y), zip(means.T, vars.T, n))
     return mean, var, n
 
 
@@ -158,89 +158,109 @@ def nan_to_zero_(x):
     x[x != x] = 0
 
 
-def nan_to_zero(x):
+def nan_to(x, num):
     nans = x != x
     if nans.any():
         x = x.clone()
-        x[nans] = 0
+        x[nans] = num
     return x
 
 
-def batch_feature_mean_std(x, keep_dims=[1], unbiased=False):
+# def class_count_(n, labels):
+#     for c in torch.unique(labels):
+#         n[c] += (labels == c).to(n.dtype).sum()
+
+
+def batch_feature_stats(x, keep_dims=[1], std=False):
     dims_collapse = list(range(x.ndim))
     for dim in keep_dims:
         dims_collapse.remove(dim)
     assert dims_collapse != [], "dims to collapse are empty"
     mean = x.mean(dim=dims_collapse)
-    std = x.std(dim=dims_collapse, unbiased=unbiased)
-    return mean, std
+    if std:
+        return mean, x.std(dim=dims_collapse)
+    return mean, x.var(dim=dims_collapse)
 
 
-def batch_feature_mean_var(x, keep_dims=[1], unbiased=False):
-    # dims_collapse = list(range(len(x.shape)))
-    dims_collapse = list(range(x.ndim))
-    for dim in keep_dims:
-        dims_collapse.remove(dim)
-    assert dims_collapse != [], "dims to collapse are empty"
-    mean = x.mean(dim=dims_collapse)
-    var = x.var(dim=dims_collapse, unbiased=unbiased)
-    return mean, var
-
-
-def c_mean_std(data, labels, n_classes, unbiased=False):
-    mean = torch.zeros((n_classes, data.shape[1]),
-                       dtype=data.dtype, device=data.device)
-    std = torch.ones((n_classes, data.shape[1]),
-                     dtype=data.dtype, device=data.device)
-    for c in labels.unique().to(torch.long):
-        c_mask = labels == c
-        mean[c], std[c] = batch_feature_mean_std(
-            data[c_mask], unbiased=unbiased)
-
-    return mean, std
-
-
-def c_mean_var(data, labels, n_classes, unbiased=False):
-    mean = torch.zeros((n_classes, data.shape[1]),
-                       dtype=data.dtype, device=data.device)
-    var = torch.ones((n_classes, data.shape[1]),
-                     dtype=data.dtype, device=data.device)
-    n = torch.zeros(n_classes, dtype=torch.long, device=data.device)
+def c_stats(inputs, labels, n_classes, return_count=False, std=False):
+    mean = torch.zeros((n_classes, inputs.shape[1]),
+                       dtype=inputs.dtype, device=inputs.device)
+    var = torch.ones((n_classes, inputs.shape[1]),
+                     dtype=inputs.dtype, device=inputs.device)
+    n = torch.zeros(n_classes, dtype=torch.long, device=inputs.device)
 
     for c in labels.unique().to(torch.long):
         c_mask = labels == c
-        mean[c], var[c] = batch_feature_mean_var(
-            data[c_mask], unbiased=unbiased)
-        n[c] = c_mask.sum()
+        mean[c], var[c] = batch_feature_stats(inputs[c_mask], std=std)
+        n[c] = c_mask.sum().item()
 
-    return mean, var, n
-
-
-def class_count_(n, labels):
-    for c in torch.unique(labels):
-        n[c] += (labels == c).to(n.dtype).sum()
+    if return_count:
+        return mean.T, var.T, n.T
+    return mean.T, var.T
 
 
-def c_mean_var_old(data, labels, shape):
-    # used in iteration over batches, skip channels
-    # d.shape: [n_chan, ..]
-    dims_collapse = list(range(len(data.shape)))[1:-1]
-    # calculate size of collapsed dims
-    weight = torch.prod(torch.Tensor(list(data.shape[2:])))
-    S, S_2 = torch.zeros(shape), torch.zeros(shape)
-    n = torch.zeros(shape[0])
-    for d, c in zip(data, labels):
-        S[c] += d.sum(dims_collapse)
-        S_2[c] += (d**2).sum(dims_collapse)
-        n[c] += 1
-    n = expand_as_r(n, S)
-    mean = S / n / weight
-    # print("weight, ", weight)
-    # print("c_mean : ", mean)
-    var = (S_2 - S**2 / n / weight) / n / weight
-    # nan_to_zero(mean)
-    # nan_to_zero(var)
-    return mean, var, n
+def get_stats(inputs, labels=None, n_classes=None, class_conditional=False):
+    if isinstance(inputs, list):
+        means, stds = zip(*[_get_stats(x, labels, n_classes, class_conditional)
+                            for x in inputs])
+        return torch.cat(means), torch.cat(stds)
+    return _get_stats(inputs, labels, n_classes, class_conditional)
+
+
+def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False):
+    if class_conditional:
+        assert labels is not None and n_classes is not None
+        return c_stats(inputs, labels, n_classes, std=True)
+    return inputs.mean(dim=0), inputs.std(dim=0)
+
+
+def collect_stats(projection, data_loader, n_classes, class_conditional, std=False,
+                  device='cpu', path=None, use_drive=True):
+
+    save_path, load_path = save_load_path(path, use_drive=use_drive)
+    if load_path and os.path.exists(load_path):
+        print(f"Loading stats from {load_path}.")
+        chkpt = torch.load(load_path, map_location=torch.device(device))
+        mean, var = chkpt['mean'], chkpt['var']
+        if std:
+            var = var.sqrt()
+        return mean.float(), var.float()
+
+    mean = var = n = None
+    print("Beginning tracking stats.", flush=True)
+
+    with torch.no_grad(), tqdm(data_loader, desc="Batch") as pbar:
+        for data in pbar:
+            inputs, labels = data
+            outputs = projection(data).double()
+
+            if class_conditional:
+                new_mean, new_var, m = c_stats(
+                    outputs, labels, n_classes, return_count=True)
+            else:
+                new_mean, new_var = outputs.mean(dim=0), outputs.var(dim=0)
+                m = torch.LongTensor([len(inputs)]).to(device)
+
+            if mean is None:
+                mean = torch.zeros_like(new_mean)
+                var = torch.zeros_like(new_var)
+                n = torch.zeros_like(m)
+
+            mean, var, n = combine_mean_var(mean, var, n,
+                                            new_mean, new_var, m)
+    print(flush=True, end='')
+
+    if save_path:
+        torch.save({
+            'mean': mean.to('cpu'),
+            'var': var.to('cpu'),
+        }, save_path)
+        print(f"Saving stats in {load_path}.")
+
+    if std:
+        var = var.sqrt()
+
+    return mean.float(), var.float()
 
 
 def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
@@ -321,10 +341,12 @@ def train(net, data_loader, criterion, optimizer,
     assert valid_data_loader(
         data_loader), f"invalid data_loader: {data_loader}"
 
+    device = next(net.parameters()).device
+
     save_path, load_path = save_load_path(model_path, use_drive)
 
     if load_path is not None and not reset and os.path.exists(load_path):
-        checkpoint = torch.load(load_path)
+        checkpoint = torch.load(load_path, map_location=device)
         if 'net_state_dict' in checkpoint:
             net.load_state_dict(checkpoint['net_state_dict'])
             init_epoch = checkpoint['epoch'] + 1
@@ -342,7 +364,6 @@ def train(net, data_loader, criterion, optimizer,
 
     net.train()
 
-    device = next(net.parameters()).device
     USE_AMP = device.type == 'cuda'
     if USE_AMP:
         scaler = GradScaler()
@@ -471,6 +492,23 @@ def plot_metrics(metrics, step_start=1):
     plt.legend()
 
 
+def print_tensor(t):
+    if isinstance(t, torch.Tensor):
+        shape = tuple(t.shape)
+        if shape == () or shape == (1,):
+            contents = f"{t.item()}, "
+            shape = ""
+        else:
+            contents = ""
+            shape = f"shape={shape}"
+        dtype = f", dtype={t.dtype}" if t.dtype != torch.float else ""
+        device = f", device={t.device.type}" if t.device.type != 'cpu' else ""
+        print(
+            f"tensor({contents}{shape}{dtype}{device})")
+    else:
+        print(t)
+
+
 def debug(func):
 
     parameters = inspect.signature(func).parameters
@@ -482,22 +520,6 @@ def debug(func):
     }
 
     @wraps(func)
-    def print_tensor(t, test=False):
-        if isinstance(t, torch.Tensor):
-            shape = tuple(t.shape)
-            if shape == () or shape == (1,):
-                contents = f"{t.item()}, "
-                shape = ""
-            else:
-                contents = ""
-                shape = f"shape={shape}"
-            dtype = f", dtype={t.dtype}" if t.dtype != torch.float else ""
-            device = f", device={t.device.type}" if t.device.type != 'cpu' else ""
-            print(
-                f"tensor({contents}{shape}{dtype}{device})")
-        else:
-            print(t)
-
     def _func(*args, **kwargs):
         print(f"\nCALL to {func.__name__}()")
         for argtype, params in [
@@ -514,58 +536,9 @@ def debug(func):
         out = func(*args, **kwargs)
         if out is not None:
             print("returned: ", end='')
-            print_tensor(out, True)
+            print_tensor(out)
         return out
     return _func
-
-
-def collect_stats(projection, data_loader, n_classes, class_conditional, std=False,
-                  device='cpu', path=None, use_drive=True):
-
-    save_path, load_path = save_load_path(path, use_drive=use_drive)
-    if load_path and os.path.exists(load_path):
-        print(f"Loading stats from {load_path}.")
-        chkpt = torch.load(load_path, map_location=torch.device(device))
-        mean, var = chkpt['mean'], chkpt['var']
-        if std:
-            var = var.sqrt()
-        mean, var = mean.float(), var.float()
-        return mean, var
-
-    mean = var = n = None
-    print("Beginning tracking stats.", flush=True)
-
-    with torch.no_grad(), tqdm(data_loader, desc="Batch") as pbar:
-        for data in pbar:
-            inputs, labels = data
-            outputs = projection(data).double()
-
-            if class_conditional:
-                new_mean, new_var, m = c_mean_var(outputs, labels, n_classes)
-            else:
-                new_mean, new_var = outputs.mean(dim=0), outputs.var(dim=0)
-                m = torch.LongTensor([len(inputs)]).to(device)
-
-            if mean is None:
-                mean = torch.zeros_like(new_mean)
-                var = torch.zeros_like(new_var)
-                n = torch.zeros_like(m)
-            mean, var, n = combine_mean_var(mean, var, n,
-                                            new_mean, new_var, m)
-    print(flush=True, end='')
-
-    if save_path:
-        torch.save({
-            'mean': mean.to('cpu'),
-            'var': var.to('cpu'),
-        }, save_path)
-        print(f"Saving stats in {load_path}.")
-
-    if std:
-        var = var.sqrt()
-    mean, var = mean.float(), var.float()
-
-    return mean, var
 
 
 def learn_stats(stats_net, data_loader):
@@ -836,9 +809,11 @@ def _plot_random_projections(RP, X_proj, mean, color='r', marker='o', scatter=Tr
 
 def print_tabular(data, row_name="", spacing=2):
     print()
-    headers = list(next(iter(data.values())).keys())
-    row_data = [[row_name] + headers] + [[m] + [f"{data[m][h]:.2f}" for h in headers]
-                                         for m in data.keys()]
+    headers = list(set([k for d in data.values() for k in d.keys()]))
+    row_data = ([[row_name] + headers] +
+                [[m] + [f"{data[m][h]:.2f}" if h in data[m] else "N.A."
+                        for h in headers]
+                 for m in data.keys()])
     widths = [max(map(len, column)) for column in zip(*row_data)]
     for i, rd in enumerate(row_data):
         line = "".join(f"{e:<{w + spacing}}" for e, w in zip(rd, widths))

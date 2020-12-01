@@ -220,7 +220,8 @@ RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
 RP = RP / RP.norm(2, dim=0)
 
 mean_A, std_A = X_A.mean(dim=0), X_A.std(dim=0)
-mean_A_C, std_A_C = utility.c_mean_std(X_A, Y_A, n_classes)
+mean_A_C, std_A_C = utility.c_stats(X_A, Y_A, n_classes, std=True)
+mean_A_C = mean_A_C.T
 
 
 def project_RP(data):
@@ -240,11 +241,14 @@ def project_RP_CC(data):
     return X_proj_C
 
 
+# project_RP_CC((X_B, Y_B))
+
 # Random ReLU Projections
+# NOTE: should be stds in direction of projections
 relu_bias = (torch.randn((1, n_random_projections), device=DEVICE)
              * std_A.max())
 relu_bias_C = (torch.randn((n_classes, n_random_projections), device=DEVICE)
-               * std_A_C.max(dim=1)[0].reshape(-1, 1))
+               * std_A_C.max(dim=0, keepdims=True)[0].T)
 
 
 def project_RP_relu(data):
@@ -282,23 +286,16 @@ def loss_stats(m_a, s_a, m_b, s_b):
     return loss_mean + loss_std
 
 
-def get_stats(inputs, labels, class_conditional):
-    if class_conditional:
-        mean, std = utility.c_mean_std(inputs, labels, n_classes)
-        return mean, std
-    return inputs.mean(dim=0), inputs.std(dim=0)
-
-
 def loss_fn_wrapper(project, class_conditional):
     with torch.no_grad():
         X_A_proj = project((X_A, Y_A))
-        m_a, s_a = get_stats(X_A_proj, Y_A, class_conditional)
+        m_a, s_a = utility.get_stats(X_A_proj, Y_A, class_conditional)
 
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
         assert isinstance(data, tuple), f"data is not a tuple {data}"
         X, Y = data
         X_proj = project(data)
-        m_b, s_b = get_stats(X_proj, Y, class_conditional)
+        m_b, s_b = utility.get_stats(X_proj, Y, class_conditional)
         return loss_stats(m_a, s_a, m_b, s_b)
     return _loss_fn
 
@@ -353,8 +350,8 @@ for method, loss_fn in methods.items():
 
     def pre_fn(data):
         X, Y = data
-        data = (preprocess(X), Y)
-        return data
+        X = preprocess(X)
+        return (X, Y)
 
     optimizer = torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
@@ -428,7 +425,6 @@ if nn_verifier:
         verifier_net, X_B_pert, Y_B)
 
 baseline['A']['acc'] = accuracy_A
-baseline['A']['acc(val)'] = float('NaN')
 if nn_verifier:
     baseline['A']['acc(ver)'] = accuracy_A_ver
 baseline['A']['c-entr'] = entropy_A
@@ -447,6 +443,7 @@ if nn_verifier:
 
 print("\n# Summary")
 print("=========\n")
+importlib.reload(utility)
 utility.print_tabular(baseline, row_name="baseline")
 
 print("\nReconstruction methods:")
