@@ -103,16 +103,6 @@ inv_steps = args.inv_steps
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f"Running on '{DEVICE}'")
 
-# ======= Perturbation =======
-perturb_matrix = (torch.eye(n_dims) + perturb_strength *
-                  torch.randn((n_dims, n_dims))).to(DEVICE)
-perturb_shift = (perturb_strength * torch.randn(n_dims)).to(DEVICE)
-
-
-def perturb(X):
-    return X @ perturb_matrix + perturb_shift
-
-
 # ======= Create Dataset =======
 img_transform = transforms.Compose([
     transforms.ToTensor(),
@@ -135,6 +125,18 @@ A, B = torch.utils.data.random_split(CIF10, (n_A, n_B))
 DATA_A = DataLoader(A, **dataloader_params)
 DATA_B = DataLoader(B, **dataloader_params)
 DATA_B_val = DataLoader(B_val, **dataloader_params)
+
+
+# ======= Perturbation =======
+perturb_matrix = (torch.eye(n_dims) + perturb_strength *
+                  torch.randn((n_dims, n_dims))).to(DEVICE)
+perturb_shift = (perturb_strength * torch.randn(n_dims)).to(DEVICE)
+
+
+def perturb(X):
+    X_shape = X.shape
+    out = X.reshape(-1, n_dims) @ perturb_matrix + perturb_shift
+    return out.reshape(X_shape)
 
 
 # ======= Neural Network =======
@@ -232,10 +234,6 @@ mean_A_C_T, std_A_C = utility.collect_stats(
 mean_A = mean_A.reshape(-1, 1, 1)
 mean_A_C = mean_A_C_T.T.reshape(n_classes, -1, 1, 1).contiguous()
 
-# %%
-importlib.reload(utility)
-from utility import debug, print_t
-
 
 # @debug
 def project_RP(data):
@@ -253,9 +251,6 @@ def project_RP_CC(data):
                                    dtype=X_proj_c.dtype, device=X.device)
         X_proj_C[Y == c] = X_proj_c
     return X_proj_C
-
-
-# %%
 
 
 # Random ReLU Projections
