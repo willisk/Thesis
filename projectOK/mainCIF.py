@@ -394,7 +394,7 @@ for method, loss_fn in methods:
     def pre_fn(data):
         inputs, labels = data
         inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
-        with torch.no_grad:
+        with torch.no_grad():
             inputs = perturb(inputs)
         outputs = preprocess(inputs)
         return (outputs, labels)
