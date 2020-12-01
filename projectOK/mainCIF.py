@@ -37,7 +37,7 @@ if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
     importlib.reload(deepinversion)
     importlib.reload(shared)
 
-from utility import debug
+from utility import debug, print_t
 
 print("#", __doc__)
 
@@ -225,28 +225,37 @@ path_cc = os.path.join(MODELDIR, "stats_inputs-CC.pt")
 mean_A, std_A = utility.collect_stats(
     identity, DATA_A, n_classes, class_conditional=False,
     std=True, path=path, device=DEVICE)
-mean_A_C, std_A_C = utility.collect_stats(
+mean_A_C_T, std_A_C = utility.collect_stats(
     identity, DATA_A, n_classes, class_conditional=True,
     std=True, path=path_cc, device=DEVICE)
 
-mean_A_C = mean_A_C.T
+mean_A = mean_A.reshape(-1, 1, 1)
+mean_A_C = mean_A_C_T.T.reshape(n_classes, -1, 1, 1).contiguous()
+
+# %%
+importlib.reload(utility)
+from utility import debug, print_t
 
 
+# @debug
 def project_RP(data):
     X, Y = data
-    return (X - mean_A) @ RP
+    return (X - mean_A).reshape(-1, n_dims) @ RP
 
 
 def project_RP_CC(data):
     X, Y = data
     X_proj_C = None
     for c in range(n_classes):
-        X_proj_c = (X[Y == c] - mean_A_C[c]) @ RP
+        X_proj_c = (X[Y == c] - mean_A_C[c]).reshape(-1, n_dims) @ RP
         if X_proj_C is None:
             X_proj_C = torch.empty((X.shape[0], n_random_projections),
                                    dtype=X_proj_c.dtype, device=X.device)
         X_proj_C[Y == c] = X_proj_c
     return X_proj_C
+
+
+# %%
 
 
 # Random ReLU Projections
@@ -269,7 +278,13 @@ def project_RP_relu_CC(data):
 
 def combine(project1, project2):
     def _combined_fn(data):
-        return torch.cat((project1(data), project2(data)), dim=1)
+        out1 = project1(data)
+        out2 = project2(data)
+        if not isinstance(out1, list):
+            out1 = [out1]
+        if not isinstance(out2, list):
+            out2 = [out2]
+        return out1 + out2
     return _combined_fn
 
 # ======= Preprocessing Model =======

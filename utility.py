@@ -61,22 +61,26 @@ def prettify_time(seconds):
         return "{}ms".format(int(seconds * 1000))
 
 
-def tensor_repr(t, indent=""):
+def extra_repr(t, indent=""):
     if isinstance(t, torch.Tensor):
-        return(_tensor_repr(t))
+        return(tensor_repr(t))
+    elif isinstance(t, str):
+        return t
     elif is_iterable(t):
         string = f"{type(t).__name__} {{"
-        for e in t:
-            if isinstance(e, torch.Tensor):
-                string += '\n    ' + indent + _tensor_repr(e)
-            else:
-                string += '\n    ' + tensor_repr(e, indent + '    ')
-        string += '\n' + indent + "}"
-        return string
+        end = '\n' + indent + "}"
+        indent += '    '
+        if isinstance(t, dict):
+            for k, v in t.items():
+                string += '\n' + indent + str(k) + ": " + extra_repr(v, indent)
+        else:
+            for e in t:
+                string += '\n' + indent + extra_repr(e)
+        return string + end
     return str(t)
 
 
-def _tensor_repr(t):
+def tensor_repr(t):
     info = []
     shape = tuple(t.shape)
     if shape == () or shape == (1,):
@@ -91,7 +95,7 @@ def _tensor_repr(t):
 
 
 def print_t(t):
-    print(tensor_repr(t))
+    print(extra_repr(t))
 
 
 def debug(func):
@@ -122,14 +126,14 @@ def debug(func):
                 print(indent + ' ' * 4 + f"{argtype}:")
             for argname, arg in params:
                 print(indent + ' ' * 6 + f"- {argname}: ", end='')
-                print(tensor_repr(arg, indent + ' ' * 8))
+                print(extra_repr(arg, indent + ' ' * 8))
         # print(indent + ' ' * 4 + ')')
         debug.indent += 1
         out = func(*args, **kwargs)
         debug.indent -= 1
         if out is not None:
             print(indent + "returned: ", end='')
-            print(tensor_repr(out, indent))
+            print(extra_repr(out, indent))
         return out
     return _func
 
@@ -309,7 +313,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
     mean = var = n = None
     print("Beginning tracking stats.", flush=True)
 
-    with torch.no_grad(), tqdm(data_loader, desc="Batch") as pbar:
+    with torch.no_grad(), tqdm(data_loader) as pbar:
         for data in pbar:
             inputs, labels = data
             outputs = projection(data)
