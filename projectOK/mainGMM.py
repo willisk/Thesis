@@ -318,26 +318,26 @@ methods = {
         project=project_NN_all,
         class_conditional=True,
     ),
-    # "RP": loss_fn_wrapper(
-    #     project=project_RP,
-    #     class_conditional=False,
-    # ),
-    # "RP CC": loss_fn_wrapper(
-    #     project=project_RP_CC,
-    #     class_conditional=True,
-    # ),
-    # "RP ReLU": loss_fn_wrapper(
-    #     project=project_RP_relu,
-    #     class_conditional=False,
-    # ),
-    # "RP ReLU CC": loss_fn_wrapper(
-    #     project=project_RP_relu_CC,
-    #     class_conditional=True,
-    # ),
-    # "combined": loss_fn_wrapper(
-    #     project=combine(project_NN_all, project_RP_CC),
-    #     class_conditional=True,
-    # ),
+    "RP": loss_fn_wrapper(
+        project=project_RP,
+        class_conditional=False,
+    ),
+    "RP CC": loss_fn_wrapper(
+        project=project_RP_CC,
+        class_conditional=True,
+    ),
+    "RP ReLU": loss_fn_wrapper(
+        project=project_RP_relu,
+        class_conditional=False,
+    ),
+    "RP ReLU CC": loss_fn_wrapper(
+        project=project_RP_relu_CC,
+        class_conditional=True,
+    ),
+    "combined": loss_fn_wrapper(
+        project=combine(project_NN_all, project_RP_CC),
+        class_conditional=True,
+    ),
 }
 
 
