@@ -289,13 +289,14 @@ def loss_stats(m_a, s_a, m_b, s_b):
 def loss_fn_wrapper(project, class_conditional):
     with torch.no_grad():
         X_A_proj = project((X_A, Y_A))
-        m_a, s_a = utility.get_stats(X_A_proj, Y_A, class_conditional)
+        m_a, s_a = utility.get_stats(
+            X_A_proj, Y_A, n_classes, class_conditional)
 
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
         assert isinstance(data, tuple), f"data is not a tuple {data}"
         X, Y = data
         X_proj = project(data)
-        m_b, s_b = utility.get_stats(X_proj, Y, class_conditional)
+        m_b, s_b = utility.get_stats(X_proj, Y, n_classes, class_conditional)
         return loss_stats(m_a, s_a, m_b, s_b)
     return _loss_fn
 
@@ -317,26 +318,26 @@ methods = {
         project=project_NN_all,
         class_conditional=True,
     ),
-    "RP": loss_fn_wrapper(
-        project=project_RP,
-        class_conditional=False,
-    ),
-    "RP CC": loss_fn_wrapper(
-        project=project_RP_CC,
-        class_conditional=True,
-    ),
-    "RP ReLU": loss_fn_wrapper(
-        project=project_RP_relu,
-        class_conditional=False,
-    ),
-    "RP ReLU CC": loss_fn_wrapper(
-        project=project_RP_relu_CC,
-        class_conditional=True,
-    ),
-    "combined": loss_fn_wrapper(
-        project=combine(project_NN_all, project_RP_CC),
-        class_conditional=True,
-    ),
+    # "RP": loss_fn_wrapper(
+    #     project=project_RP,
+    #     class_conditional=False,
+    # ),
+    # "RP CC": loss_fn_wrapper(
+    #     project=project_RP_CC,
+    #     class_conditional=True,
+    # ),
+    # "RP ReLU": loss_fn_wrapper(
+    #     project=project_RP_relu,
+    #     class_conditional=False,
+    # ),
+    # "RP ReLU CC": loss_fn_wrapper(
+    #     project=project_RP_relu_CC,
+    #     class_conditional=True,
+    # ),
+    # "combined": loss_fn_wrapper(
+    #     project=combine(project_NN_all, project_RP_CC),
+    #     class_conditional=True,
+    # ),
 }
 
 
@@ -424,11 +425,6 @@ if nn_verifier:
     accuracy_B_pert_ver = utility.net_accuracy_batch(
         verifier_net, X_B_pert, Y_B)
 
-baseline['A']['acc'] = accuracy_A
-if nn_verifier:
-    baseline['A']['acc(ver)'] = accuracy_A_ver
-baseline['A']['c-entr'] = entropy_A
-
 baseline['B (original)']['acc'] = accuracy_B
 baseline['B (original)']['acc(val)'] = accuracy_B_val
 baseline['B (original)']['c-entr'] = entropy_B
@@ -440,6 +436,12 @@ baseline['B (perturbed)']['c-entr'] = entropy_B_pert
 if nn_verifier:
     baseline['B (perturbed)']['acc(ver)'] = accuracy_B_pert_ver
     baseline['B (original)']['acc(ver)'] = accuracy_B_ver
+
+baseline['A']['acc'] = accuracy_A
+if nn_verifier:
+    baseline['A']['acc(ver)'] = accuracy_A_ver
+baseline['A']['c-entr'] = entropy_A
+
 
 print("\n# Summary")
 print("=========\n")

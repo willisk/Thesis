@@ -809,7 +809,7 @@ def _plot_random_projections(RP, X_proj, mean, color='r', marker='o', scatter=Tr
 
 def print_tabular(data, row_name="", spacing=2):
     print()
-    headers = list(set([k for d in data.values() for k in d.keys()]))
+    headers = list(dict.fromkeys([k for d in data.values() for k in d.keys()]))
     row_data = ([[row_name] + headers] +
                 [[m] + [f"{data[m][h]:.2f}" if h in data[m] else "N.A."
                         for h in headers]
