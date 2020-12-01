@@ -50,6 +50,7 @@ parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-nn_width", type=int, default=16)
 parser.add_argument("-nn_depth", type=int, default=4)
+parser.add_argument("-batch_size", type=int, default=64)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--nn_verifier", action="store_true")
@@ -63,6 +64,7 @@ if 'ipykernel_launcher' in sys.argv:
     # args.nn_verifier = True
     args.nn_steps = 2
     args.inv_steps = 2
+    args.batch_size = 32
 else:
     args = parser.parse_args()
 
@@ -109,7 +111,7 @@ img_transform = transforms.Compose([
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 ])
 
-dataloader_params = {'batch_size': 64,
+dataloader_params = {'batch_size': args.batch_size,
                      'shuffle': True}
 
 CIF10 = CIFAR10(root=DATADIR, train=True,
