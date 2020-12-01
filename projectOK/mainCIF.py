@@ -12,7 +12,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-import torchvision.datasets.CIFAR10 as CIFAR10
+from torchvision.datasets import CIFAR10
 import torchvision.transforms as transforms
 
 import numpy as np
@@ -122,9 +122,9 @@ img_transform = transforms.Compose([
 dataloader_params = {'batch_size': 64,
                      'shuffle': True}
 
-CIF10 = CIFAR10(root=DATADIR, device=DEVICE, train=True,
+CIF10 = CIFAR10(root=DATADIR, train=True,
                 transform=img_transform, download=True)
-B_val = CIFAR10(root=DATADIR, device=DEVICE, train=False,
+B_val = CIFAR10(root=DATADIR, train=False,
                 transform=img_transform, download=True)
 
 n_A = int(len(CIF10) * split_A)
@@ -135,30 +135,6 @@ A, B = torch.utils.data.random_split(CIF10, (n_A, n_B))
 DATA_A = DataLoader(A, **dataloader_params)
 DATA_B = DataLoader(B, **dataloader_params)
 DATA_B_val = DataLoader(B_val, **dataloader_params)
-
-
-# ======= Neural Network =======
-from functools import wraps
-
-
-def get_stats(inputs, labels, class_conditional):
-    if class_conditional:
-        return utility.c_mean_std(inputs, labels, n_classes)
-    return inputs.mean(dim=0), inputs.std(dim=0)
-
-
-def choice_CC(project_fn):
-    """Wrapper to get stats from projected space"""
-    @wraps(project_fn)
-    def stats_projected(data, class_conditional):
-        inputs, labels = data
-        outputs = project_fn(data)
-        if isinstance(outputs, list):
-            means, stds = zip(*[get_stats(x, labels, class_conditional)
-                                for x in outputs])
-            return torch.cat(means, dim=1), torch.cat(stds, dim=1)
-        return get_stats(outputs, labels, class_conditional)
-    return stats_projected
 
 
 # ======= Neural Network =======
@@ -221,31 +197,18 @@ for l, layer in enumerate(net_layers):
     layer.register_forward_hook(layer_hook_wrapper(l))
 
 
-@choice_CC
 def project_NN(data):
     inputs, labels = data
     net(inputs)
-    return layer_activations[-1]
-
-    means, stds = zip(*[get_stats(x, class_conditional) for x in outputs])
-
-
-l = [
-    (torch.empty((5, 3)), torch.empty((5, 3))),
-    (torch.empty((5, 10)), torch.empty((5, 10))),
-    (torch.empty((5, 7)), torch.empty((5, 7))),
-]
-m, v = zip(*l)
-print(torch.cat(m, dim=1).shape)
-print(torch.cat(v, dim=1).shape)
+    outputs = layer_activations[-1]
+    return outputs
 
 
-def project_NN_all(data, class_conditional):
+def project_NN_all(data):
     inputs, labels = data
     net(inputs)
     outputs = [inputs] + layer_activations
-    means, stds = zip(*[get_stats(x, class_conditional) for x in outputs])
-    return torch.cat(means), torch.cat(stds)
+    return outputs
 
 
 # ======= Random Projections =======
@@ -266,14 +229,14 @@ mean_A_C, std_A_C = utility.collect_stats(
     identity, DATA_A, n_classes, class_conditional=True,
     std=True, path=path_cc, device=DEVICE)
 
+mean_A_C = mean_A_C.T
 
-@ get_stats
+
 def project_RP(data):
     X, Y = data
     return (X - mean_A) @ RP
 
 
-@ get_stats
 def project_RP_CC(data):
     X, Y = data
     X_proj_C = None
@@ -290,15 +253,13 @@ def project_RP_CC(data):
 relu_bias = (torch.randn((1, n_random_projections), device=DEVICE)
              * std_A.max())
 relu_bias_C = (torch.randn((n_classes, n_random_projections), device=DEVICE)
-               * std_A_C.max(dim=1)[0].reshape(-1, 1))
+               * std_A_C.max(dim=0, keepdims=True)[0].T)
 
 
-@ get_stats(False)
 def project_RP_relu(data):
     return F.relu(project_RP(data) + relu_bias)
 
 
-@ get_stats(True)
 def project_RP_relu_CC(data):
     X, Y = data
     return F.relu(project_RP_CC(data) + relu_bias_C[Y])
@@ -343,55 +304,56 @@ def loss_fn_wrapper(name, project, class_conditional):
         inputs, labels = data
         outputs = project(data)
         m, s = utility.get_stats(outputs, labels, class_conditional)
-        if isinstance(outputs, list):
-            means, stds = zip(*[get_stats(x, labels, class_conditional)
-                                for x in outputs])
-            m, s = torch.cat(means, dim=1), torch.cat(stds, dim=1)
-        else:
-            m, s = get_stats
-        
         return loss_stats(m_a, s_a, m, s)
     return name, _loss_fn
 
 
 methods = [
-    # "NN": loss_fn_wrapper(
-    #     project=project_NN,
-    #     class_conditional=False,
-    # ),
-    # "NN CC": loss_fn_wrapper(
-    #     project=project_NN,
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="NN",
+        project=project_NN,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="NN CC",
+        project=project_NN,
+        class_conditional=True,
+    ),
     loss_fn_wrapper(
         name="NN ALL",
         project=project_NN_all,
         class_conditional=False,
     ),
-    # "NN ALL CC": loss_fn_wrapper(
-    #     project=project_NN_all,
-    #     class_conditional=True,
-    # ),
-    # "RP": loss_fn_wrapper(
-    #     project=project_RP,
-    #     class_conditional=False,
-    # ),
-    # "RP CC": loss_fn_wrapper(
-    #     project=project_RP_CC,
-    #     class_conditional=True,
-    # ),
-    # "RP ReLU": loss_fn_wrapper(
-    #     project=project_RP_relu,
-    #     class_conditional=False,
-    # ),
-    # "RP ReLU CC": loss_fn_wrapper(
-    #     project=project_RP_relu_CC,
-    #     class_conditional=True,
-    # ),
-    # "combined": loss_fn_wrapper(
-    #     project=combine(project_NN_all, project_RP_CC),
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="NN ALL CC",
+        project=project_NN_all,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="RP",
+        project=project_RP,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="RP CC",
+        project=project_RP_CC,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="RP ReLU",
+        project=project_RP_relu,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="RP ReLU CC",
+        project=project_RP_relu_CC,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="combined",
+        project=combine(project_NN_all, project_RP_CC),
+        class_conditional=True,
+    ),
 ]
 
 
@@ -419,8 +381,8 @@ for method, loss_fn in methods:
         inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
         with torch.no_grad:
             inputs = perturb(inputs)
-        inputs = preprocess(inputs)
-        return (inputs, labels)
+        outputs = preprocess(inputs)
+        return (outputs, labels)
 
     optimizer = torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
@@ -485,19 +447,19 @@ accuracy_B_val_pert = utility.net_accuracy(net, DATA_B_val)
 if nn_verifier:
     accuracy_B_pert_ver = utility.net_accuracy(verifier_net, DATA_B)
 
-baseline['A']['acc'] = accuracy_A
-baseline['A']['acc(val)'] = float('NaN')
-
 baseline['B (original)']['acc'] = accuracy_B
 baseline['B (original)']['acc(val)'] = accuracy_B_val
 
 baseline['B (perturbed)']['acc'] = accuracy_B_pert
 baseline['B (perturbed)']['acc(val)'] = accuracy_B_val_pert
 
+baseline['A']['acc'] = accuracy_A
+
 if nn_verifier:
-    baseline['A']['acc(ver)'] = accuracy_A_ver
     baseline['B (perturbed)']['acc(ver)'] = accuracy_B_pert_ver
     baseline['B (original)']['acc(ver)'] = accuracy_B_ver
+    baseline['A']['acc(ver)'] = accuracy_A_ver
+
 
 print("\n# Summary")
 print("=========\n")

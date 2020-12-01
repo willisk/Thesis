@@ -61,6 +61,79 @@ def prettify_time(seconds):
         return "{}ms".format(int(seconds * 1000))
 
 
+def tensor_repr(t, indent=""):
+    if isinstance(t, torch.Tensor):
+        return(_tensor_repr(t))
+    elif is_iterable(t):
+        string = f"{type(t).__name__} {{"
+        for e in t:
+            if isinstance(e, torch.Tensor):
+                string += '\n    ' + indent + _tensor_repr(e)
+            else:
+                string += '\n    ' + tensor_repr(e, indent + '    ')
+        string += '\n' + indent + "}"
+        return string
+    return str(t)
+
+
+def _tensor_repr(t):
+    info = []
+    shape = tuple(t.shape)
+    if shape == () or shape == (1,):
+        info.append(f"[{t.item()}]")
+    else:
+        info.append(f"({', '.join(map(repr, shape))})")
+    if t.dtype != torch.float:
+        info.append(f"dtype={t.dtype}")
+    if t.device.type != 'cpu':
+        info.append(f", device={t.device.type}")
+    return f"tensor({', '.join(info)})"
+
+
+def print_t(t):
+    print(tensor_repr(t))
+
+
+def debug(func):
+
+    debug.indent = 0
+
+    parameters = inspect.signature(func).parameters
+    argnames = [p.name for p in parameters.values()]
+    defaults = {
+        k: v.default
+        for k, v in parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
+
+    @wraps(func)
+    def _func(*args, **kwargs):
+        # print('\n', flush=True)
+        print('\n')
+        indent = '  ' * debug.indent
+        print(indent + f"@{func.__name__}()")
+        for argtype, params in [
+            ("args", zip(argnames, args)),
+            ("kwargs", kwargs.items()),
+            ("defaults", {k: v
+                          for k, v in defaults.items()
+                          if k not in kwargs}.items())]:
+            if params:
+                print(indent + ' ' * 4 + f"{argtype}:")
+            for argname, arg in params:
+                print(indent + ' ' * 6 + f"- {argname}: ", end='')
+                print(tensor_repr(arg, indent + ' ' * 8))
+        # print(indent + ' ' * 4 + ')')
+        debug.indent += 1
+        out = func(*args, **kwargs)
+        debug.indent -= 1
+        if out is not None:
+            print(indent + "returned: ", end='')
+            print(tensor_repr(out, indent))
+        return out
+    return _func
+
+
 def is_iterable(x):
     return isinstance(x, Iterable)
 
@@ -199,19 +272,26 @@ def c_stats(inputs, labels, n_classes, return_count=False, std=False):
     return mean.T, var.T
 
 
-def get_stats(inputs, labels=None, n_classes=None, class_conditional=False):
+def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, dtype=torch.float):
     if isinstance(inputs, list):
-        means, stds = zip(*[_get_stats(x, labels, n_classes, class_conditional)
-                            for x in inputs])
-        return torch.cat(means), torch.cat(stds)
-    return _get_stats(inputs, labels, n_classes, class_conditional)
+        out = tuple(zip(*[_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count)
+                          for x in inputs]))
+        mean, var = torch.cat(out[0]), torch.cat(out[1])
+        if len(out) == 3:
+            n = out[2][0]
+            return mean, var, n
+        return mean, var
+    return _get_stats(inputs.to(dtype), labels, n_classes, class_conditional, std, return_count)
 
 
-def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False):
+def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False):
     if class_conditional:
         assert labels is not None and n_classes is not None
-        return c_stats(inputs, labels, n_classes, std=True)
-    return inputs.mean(dim=0), inputs.std(dim=0)
+        return c_stats(inputs, labels, n_classes, std=std, return_count=return_count)
+    if return_count:
+        m = torch.LongTensor([len(inputs)]).to(inputs.device)
+        return (*batch_feature_stats(inputs, std=std), m)
+    return batch_feature_stats(inputs, std=std)
 
 
 def collect_stats(projection, data_loader, n_classes, class_conditional, std=False,
@@ -232,14 +312,10 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
     with torch.no_grad(), tqdm(data_loader, desc="Batch") as pbar:
         for data in pbar:
             inputs, labels = data
-            outputs = projection(data).double()
+            outputs = projection(data)
 
-            if class_conditional:
-                new_mean, new_var, m = c_stats(
-                    outputs, labels, n_classes, return_count=True)
-            else:
-                new_mean, new_var = outputs.mean(dim=0), outputs.var(dim=0)
-                m = torch.LongTensor([len(inputs)]).to(device)
+            new_mean, new_var, m = get_stats(outputs, labels, n_classes, class_conditional,
+                                             std=False, return_count=True, dtype=torch.double)
 
             if mean is None:
                 mean = torch.zeros_like(new_mean)
@@ -248,7 +324,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
 
             mean, var, n = combine_mean_var(mean, var, n,
                                             new_mean, new_var, m)
-    print(flush=True, end='')
+    print(flush=True)
 
     if save_path:
         torch.save({
@@ -448,7 +524,7 @@ def train(net, data_loader, criterion, optimizer,
                 chkpt=saved_epoch,
             )
 
-    print(flush=True, end='')
+    print(flush=True)
     net.eval()
 
     if TRACKING:
@@ -492,55 +568,6 @@ def plot_metrics(metrics, step_start=1):
     plt.legend()
 
 
-def print_tensor(t):
-    if isinstance(t, torch.Tensor):
-        shape = tuple(t.shape)
-        if shape == () or shape == (1,):
-            contents = f"{t.item()}, "
-            shape = ""
-        else:
-            contents = ""
-            shape = f"shape={shape}"
-        dtype = f", dtype={t.dtype}" if t.dtype != torch.float else ""
-        device = f", device={t.device.type}" if t.device.type != 'cpu' else ""
-        print(
-            f"tensor({contents}{shape}{dtype}{device})")
-    else:
-        print(t)
-
-
-def debug(func):
-
-    parameters = inspect.signature(func).parameters
-    argnames = [p.name for p in parameters.values()]
-    defaults = {
-        k: v.default
-        for k, v in parameters.items()
-        if v.default is not inspect.Parameter.empty
-    }
-
-    @wraps(func)
-    def _func(*args, **kwargs):
-        print(f"\nCALL to {func.__name__}()")
-        for argtype, params in [
-            ("args", zip(argnames, args)),
-            ("kwargs", kwargs.items()),
-            ("defaults", {k: v
-                          for k, v in defaults.items()
-                          if k not in kwargs}.items())]:
-            if params:
-                print(f"{argtype}:")
-            for argname, arg in params:
-                print(f"- {argname}: ", end='')
-                print_tensor(arg)
-        out = func(*args, **kwargs)
-        if out is not None:
-            print("returned: ", end='')
-            print_tensor(out)
-        return out
-    return _func
-
-
 def learn_stats(stats_net, data_loader):
 
     stats_net.start_tracking_stats()
@@ -554,7 +581,7 @@ def learn_stats(stats_net, data_loader):
                  'labels': labels}
             stats_net(x)
 
-    print(flush=True, end='')
+    print(flush=True)
 
 
 def scatter_matrix(data, labels,
