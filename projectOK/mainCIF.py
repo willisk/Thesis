@@ -399,16 +399,16 @@ for method, loss_fn in methods:
     optimizer = torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    deepinversion.deep_inversion(DATA_B,
-                                 loss_fn,
-                                 optimizer,
-                                 #    scheduler=scheduler,
-                                 steps=inv_steps,
-                                 pre_fn=pre_fn,
-                                 #    track_history=True,
-                                 #    track_history_every=10,
-                                 plot=True,
-                                 )
+    info = deepinversion.deep_inversion(DATA_B,
+                                        loss_fn,
+                                        optimizer,
+                                        #    scheduler=scheduler,
+                                        steps=inv_steps,
+                                        pre_fn=pre_fn,
+                                        #    track_history=True,
+                                        #    track_history_every=10,
+                                        plot=True,
+                                        )
 
     # ======= Result =======
     print("Results:")
@@ -417,7 +417,8 @@ for method, loss_fn in methods:
     B_val.transform = invert_transform
 
     # Loss
-    loss = accumulate_fn(DATA_B, loss_fn)
+    # loss = accumulate_fn(DATA_B, loss_fn)
+    loss = info['loss'][-1]
     print(f"\tloss: {loss:.3f}")
 
     # L2 Reconstruction Error
@@ -481,3 +482,32 @@ utility.print_tabular(baseline, row_name="baseline")
 print("\nReconstruction methods:")
 
 utility.print_tabular(metrics, row_name="method")
+
+# # %%
+
+# from tqdm import tqdm
+# from tqdm.auto import trange
+# from time import sleep
+
+# epochs = 5
+# batch = [64, 64, 10]
+# bs = 64
+# bar_format = "{l_bar}{bar}|{n:.1f}/{total_fmt:.0f} [{elapsed}<{remaining}, {rate_fmt}{postfix}]"
+# for b in trange(
+#     epochs * len(batch), unit_scale=1 / len(batch), unit="epoch",
+#     bar_format=bar_format,
+# ):
+#     i = b % 64  # batch num
+#     print(b, i)
+#     # epoch = b // batches
+#     sleep(0.3)
+
+# # %%
+# epochs = 5
+# batches = 7
+# for b in trange(
+#     epochs * batches, unit="epoch",
+# ):
+#     i = b % batches  # batch num
+#     # epoch = b // batches
+#     sleep(0.3)

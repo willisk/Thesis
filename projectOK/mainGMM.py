@@ -344,6 +344,8 @@ methods = {
 # ======= Optimize =======
 metrics = defaultdict(dict)
 
+DATA_B = (X_B_pert.to(DEVICE), Y_B.to(DEVICE))
+
 for method, loss_fn in methods.items():
     print("## Method:", method)
 
@@ -357,7 +359,6 @@ for method, loss_fn in methods.items():
     optimizer = torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    DATA_B = (X_B_pert.to(DEVICE), Y_B.to(DEVICE))
     deepinversion.deep_inversion([DATA_B],
                                  loss_fn,
                                  optimizer,

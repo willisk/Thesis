@@ -20,6 +20,12 @@ import time
 
 from tqdm.auto import tqdm
 
+tqdm_settings = {
+    'bar_format': "{l_bar}{bar}|{n:.1f}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]",
+    'unit_scale': 0.1,
+    'unit': 'epoch',
+}
+
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
@@ -313,7 +319,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
     mean = var = n = None
     print("Beginning tracking stats.", flush=True)
 
-    with torch.no_grad(), tqdm(data_loader) as pbar:
+    with torch.no_grad(), tqdm(data_loader, unit="epoch") as pbar:
         for data in pbar:
             inputs, labels = data
             outputs = projection(data)
