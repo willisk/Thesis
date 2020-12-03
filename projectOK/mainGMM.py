@@ -70,7 +70,7 @@ if 'ipykernel_launcher' in sys.argv:
     args.n_samples_B = 100
     args.n_samples_valid = 100
     args.nn_width = 16
-    # args.nn_reset_train = True
+    args.nn_reset_train = True
     args.nn_verifier = True
     args.nn_steps = 500
     args.inv_steps = 500
