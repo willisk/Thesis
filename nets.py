@@ -125,9 +125,6 @@ class FCNet(Net):
         return self.main(x)
 
 
-from utility import print_t
-
-
 class ConvNet(Net):
 
     def __init__(self, input_dims, layer_dims, out_dims, kernel_size):
@@ -149,7 +146,6 @@ class ConvNet(Net):
         for i in range(len(self.layers) - 1):
             x = self.layers[i](x)
             x = F.relu(x)
-        print_t(x)
         x = nn.Flatten()(x)
         x = self.layers[-1](x)
         return x
