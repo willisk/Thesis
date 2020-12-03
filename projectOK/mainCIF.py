@@ -64,7 +64,7 @@ if 'ipykernel_launcher' in sys.argv:
     args = parser.parse_args([])
     # args.nn_verifier = True
     args.nn_steps = 2
-    args.inv_steps = 0
+    args.inv_steps = 1
     args.batch_size = 32
 else:
     args = parser.parse_args()
@@ -349,11 +349,11 @@ methods = [
     #     project=project_NN_all,
     #     class_conditional=False,
     # ),
-    loss_fn_wrapper(
-        name="NN ALL CC",
-        project=project_NN_all,
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
+    #     class_conditional=True,
+    # ),
     loss_fn_wrapper(
         name="RP",
         project=project_RP,
