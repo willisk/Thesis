@@ -221,7 +221,7 @@ def project_NN_all(data):
 
 # ======= Random Projections =======
 # n_random_projections = int(net_n_params / n_dims)
-print(f"rp num projections {net_n_params / n_dims}?")
+print(f"rp num projections should be {net_n_params / n_dims}?")
 RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
 RP = RP / RP.norm(2, dim=0)
 
@@ -311,11 +311,8 @@ def loss_stats(m_a, s_a, m_b, s_b):
     loss_std = ((s_a - s_b)**2).mean()
     return loss_mean + loss_std
 
-
-from functools import wraps
-
-
-importlib.reload(utility)
+# from functools import wraps
+# importlib.reload(utility)
 
 
 def loss_fn_wrapper(name, project, class_conditional):
@@ -396,10 +393,6 @@ def accumulate_fn(data_loader, func):
 metrics = defaultdict(dict)
 
 
-def to_device(X):
-    return X.to(DEVICE)
-
-
 for method, loss_fn in methods:
     print("## Method:", method)
 
@@ -407,7 +400,7 @@ for method, loss_fn in methods:
 
     preprocess, params = preprocessing_model()
 
-    def pre_fn_x(inputs):
+    def pre_fn_inputs(inputs):
         inputs = inputs.to(DEVICE)
         with torch.no_grad():
             inputs = perturb(inputs)
@@ -417,10 +410,7 @@ for method, loss_fn in methods:
     def pre_fn(data):
         inputs, labels = data
         inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
-        with torch.no_grad():
-            inputs = perturb(inputs)
-        outputs = preprocess(inputs)
-        return (outputs, labels)
+        return (pre_fn_inputs(inputs), labels)
 
     optimizer = torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
@@ -441,7 +431,7 @@ for method, loss_fn in methods:
     # ======= Result =======
     print("Results:")
 
-    invert_transform = transforms.Compose([img_transform, pre_fn_x])
+    invert_transform = transforms.Compose([img_transform, pre_fn_inputs])
     DATA_B.dataset.dataset.transform = invert_transform
     DATA_B_val.dataset.transform = invert_transform
 

@@ -60,8 +60,6 @@ parser.add_argument("-seed", type=int, default=333)
 
 use_drive = True
 
-cmaps = utility.categorical_colors(2)
-
 if 'ipykernel_launcher' in sys.argv:
     args = parser.parse_args([])
     args.n_classes = 3
@@ -70,9 +68,10 @@ if 'ipykernel_launcher' in sys.argv:
     args.n_samples_B = 100
     args.n_samples_valid = 100
     args.nn_width = 16
-    args.nn_reset_train = True
+    # args.nn_reset_train = True
     args.nn_verifier = True
     args.nn_steps = 500
+    args.n_random_projections = 128
     args.inv_steps = 500
     use_drive = False
 else:
@@ -219,11 +218,13 @@ def project_NN(data):
 def project_NN_all(data):
     X, Y = data
     net(X)
-    # outputs = [X] + layer_activations
-    return torch.cat([X] + layer_activations, dim=1)
+    # return torch.cat([X] + layer_activations, dim=1)
+    outputs = [X] + layer_activations
+    return outputs
 
 
 # ======= Random Projections =======
+print(f"rp num projections should be {net_n_params / n_dims}?")
 RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
 RP = RP / RP.norm(2, dim=0)
 
@@ -272,7 +273,15 @@ def project_RP_relu_CC(data):
 
 def combine(project1, project2):
     def _combined_fn(data):
-        return torch.cat((project1(data), project2(data)), dim=1)
+        # return torch.cat((project1(data), project2(data)), dim=1)
+        # XXX REMOVE
+        out1 = project1(data)
+        out2 = project2(data)
+        if not isinstance(out1, list):
+            out1 = [out1]
+        if not isinstance(out2, list):
+            out2 = [out2]
+        return out1 + out2
     return _combined_fn
 
 # ======= Preprocessing Model =======
@@ -301,7 +310,6 @@ def loss_fn_wrapper(project, class_conditional):
             X_A_proj, Y_A, n_classes, class_conditional, std=True)
 
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
-        assert isinstance(data, tuple), f"data is not a tuple {data}"
         X, Y = data
         X_proj = project(data)
         m_b, s_b = utility.get_stats(
@@ -356,7 +364,7 @@ metrics = defaultdict(dict)
 DATA_B = (X_B_pert.to(DEVICE), Y_B.to(DEVICE))
 
 for method, loss_fn in methods.items():
-    print("## Method:", method)
+    print("\n## Method:", method)
 
     preprocess, params = preprocessing_model()
 
@@ -437,15 +445,16 @@ if nn_verifier:
 
 baseline['B (original)']['acc'] = accuracy_B
 baseline['B (original)']['acc(val)'] = accuracy_B_val
-baseline['B (original)']['c-entr'] = entropy_B
 
 baseline['B (perturbed)']['acc'] = accuracy_B_pert
 baseline['B (perturbed)']['acc(val)'] = accuracy_B_val_pert
-baseline['B (perturbed)']['c-entr'] = entropy_B_pert
 
 if nn_verifier:
     baseline['B (perturbed)']['acc(ver)'] = accuracy_B_pert_ver
     baseline['B (original)']['acc(ver)'] = accuracy_B_ver
+
+baseline['B (original)']['c-entr'] = entropy_B
+baseline['B (perturbed)']['c-entr'] = entropy_B_pert
 
 baseline['A']['acc'] = accuracy_A
 if nn_verifier:
