@@ -418,14 +418,19 @@ for method, loss_fn in methods:
     # ======= Result =======
     print("Results:")
 
-    invert_transform = transforms.Compose([img_transform, perturb, preprocess])
+    def to_device(X):
+        return X.to(DEVICE)
+
+    invert_transform = transforms.Compose(
+        [img_transform, to_device, perturb, preprocess])
     DATA_B.dataset.dataset.transform = invert_transform
+    DATA_B.dataset.dataset.target_transform = to_device
     DATA_B_val.dataset.transform = invert_transform
+    DATA_B_val.dataset.target_transform = invert_transto_device
 
     # Loss
-    loss = accumulate_fn(DATA_B, loss_fn)
+    # loss = accumulate_fn(DATA_B, loss_fn)
     loss = info['loss'][-1]
-    loss = 0
     print(f"\tloss: {loss:.3f}")
 
     # L2 Reconstruction Error
@@ -451,8 +456,9 @@ for method, loss_fn in methods:
 
 baseline = defaultdict(dict)
 
-DATA_B.dataset.dataset.transform = img_transform
-DATA_B_val.dataset.transform = img_transform
+xform = transforms.Compose([img_transform, to_device])
+DATA_B.dataset.dataset.transform = xform
+DATA_B_val.dataset.transform = xform
 
 accuracy_B = utility.net_accuracy(net, DATA_B)
 accuracy_B_val = utility.net_accuracy(net, DATA_B_val)
