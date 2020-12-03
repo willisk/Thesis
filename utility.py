@@ -180,10 +180,11 @@ def expand_as_r(a, b):
 def net_accuracy(net, data_loader):
     total_count = 0.0
     total_correct = 0.0
+    device = next(iter(net.parameters())).device
     print(flush=True)
     with torch.no_grad(), tqdm(data_loader) as pbar:
         for inputs, labels in pbar:
-            inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
+            inputs, labels = inputs.to(device), labels.to(device)
             outputs = net(inputs)
             total_count += len(inputs)
             total_correct += count_correct(outputs, labels)
@@ -323,7 +324,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
     mean = var = n = None
     print("Beginning tracking stats.", flush=True)
 
-    with torch.no_grad(), tqdm(data_loader, unit="epoch") as pbar:
+    with torch.no_grad(), tqdm(data_loader, unit="batch") as pbar:
         for data in pbar:
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
@@ -339,14 +340,13 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
 
             mean, var, n = combine_mean_var(mean, var, n,
                                             new_mean, new_var, m)
-    print(flush=True)
-
     if save_path:
         torch.save({
             'mean': mean.to('cpu'),
             'var': var.to('cpu'),
         }, save_path)
-        print(f"Saving stats in {load_path}.")
+        print(f"Saving stats in {load_path}.", flush=True)
+    print(flush=True)
 
     if std:
         var = var.sqrt()
