@@ -574,7 +574,7 @@ def plot_metrics(metrics, step_start=1):
     y_min, y_max = min(vals), max(vals)
     y_min, y_max = max(y_min, sgm_m - sgm_s), min(y_max, sgm_m + sgm_s)
     buffer = 0.1 * (y_max - y_min)
-    # plt.gca().set_ylim([y_min - buffer, y_max + buffer])
+    plt.gca().set_ylim([y_min - buffer, y_max + buffer])
 
     if accuracy:
         acc_scaled = [y_min + a * (y_max - y_min) for a in accuracy]
