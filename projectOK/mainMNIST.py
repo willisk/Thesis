@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from torchvision.datasets import CIFAR10
+from torchvision.datasets import MNIST
 import torchvision.transforms as transforms
 
 import numpy as np
@@ -19,22 +19,18 @@ import matplotlib.pyplot as plt
 
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATADIR = os.path.join(PWD, "data")
-MODELDIR = os.path.join(PWD, "models/CIFAR10")
+MODELDIR = os.path.join(PWD, "models/MNIST")
 sys.path.append(PWD)
 
 import utility
-import datasets
-import statsnet
 import deepinversion
-import shared
+import nets
 
 if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
     import importlib
-    importlib.reload(datasets)
-    importlib.reload(statsnet)
     importlib.reload(utility)
     importlib.reload(deepinversion)
-    importlib.reload(shared)
+    importlib.reload(nets)
 
 from utility import debug, print_t
 
@@ -79,8 +75,8 @@ torch.manual_seed(args.seed)
 
 
 # Neural Network
-model_name = "resnet34"
-n_dims, n_classes = 3 * 32 * 32, 10
+model_name = "convnet"
+n_dims, n_classes = 28 * 28, 10
 
 nn_lr = args.nn_lr
 nn_steps = args.nn_steps
@@ -105,23 +101,23 @@ print(f"Running on '{DEVICE}'")
 # ======= Create Dataset =======
 img_transform = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    transforms.Normalize((0.1307,), (0.3081,))
 ])
 
 dataloader_params = {'batch_size': args.batch_size,
                      'shuffle': True}
 
-CIF10 = CIFAR10(root=DATADIR, train=True,
-                transform=img_transform, download=True)
-B_val = CIFAR10(root=DATADIR, train=False,
-                transform=img_transform, download=True)
+DATASET_MNIST = MNIST(root=DATADIR, train=True,
+                      transform=img_transform, download=True)
+B_val = MNIST(root=DATADIR, train=False,
+              transform=img_transform, download=True)
 
 split_A = args.split_A
 
-n_A = int(len(CIF10) * split_A)
-n_B = len(CIF10) - n_A
+n_A = int(len(DATASET_MNIST) * split_A)
+n_B = len(DATASET_MNIST) - n_A
 
-A, B = torch.utils.data.random_split(CIF10, (n_A, n_B))
+A, B = torch.utils.data.random_split(DATASET_MNIST, (n_A, n_B))
 
 DATA_A = DataLoader(A, **dataloader_params)
 DATA_B = DataLoader(B, **dataloader_params)
@@ -143,12 +139,8 @@ def perturb(X):
 
 
 # ======= Neural Network =======
-from ext.cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
-from ext.cifar10pretrained.cifar10_download import main as download_resnet
-download = False
-if download:
-    download_resnet()
-net = ResNet34(pretrained=download)
+
+net = nets.ConvNet(28 * 28, [1, 8, 16, 16], 10, 5)
 net.to(DEVICE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
@@ -161,9 +153,7 @@ utility.train(net, DATA_A, criterion, optimizer,
               plot=True,
               use_drive=True,
               )
-# accuracy_A = utility.net_accuracy(net, DATA_A)
-accuracy_A = 0.99
-print("USING DUMMY ACCURACY")
+accuracy_A = utility.net_accuracy(net, DATA_A)
 print(f"net accuracy: {accuracy_A * 100:.1f}%")
 
 net_n_params = sum(p.numel() for p in net.parameters()
@@ -174,7 +164,7 @@ print(f"net parameters {net_n_params}")
 
 if nn_verifier:
     verifier_path = os.path.join(MODELDIR, f"net_{model_name}_verifier.pt")
-    verifier_net = ResNet34()
+    verifier_net = nets.ConvNet(28 * 28, [1, 8, 16, 16], 10, 5)
     verifier_net.to(DEVICE)
     optimizer = torch.optim.Adam(verifier_net.parameters(), lr=nn_lr)
     utility.train(verifier_net, DATA_A, criterion, optimizer,

@@ -110,7 +110,7 @@ def print_t(t):
 
 def debug(func):
 
-    debug.indent = 0
+    debug._indent = 0
 
     parameters = inspect.signature(func).parameters
     argnames = [p.name for p in parameters.values()]
@@ -124,7 +124,7 @@ def debug(func):
     def _func(*args, **kwargs):
         # print('\n', flush=True)
         print('\n')
-        indent = '  ' * debug.indent
+        indent = '  ' * debug._indent
         print(indent + f"@{func.__name__}()")
         for argtype, params in [
             ("args", zip(argnames, args)),
@@ -138,9 +138,9 @@ def debug(func):
                 print(indent + ' ' * 6 + f"- {argname}: ", end='')
                 print(extra_repr(arg, indent + ' ' * 8))
         # print(indent + ' ' * 4 + ')')
-        debug.indent += 1
+        debug._indent += 1
         out = func(*args, **kwargs)
-        debug.indent -= 1
+        debug._indent -= 1
         if out is not None:
             print(indent + "returned: ", end='')
             print(extra_repr(out, indent))

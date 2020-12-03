@@ -125,35 +125,31 @@ class FCNet(Net):
         return self.main(x)
 
 
+from utility import print_t
+
+
 class ConvNet(Net):
 
-    def __init__(self, layer_dims, kernel_size):
+    def __init__(self, input_dims, layer_dims, out_dims, kernel_size):
         super().__init__()
 
         self.layers = nn.ModuleList()
 
-        L = len(layer_dims) - 2
-        in_channels = 1
-
         padding = (kernel_size - 1) // 2
 
-        for i in range(L):
-            out_channels = layer_dims[i]
-            self.layers.append(nn.Conv2d(in_channels,
-                                         out_channels,
+        for i in range(len(layer_dims) - 1):
+            self.layers.append(nn.Conv2d(layer_dims[i],
+                                         layer_dims[i + 1],
                                          kernel_size=kernel_size,
                                          padding=padding))
-            in_channels = out_channels
-        self.layers.append(nn.Linear(layer_dims[i + 1],
-                                     layer_dims[i + 2]))
+        self.layers.append(nn.Linear(input_dims * layer_dims[i + 1],
+                                     out_dims))
 
     def forward(self, x):
-        L = len(self.layers)
-        for i in range(L):
-            if i < L - 1:
-                x = self.layers[i](x)
-                x = F.relu(x)
-            else:
-                x = nn.Flatten()(x)
-                x = self.layers[i](x)
+        for i in range(len(self.layers) - 1):
+            x = self.layers[i](x)
+            x = F.relu(x)
+        print_t(x)
+        x = nn.Flatten()(x)
+        x = self.layers[-1](x)
         return x
