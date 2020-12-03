@@ -420,7 +420,7 @@ for method, loss_fn in methods:
 
     invert_transform = transforms.Compose([img_transform, perturb, preprocess])
     DATA_B.dataset.dataset.transform = invert_transform
-    DATA_B_val.dataset.dataset.transform = invert_transform
+    DATA_B_val.dataset.transform = invert_transform
 
     # Loss
     loss = accumulate_fn(DATA_B, loss_fn)
@@ -452,7 +452,7 @@ for method, loss_fn in methods:
 baseline = defaultdict(dict)
 
 DATA_B.dataset.dataset.transform = img_transform
-DATA_B_val.dataset.dataset.transform = img_transform
+DATA_B_val.dataset.transform = img_transform
 
 accuracy_B = utility.net_accuracy(net, DATA_B)
 accuracy_B_val = utility.net_accuracy(net, DATA_B_val)
