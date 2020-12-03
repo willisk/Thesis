@@ -426,7 +426,7 @@ def train(net, data_loader, criterion, optimizer,
           epochs=10, save_every=20,
           model_path=None, use_drive=False,
           resume_training=False, reset=False,
-          scheduler=None, plot=False):
+          scheduler=None, plot=False, use_amp=False):
     "Training Loop"
 
     assert valid_data_loader(
@@ -455,7 +455,7 @@ def train(net, data_loader, criterion, optimizer,
 
     net.train()
 
-    USE_AMP = device.type == 'cuda'
+    USE_AMP = device.type == 'cuda' and use_amp
     if USE_AMP:
         scaler = GradScaler()
 
@@ -539,7 +539,7 @@ def train(net, data_loader, criterion, optimizer,
                 chkpt=saved_epoch,
             )
 
-    print(flush=True)
+    print(flush=True, end='')
     net.eval()
 
     if TRACKING:

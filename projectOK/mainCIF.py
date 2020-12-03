@@ -394,7 +394,7 @@ metrics = defaultdict(dict)
 
 
 for method, loss_fn in methods:
-    print("## Method:", method)
+    print("\n## Method:", method)
 
     DATA_B.dataset.dataset.transform = img_transform
 
