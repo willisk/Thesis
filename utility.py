@@ -326,6 +326,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
     with torch.no_grad(), tqdm(data_loader, unit="epoch") as pbar:
         for data in pbar:
             inputs, labels = data
+            inputs, labels = inputs.to(device), labels.to(device)
             outputs = projection(data)
 
             new_mean, new_var, m = get_stats(outputs, labels, n_classes, class_conditional,
