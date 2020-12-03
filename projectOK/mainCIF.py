@@ -303,12 +303,18 @@ def preprocessing_model():
     return preprocessing_fn, (M, b)
 
 
+# %%
 # ======= Loss Function =======
-@debug
 def loss_stats(m_a, s_a, m_b, s_b):
     loss_mean = ((m_a - m_b)**2).mean()
     loss_std = ((s_a - s_b)**2).mean()
     return loss_mean + loss_std
+
+
+from functools import wraps
+
+
+importlib.reload(utility)
 
 
 def loss_fn_wrapper(name, project, class_conditional):
@@ -321,7 +327,8 @@ def loss_fn_wrapper(name, project, class_conditional):
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
         inputs, labels = data
         outputs = project(data)
-        m, s = utility.get_stats(outputs, labels, class_conditional)
+        m, s = utility.get_stats(
+            outputs, labels, n_classes, class_conditional, std=True)
         return loss_stats(m_a, s_a, m, s)
     return name, _loss_fn
 
@@ -421,8 +428,8 @@ for method, loss_fn in methods:
                                         loss_fn,
                                         optimizer,
                                         #    scheduler=scheduler,
-                                        # steps=inv_steps,
-                                        steps=1,
+                                        steps=inv_steps,
+                                        # steps=2,
                                         pre_fn=pre_fn,
                                         #    track_history=True,
                                         #    track_history_every=10,
