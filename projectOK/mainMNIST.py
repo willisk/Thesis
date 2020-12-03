@@ -152,6 +152,7 @@ utility.train(net, DATA_A, criterion, optimizer,
               reset=nn_reset_training,
               plot=True,
               use_drive=True,
+              use_amp=args.use_amp,
               )
 accuracy_A = utility.net_accuracy(net, DATA_A)
 print(f"net accuracy: {accuracy_A * 100:.1f}%")
@@ -173,6 +174,7 @@ if nn_verifier:
                   resume_training=nn_resume_training,
                   reset=nn_reset_training,
                   use_drive=True,
+                  use_amp=args.use_amp,
                   )
     accuracy_A_ver = utility.net_accuracy(verifier_net, DATA_A)
     print(f"verifier net accuracy: {accuracy_A_ver * 100:.1f}%")
