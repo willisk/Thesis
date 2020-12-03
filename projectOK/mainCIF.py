@@ -398,6 +398,13 @@ for method, loss_fn in methods:
 
     preprocess, params = preprocessing_model()
 
+    def pre_fn_x(inputs):
+        inputs = inputs.to(DEVICE)
+        with torch.no_grad():
+            inputs = perturb(inputs)
+        outputs = preprocess(inputs)
+        return outputs
+
     def pre_fn(data):
         inputs, labels = data
         inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
@@ -425,7 +432,7 @@ for method, loss_fn in methods:
     # ======= Result =======
     print("Results:")
 
-    invert_transform = transforms.Compose([img_transform, perturb, preprocess])
+    invert_transform = transforms.Compose([img_transform, pre_fn_x])
     DATA_B.dataset.dataset.transform = invert_transform
     DATA_B_val.dataset.transform = invert_transform
 
