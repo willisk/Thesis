@@ -84,6 +84,7 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                    pre_fn=None, scheduler=None,
                    #    track_history_every=None,
                    plot=False,
+                   use_amp=False,
                    ):
 
     assert utility.valid_data_loader(
@@ -91,15 +92,13 @@ def deep_inversion(data_loader, loss_fn, optimizer,
 
     # writer = shared.get_summary_writer()
     device = optimizer.param_groups[0]['params'][0].device
-    USE_AMP = (device.type == 'cuda')
+    USE_AMP = (device.type == 'cuda') and use_amp
     if USE_AMP:
         scaler = GradScaler()
 
     # history = []
 
-    TRACKING = False
-    if plot:
-        TRACKING = defaultdict(list, loss=[])
+    TRACKING = defaultdict(list)
 
     def process_result(res, metrics):
         if isinstance(res, tuple):
@@ -113,9 +112,10 @@ def deep_inversion(data_loader, loss_fn, optimizer,
 
     print("Beginning Inversion.", flush=True)
 
-    with tqdm(range(1, steps + 1), desc="Epoch") as pbar:
+    # with tqdm(range(1, steps + 1), desc="Epoch") as pbar:
+    with tqdm(**utility.tqdm_fmt_dict(steps, len(data_loader))) as pbar:
 
-        for _ in pbar:
+        for epoch in range(1, steps + 1):
 
             METRICS = defaultdict(float)
             total_count = 0
@@ -143,14 +143,13 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                     grad_scale = 1
 
                 grad_total = 0.
-                if True:
-                    for p_group in optimizer.param_groups:
-                        for i, param in enumerate(p_group['params']):
-                            # p_name = f"parpam_{'-'.join(map(str, param.shape))}"
-                            p_name = f'grad_{i}'
-                            p_grad = (param.grad.norm(2) / grad_scale).item()
-                            grad_total += p_grad
-                            METRICS[p_name] += p_grad
+                for p_group in optimizer.param_groups:
+                    for i, param in enumerate(p_group['params']):
+                        # p_name = f"parpam_{'-'.join(map(str, param.shape))}"
+                        p_name = f'grad_{i}'
+                        p_grad = (param.grad.norm(2) / grad_scale).item()
+                        grad_total += p_grad
+                        METRICS[p_name] += p_grad
 
                 if USE_AMP:
                     scaler.step(optimizer)
@@ -167,9 +166,8 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                 pbar.set_postfix(**METRICS, refresh=False)
                 pbar.update(0)
 
-            if TRACKING:
-                for k, v in METRICS.items():
-                    TRACKING[k].append(v)
+            for k, v in METRICS.items():
+                TRACKING[k].append(v)
 
             # if track_history_every and (
             #         step % track_history_every == 0 or step == steps):
@@ -177,7 +175,7 @@ def deep_inversion(data_loader, loss_fn, optimizer,
 
     print(flush=True, end='')
 
-    if TRACKING:
+    if plot and TRACKING:
         utility.plot_metrics(TRACKING)
         plt.show()
 

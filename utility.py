@@ -20,14 +20,17 @@ import time
 
 from tqdm.auto import tqdm
 
-# def tqdm_epochs(n)
-# tqdm_settings = {
-#     'bar_format': "{l_bar}{bar}|{n:.1f}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]",
-#     'unit_scale': 0.1,
-#     'unit': 'epoch',
-# }
-
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+
+def tqdm_fmt_dict(epochs, batch_size):
+    total = epochs * batch_size
+    return dict(
+        total=total,
+        bar_format=f"{{l_bar}}{{bar}}|{{n:.1f}}/{str(epochs)} [{{elapsed}}<{{remaining}}, {{rate_fmt}}{{postfix}}]",
+        unit_scale=1 / batch_size,
+        unit='epoch',
+    )
 
 
 class timer():

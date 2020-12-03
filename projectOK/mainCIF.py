@@ -54,6 +54,7 @@ parser.add_argument("-batch_size", type=int, default=64)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--nn_verifier", action="store_true")
+parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("-n_random_projections", type=int, default=256)
 parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
@@ -63,7 +64,7 @@ if 'ipykernel_launcher' in sys.argv:
     args = parser.parse_args([])
     # args.nn_verifier = True
     args.nn_steps = 2
-    args.inv_steps = 2
+    args.inv_steps = 0
     args.batch_size = 32
 else:
     args = parser.parse_args()
@@ -137,7 +138,8 @@ perturb_shift = (perturb_strength * torch.randn(n_dims)).to(DEVICE)
 
 def perturb(X):
     X_shape = X.shape
-    out = X.reshape(-1, n_dims) @ perturb_matrix + perturb_shift
+    X = X.reshape(-1, n_dims)
+    out = X @ perturb_matrix + perturb_shift
     return out.reshape(X_shape)
 
 
@@ -292,8 +294,9 @@ def preprocessing_model():
     b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
 
     def preprocessing_fn(X):
-        X = X.reshape(-1, 3 * 32 * 32)
-        return (X @ M + b).reshape(-1, 3, 32, 32)
+        X_shape = X.shape
+        X = X.reshape(-1, n_dims)
+        return (X @ M + b).reshape(X_shape)
 
     return preprocessing_fn, (M, b)
 
@@ -384,7 +387,7 @@ metrics = defaultdict(dict)
 for method, loss_fn in methods:
     print("## Method:", method)
 
-    B.transform = img_transform
+    DATA_B.dataset.dataset.transform = img_transform
 
     preprocess, params = preprocessing_model()
 
@@ -403,22 +406,26 @@ for method, loss_fn in methods:
                                         loss_fn,
                                         optimizer,
                                         #    scheduler=scheduler,
-                                        steps=inv_steps,
+                                        # steps=inv_steps,
+                                        steps=1,
                                         pre_fn=pre_fn,
                                         #    track_history=True,
                                         #    track_history_every=10,
                                         plot=True,
+                                        use_amp=args.use_amp,
                                         )
 
     # ======= Result =======
     print("Results:")
+
     invert_transform = transforms.Compose([img_transform, perturb, preprocess])
-    B.transform = invert_transform
-    B_val.transform = invert_transform
+    DATA_B.dataset.dataset.transform = invert_transform
+    DATA_B_val.dataset.dataset.transform = invert_transform
 
     # Loss
-    # loss = accumulate_fn(DATA_B, loss_fn)
+    loss = accumulate_fn(DATA_B, loss_fn)
     loss = info['loss'][-1]
+    loss = 0
     print(f"\tloss: {loss:.3f}")
 
     # L2 Reconstruction Error
@@ -444,8 +451,8 @@ for method, loss_fn in methods:
 
 baseline = defaultdict(dict)
 
-B.transform = None
-B_val.transform = None
+DATA_B.dataset.dataset.transform = img_transform
+DATA_B_val.dataset.dataset.transform = img_transform
 
 accuracy_B = utility.net_accuracy(net, DATA_B)
 accuracy_B_val = utility.net_accuracy(net, DATA_B_val)
@@ -482,32 +489,3 @@ utility.print_tabular(baseline, row_name="baseline")
 print("\nReconstruction methods:")
 
 utility.print_tabular(metrics, row_name="method")
-
-# # %%
-
-# from tqdm import tqdm
-# from tqdm.auto import trange
-# from time import sleep
-
-# epochs = 5
-# batch = [64, 64, 10]
-# bs = 64
-# bar_format = "{l_bar}{bar}|{n:.1f}/{total_fmt:.0f} [{elapsed}<{remaining}, {rate_fmt}{postfix}]"
-# for b in trange(
-#     epochs * len(batch), unit_scale=1 / len(batch), unit="epoch",
-#     bar_format=bar_format,
-# ):
-#     i = b % 64  # batch num
-#     print(b, i)
-#     # epoch = b // batches
-#     sleep(0.3)
-
-# # %%
-# epochs = 5
-# batches = 7
-# for b in trange(
-#     epochs * batches, unit="epoch",
-# ):
-#     i = b % batches  # batch num
-#     # epoch = b // batches
-#     sleep(0.3)
