@@ -304,6 +304,7 @@ def preprocessing_model():
 
 
 # ======= Loss Function =======
+@debug
 def loss_stats(m_a, s_a, m_b, s_b):
     loss_mean = ((m_a - m_b)**2).mean()
     loss_std = ((s_a - s_b)**2).mean()
