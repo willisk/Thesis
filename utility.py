@@ -863,12 +863,14 @@ def print_tabular(data, row_name="", spacing=2):
             print('-' * len(line))
 
 
+# batchnorm, conv, pooling
 def get_child_modules(net, ignore_types=['activation', 'loss']):
     all_layers = []
     for layer in net.children():
-        if "container" in layer.__module__:
-            all_layers = all_layers + \
-                get_child_modules(layer, ignore_types)
+        # if "container" in layer.__module__:
+        #     # print("CONTAINER")
+        #     # print(layer)
+        #     all_layers += get_child_modules(layer, ignore_types)
         if len(list(layer.children())) == 0:
             skip = False
             for ignore in ignore_types:
@@ -877,4 +879,6 @@ def get_child_modules(net, ignore_types=['activation', 'loss']):
             if skip:
                 continue
             all_layers.append(layer)
+        else:
+            all_layers += get_child_modules(layer, ignore_types)
     return all_layers

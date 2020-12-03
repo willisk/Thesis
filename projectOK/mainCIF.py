@@ -171,6 +171,8 @@ net_n_params = sum(p.numel() for p in net.parameters()
                    # if p.requires_grad
                    )
 print(f"net parameters {net_n_params}")
+print(f"net parameters {net_n_params / n_dims}")
+
 
 if nn_verifier:
     verifier_path = os.path.join(MODELDIR, f"net_{model_name}_verifier.pt")
