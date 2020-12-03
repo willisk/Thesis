@@ -327,7 +327,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
         for data in pbar:
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
-            outputs = projection(data)
+            outputs = projection((inputs, labels))
 
             new_mean, new_var, m = get_stats(outputs, labels, n_classes, class_conditional,
                                              std=False, return_count=True, dtype=torch.double)
