@@ -298,13 +298,14 @@ def loss_fn_wrapper(project, class_conditional):
     with torch.no_grad():
         X_A_proj = project((X_A, Y_A))
         m_a, s_a = utility.get_stats(
-            X_A_proj, Y_A, n_classes, class_conditional)
+            X_A_proj, Y_A, n_classes, class_conditional, std=True)
 
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
         assert isinstance(data, tuple), f"data is not a tuple {data}"
         X, Y = data
         X_proj = project(data)
-        m_b, s_b = utility.get_stats(X_proj, Y, n_classes, class_conditional)
+        m_b, s_b = utility.get_stats(
+            X_proj, Y, n_classes, class_conditional, std=True)
         return loss_stats(m_a, s_a, m_b, s_b)
     return _loss_fn
 
