@@ -5,7 +5,6 @@ import sys
 
 import argparse
 from collections import defaultdict
-from copy import copy
 
 import torch
 import torch.nn.functional as F
@@ -98,6 +97,7 @@ nn_verifier = args.nn_verifier
 
 # Random Projections
 n_random_projections = args.n_random_projections
+
 # Inversion
 inv_lr = args.inv_lr
 inv_steps = args.inv_steps
@@ -171,7 +171,6 @@ net_n_params = sum(p.numel() for p in net.parameters()
                    # if p.requires_grad
                    )
 print(f"net parameters {net_n_params}")
-print(f"net parameters {net_n_params / n_dims}")
 
 
 if nn_verifier:
@@ -192,6 +191,7 @@ if nn_verifier:
 
 # ======= NN Project =======
 net_layers = utility.get_child_modules(net)
+net_n_params = utility.get_num_params(net_layers)
 layer_activations = [None] * len(net_layers)
 
 
@@ -220,7 +220,8 @@ def project_NN_all(data):
 
 
 # ======= Random Projections =======
-# n_random_projections = net_n_params
+# n_random_projections = int(net_n_params / n_dims)
+print(f"rp num projections {net_n_params / n_dims}?")
 RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
 RP = RP / RP.norm(2, dim=0)
 

@@ -885,3 +885,12 @@ def get_child_modules(net, ignore_types=['activation', 'loss']):
         else:
             all_layers += get_child_modules(layer, ignore_types)
     return all_layers
+
+
+def get_num_params(layers):
+    total = 0
+    for l in layers:
+        for p in l.parameters():
+            if p.requires_grad:
+                total += p.numel()
+    return total

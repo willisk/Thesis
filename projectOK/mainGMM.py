@@ -145,8 +145,14 @@ perturb_matrix = (torch.eye(n_dims) + perturb_strength *
 perturb_shift = (perturb_strength * torch.randn(n_dims)).to(DEVICE)
 
 
+# def perturb(X):
+#     return X @ perturb_matrix + perturb_shift
+# XXX REMOVE
 def perturb(X):
-    return X @ perturb_matrix + perturb_shift
+    X_shape = X.shape
+    X = X.reshape(-1, n_dims)
+    out = X @ perturb_matrix + perturb_shift
+    return out.reshape(X_shape)
 
 
 # perturbed Dataset B
@@ -190,6 +196,7 @@ if nn_verifier:
 
 # ======= NN Project =======
 net_layers = utility.get_child_modules(net)
+net_n_params = utility.get_num_params(net_layers)
 layer_activations = [None] * len(net_layers)
 
 
@@ -212,6 +219,7 @@ def project_NN(data):
 def project_NN_all(data):
     X, Y = data
     net(X)
+    # outputs = [X] + layer_activations
     return torch.cat([X] + layer_activations, dim=1)
 
 
