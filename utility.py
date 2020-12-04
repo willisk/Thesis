@@ -278,9 +278,10 @@ def batch_feature_stats(x, keep_dims=[1], std=False):
 
 
 def c_stats(inputs, labels, n_classes, return_count=False, std=False):
-    mean = torch.zeros((n_classes, inputs.shape[1]),
+    shape = (n_classes, inputs.shape[1], *((len(inputs.shape) - 2) * [1]))
+    mean = torch.zeros(shape,
                        dtype=inputs.dtype, device=inputs.device)
-    var = torch.ones((n_classes, inputs.shape[1]),
+    var = torch.ones(shape,
                      dtype=inputs.dtype, device=inputs.device)
     n = torch.zeros(n_classes, dtype=torch.long, device=inputs.device)
 

@@ -60,11 +60,11 @@ if 'ipykernel_launcher' in sys.argv:
     # args.inv_steps = 500
     # args.batch_size = -1
 
-    args.use_drive = False
-
     args = parser.parse_args('-dataset CIFAR10'.split())
     args.inv_steps = 1
     args.batch_size = 64
+
+    args.use_drive = True
 else:
     args = parser.parse_args()
 
