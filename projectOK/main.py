@@ -55,14 +55,14 @@ parser.add_argument("-g_scale_cov", type=float, default=20)
 parser.add_argument("-g_mean_shift", type=float, default=0)
 
 if 'ipykernel_launcher' in sys.argv:
-    # args = parser.parse_args('-dataset GMM'.split())
-    # args.nn_steps = 500
-    # args.inv_steps = 500
-    # args.batch_size = -1
+    args = parser.parse_args('-dataset GMM'.split())
+    args.nn_steps = 500
+    args.inv_steps = 500
+    args.batch_size = -1
 
-    args = parser.parse_args('-dataset MNIST'.split())
-    args.inv_steps = 1
-    args.batch_size = 64
+    # args = parser.parse_args('-dataset MNIST'.split())
+    # args.inv_steps = 1
+    # args.batch_size = 64
 
     # args = parser.parse_args('-dataset CIFAR10'.split())
     # args.inv_steps = 1
@@ -218,6 +218,7 @@ RP = RP / RP.norm(2, dim=0)
 
 def identity(data): return data[0]
 
+
 STD = not args.use_var
 
 path = os.path.join(MODELDIR, "stats_inputs.pt")
@@ -293,7 +294,6 @@ def preprocessing_model():
     return preprocessing_fn, (M, b)
 
 
-# %%
 # ======= Loss Function =======
 def loss_stats(m_a, s_a, m_b, s_b):
     if isinstance(m_a, list):
