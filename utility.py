@@ -320,17 +320,17 @@ def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=
 def collect_stats(projection, data_loader, n_classes, class_conditional, std=False,
                   device='cpu', path=None, use_drive=True):
 
-    def convert_to(mean, var, t_type, sqrt=False):
-        if isinstance(mean, tuple):
-            return_mean = [m.to(t_type) for m in mean]
+    def convert_to(_mean, _var, t_type, sqrt=False):
+        if isinstance(_mean, tuple) or isinstance(_mean, list):
+            return_mean = [m.to(t_type) for m in _mean]
             if sqrt:
-                return_var = [v.sqrt().to(t_type) for v in var]
+                return_var = [v.sqrt().to(t_type) for v in _var]
             else:
-                return_var = [v.to(t_type) for v in var]
+                return_var = [v.to(t_type) for v in _var]
         else:
-            return_mean = mean.to(t_type)
+            return_mean = _mean.to(t_type)
             if sqrt:
-                return_var = var.sqrt().to(t_type)
+                return_var = _var.sqrt().to(t_type)
         return return_mean, return_var
 
     save_path, load_path = save_load_path(path, use_drive=use_drive)
