@@ -359,10 +359,17 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
             else:
                 mean, var, n = new_mean_var(outputs, labels, mean, var, n)
 
+    if isinstance(mean, list):
+        save_mean = [m.cpu() for m in mean]
+        save_var = [v.cpu() for v in var]
+    else:
+        save_mean = mean.cpu()
+        save_var = var.cpu()
+
     if save_path:
         torch.save({
-            'mean': mean.to('cpu'),
-            'var': var.to('cpu'),
+            'mean': save_mean,
+            'var': save_var,
         }, save_path)
         print(f"Saving stats in {load_path}.", flush=True)
     print(flush=True)
