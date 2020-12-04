@@ -374,10 +374,18 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
         print(f"Saving stats in {load_path}.", flush=True)
     print(flush=True)
 
-    if std:
-        var = var.sqrt()
+    if isinstance(mean, tuple):
+        return_mean = [m.float() for m in mean]
+        if std:
+            return_var = [v.sqrt().float() for v in var]
+        else:
+            return_var = [v.float() for v in var]
+    else:
+        return_mean = mean.float()
+        if std:
+            return_var = var.sqrt().float()
 
-    return mean.float(), var.float()
+    return return_mean, return_var
 
 
 def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
