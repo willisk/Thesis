@@ -295,19 +295,19 @@ def c_stats(inputs, labels, n_classes, return_count=False, std=False):
     return mean, var
 
 
-def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, dtype=torch.float):
-    if isinstance(inputs, list):
-        out = tuple(zip(*[_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count)
-                          for x in inputs]))
-        mean, var = torch.cat(out[0], dim=1), torch.cat(out[1], dim=1)
-        if len(out) == 3:
-            n = out[2][0]
-            return mean, var, n
-        return mean, var
-    return _get_stats(inputs.to(dtype), labels, n_classes, class_conditional, std, return_count)
+# def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, dtype=torch.float):
+#     if isinstance(inputs, list):
+#         out = tuple(zip(*[_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count)
+#                           for x in inputs]))
+#         mean, var = out[0], out[1]
+#         if len(out) == 3:
+#             n = out[2][0]
+#             return mean, var, n
+#         return mean, var
+#     return _get_stats(inputs.to(dtype), labels, n_classes, class_conditional, std, return_count)
 
 
-def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False):
+def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False):
     if class_conditional:
         assert labels is not None and n_classes is not None
         return c_stats(inputs, labels, n_classes, std=std, return_count=return_count)
@@ -332,22 +332,33 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
     mean = var = n = None
     print("Beginning tracking stats.", flush=True)
 
+    def new_mean_var(inputs, labels, old_mean=None, old_var=None, old_n=None):
+        new_mean, new_var, new_n = get_stats(inputs.double(), labels, n_classes, class_conditional,
+                                             std=False, return_count=True)
+        if old_mean is None:
+            return new_mean, new_var, new_n
+
+        return combine_mean_var(old_mean, old_var, old_n,
+                                new_mean, new_var, new_n)
+
     with torch.no_grad(), tqdm(data_loader, unit="batch") as pbar:
-        for data in pbar:
+        for i, data in enumerate(pbar):
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = projection((inputs, labels))
+            if isinstance(outputs, list):
+                if mean is None:
+                    mean = var = [None] * len(outputs)
+                m_v_n = [new_mean_var(x, labels, m, v, n)
+                         for x, m, v in zip(outputs, mean, var)]
+                mean, var, n = tuple(zip(*m_v_n))
+                n = n[0]
+                # print_t(mean)
+                # print_t(var)
+                # print_t(n)
+            else:
+                mean, var, n = new_mean_var(outputs, labels, mean, var, n)
 
-            new_mean, new_var, m = get_stats(outputs, labels, n_classes, class_conditional,
-                                             std=False, return_count=True, dtype=torch.double)
-
-            if mean is None:
-                mean = torch.zeros_like(new_mean)
-                var = torch.zeros_like(new_var)
-                n = torch.zeros_like(m)
-
-            mean, var, n = combine_mean_var(mean, var, n,
-                                            new_mean, new_var, m)
     if save_path:
         torch.save({
             'mean': mean.to('cpu'),
