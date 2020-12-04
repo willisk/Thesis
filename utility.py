@@ -105,7 +105,9 @@ def tensor_repr(t):
 
 
 def print_t(t):
-    print(extra_repr(t))
+    lines = inspect.stack()[1][4]
+    varname = ''.join(lines).strip().split('(')[-1].split(')')[0]
+    print(f"{{{varname}}}={extra_repr(t)}", flush=True)
 
 
 def debug(func):
@@ -131,7 +133,8 @@ def debug(func):
             ("kwargs", kwargs.items()),
             ("defaults", {k: v
                           for k, v in defaults.items()
-                          if k not in kwargs}.items())]:
+                          if k not in kwargs
+                          if k not in argnames}.items())]:
             if params:
                 print(indent + ' ' * 4 + f"{argtype}:")
             for argname, arg in params:
@@ -177,20 +180,18 @@ def expand_as_r(a, b):
     return a.reshape(shape)
 
 
-def net_accuracy(net, data_loader):
+def net_accuracy(net, data_loader, inputs_pre_fn=None):
     total_count = 0.0
     total_correct = 0.0
     device = next(iter(net.parameters())).device
-    print(flush=True)
-    with torch.no_grad(), tqdm(data_loader) as pbar:
-        for inputs, labels in pbar:
+    with torch.no_grad():
+        for inputs, labels in data_loader:
             inputs, labels = inputs.to(device), labels.to(device)
+            if inputs_pre_fn:
+                inputs = inputs_pre_fn(inputs)
             outputs = net(inputs)
             total_count += len(inputs)
             total_correct += count_correct(outputs, labels)
-            pbar.set_postfix(
-                accuracy=f"{total_correct / total_count * 100:.0f}%", refresh=False)
-            pbar.update(0)
     return total_correct / total_count
 
 
@@ -227,7 +228,7 @@ def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, class_conditional=True, cap_g
         v_a = nan_to(v_a, 1)
         v_b = nan_to(v_b, 1)
     n = n_a + n_b
-    gamma = torch.clamp(n_a / n, max=cap_gamma).expand_as(m_a)
+    gamma = expand_as_r(torch.clamp(n_a / n, max=cap_gamma), m_a)
     mean, var = exp_av_mean_var(m_a, v_a, m_b, v_b, gamma)
     return mean, var, n
 
@@ -264,10 +265,10 @@ def batch_feature_stats(x, keep_dims=[1], std=False):
     for dim in keep_dims:
         dims_collapse.remove(dim)
     assert dims_collapse != [], "dims to collapse are empty"
-    mean = x.mean(dim=dims_collapse)
+    mean = x.mean(dim=dims_collapse, keepdims=True)
     if std:
-        return mean, x.std(dim=dims_collapse)
-    return mean, x.var(dim=dims_collapse)
+        return mean, x.std(dim=dims_collapse, keepdims=True)
+    return mean, x.var(dim=dims_collapse, keepdims=True)
 
 
 def c_stats(inputs, labels, n_classes, return_count=False, std=False):
@@ -283,15 +284,15 @@ def c_stats(inputs, labels, n_classes, return_count=False, std=False):
         n[c] = c_mask.sum().item()
 
     if return_count:
-        return mean.T, var.T, n.T
-    return mean.T, var.T
+        return mean, var, n
+    return mean, var
 
 
 def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, dtype=torch.float):
     if isinstance(inputs, list):
         out = tuple(zip(*[_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count)
                           for x in inputs]))
-        mean, var = torch.cat(out[0]), torch.cat(out[1])
+        mean, var = torch.cat(out[0], dim=1), torch.cat(out[1], dim=1)
         if len(out) == 3:
             n = out[2][0]
             return mean, var, n
@@ -465,15 +466,15 @@ def train(net, data_loader, criterion, optimizer,
 
     print("Beginning training.", flush=True)
 
-    with tqdm(range(init_epoch, init_epoch + epochs), desc="Epoch") as pbar:
+    with tqdm(**tqdm_fmt_dict(epochs, len(data_loader))) as pbar:
         saved_epoch = 0
-        for epoch in pbar:
+        for epoch in range(init_epoch, init_epoch + epochs):
             total_count = 0.0
             total_loss = 0.0
             total_correct = 0.0
             grad_total = 0.0
 
-            for i_batch, (inputs, labels) in enumerate(data_loader):
+            for inputs, labels in data_loader:
                 inputs, labels = inputs.to(device), labels.to(device)
 
                 optimizer.zero_grad()
@@ -506,10 +507,9 @@ def train(net, data_loader, criterion, optimizer,
                     loss=total_loss / total_count,
                     acc=f"{total_correct / total_count * 100:.0f}%",
                     chkpt=saved_epoch,
-                    batch=f"{i_batch + 1}/{len(data_loader)}",
                     refresh=False,
                 )
-                pbar.update(0)
+                pbar.update()
 
             loss = total_loss / total_count
             accuracy = total_correct / total_count
@@ -546,8 +546,7 @@ def train(net, data_loader, criterion, optimizer,
         plot_metrics(TRACKING, step_start=init_epoch)
         plt.xlabel('epochs')
         plt.show()
-
-    return TRACKING
+        return TRACKING
 
 
 def sgm(x, sh=1):
@@ -565,8 +564,8 @@ def plot_metrics(metrics, step_start=1):
         plt.plot(steps, val, label=key)
 
     vals = np.nan_to_num(np.array(sum(metrics.values(), [])), nan=10000)
-    print("min", vals.min())
-    print("max", vals.max())
+    # print("min", vals.min())
+    # print("max", vals.max())
     # sgm_m = sgm(vals, sh=vals.max())
     # sgm_s = sgm(np.abs(vals - sgm_m), sh=vals.max())
     sgm_m = sgm(vals)

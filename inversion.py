@@ -1,10 +1,5 @@
-import shared
-import utility
-import importlib
-importlib.reload(utility)
-from utility import debug
-
-
+import os
+import sys
 from collections import defaultdict
 
 import torch
@@ -14,6 +9,15 @@ from scipy.stats import betabinom
 from tqdm.auto import tqdm
 
 import matplotlib.pyplot as plt
+
+# import shared
+import utility
+
+if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
+    import importlib
+    importlib.reload(utility)
+
+from utility import debug
 
 
 def betabinom_distr(N, a=1, b=1):
@@ -81,7 +85,9 @@ def inversion_loss(stats_net, criterion, target_labels, hp,
 # @timing
 def deep_inversion(data_loader, loss_fn, optimizer,
                    steps=10,
-                   pre_fn=None, scheduler=None,
+                   data_pre_fn=None,
+                   inputs_pre_fn=None,
+                   scheduler=None,
                    #    track_history_every=None,
                    plot=False,
                    use_amp=False,
@@ -125,8 +131,13 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                 # if step == 1 and track_history_every:
                 #     history = [(inputs.detach().cpu().clone(), 0)]
 
-                if pre_fn is not None:
-                    data = pre_fn(data)
+                if data_pre_fn is not None:
+                    data = data_pre_fn(data)
+
+                if inputs_pre_fn is not None:
+                    inputs, labels = data
+                    inputs = inputs_pre_fn(inputs)
+                    data = inputs, labels
 
                 optimizer.zero_grad()
 
