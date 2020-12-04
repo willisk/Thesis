@@ -331,6 +331,8 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
             return_mean = _mean.to(t_type)
             if sqrt:
                 return_var = _var.sqrt().to(t_type)
+            else:
+                return_var = _var.to(t_type)
         return return_mean, return_var
 
     save_path, load_path = save_load_path(path, use_drive=use_drive)
