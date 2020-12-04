@@ -320,19 +320,29 @@ def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=
 def collect_stats(projection, data_loader, n_classes, class_conditional, std=False,
                   device='cpu', path=None, use_drive=True):
 
+    def convert_to(mean, var, t_type, sqrt=False):
+        if isinstance(mean, tuple):
+            return_mean = [m.to(t_type) for m in mean]
+            if sqrt:
+                return_var = [v.sqrt().to(t_type) for v in var]
+            else:
+                return_var = [v.to(t_type) for v in var]
+        else:
+            return_mean = mean.to(t_type)
+            if sqrt:
+                return_var = var.sqrt().to(t_type)
+        return return_mean, return_var
+    
     save_path, load_path = save_load_path(path, use_drive=use_drive)
     if load_path and os.path.exists(load_path):
         print(f"Loading stats from {load_path}.")
         chkpt = torch.load(load_path, map_location=torch.device(device))
-        mean, var = chkpt['mean'], chkpt['var']
-        if std:
-            var = var.sqrt()
-        return mean.float(), var.float()
+        return convert_to(chkpt['mean'], chkpt['var'], torch.float(), sqrt=std)
 
     mean = var = n = None
     print("Beginning tracking stats.", flush=True)
 
-    def new_mean_var(inputs, labels, old_mean=None, old_var=None, old_n=None):
+    def update_mean_var(inputs, labels, old_mean=None, old_var=None, old_n=None):
         new_mean, new_var, new_n = get_stats(inputs.double(), labels, n_classes, class_conditional,
                                              std=False, return_count=True)
         if old_mean is None:
@@ -349,7 +359,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
             if isinstance(outputs, list):
                 if mean is None:
                     mean = var = [None] * len(outputs)
-                m_v_n = [new_mean_var(x, labels, m, v, n)
+                m_v_n = [update_mean_var(x, labels, m, v, n)
                          for x, m, v in zip(outputs, mean, var)]
                 mean, var, n = tuple(zip(*m_v_n))
                 n = n[0]
@@ -357,16 +367,10 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
                 # print_t(var)
                 # print_t(n)
             else:
-                mean, var, n = new_mean_var(outputs, labels, mean, var, n)
-
-    if isinstance(mean, tuple):
-        save_mean = [m.cpu() for m in mean]
-        save_var = [v.cpu() for v in var]
-    else:
-        save_mean = mean.cpu()
-        save_var = var.cpu()
+                mean, var, n = update_mean_var(outputs, labels, mean, var, n)
 
     if save_path:
+        save_mean, save_var = convert_to(mean, var, 'cpu')
         torch.save({
             'mean': save_mean,
             'var': save_var,
@@ -374,18 +378,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
         print(f"Saving stats in {load_path}.", flush=True)
     print(flush=True)
 
-    if isinstance(mean, tuple):
-        return_mean = [m.float() for m in mean]
-        if std:
-            return_var = [v.sqrt().float() for v in var]
-        else:
-            return_var = [v.float() for v in var]
-    else:
-        return_mean = mean.float()
-        if std:
-            return_var = var.sqrt().float()
-
-    return return_mean, return_var
+    return convert_to(mean, var, torch.float, sqrt=std)
 
 
 def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
