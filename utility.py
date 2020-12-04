@@ -104,6 +104,12 @@ def tensor_repr(t):
     return f"tensor({', '.join(info)})"
 
 
+# def test(*args):
+#     for arg in args:
+#         lines = inspect.stack()[1][4]
+#         varname = ''.join(lines).strip().split('(')[-1].split(')')[0]
+#         print(f"{{{varname}}}={extra_repr(t)}", flush=True)
+
 def print_t(t):
     lines = inspect.stack()[1][4]
     varname = ''.join(lines).strip().split('(')[-1].split(')')[0]

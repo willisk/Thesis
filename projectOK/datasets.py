@@ -145,7 +145,7 @@ class MULTIGMM(Dataset):
         return model_path, fcnet
 
     def verifier_net(self):
-        return self.net(suffix="verifier")
+        return self.net(suffix="_verifier")
 
     def sample(self, n_samples_per_class):
         X = Y = None

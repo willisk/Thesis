@@ -57,11 +57,16 @@ parser.add_argument("-g_scale_cov", type=float, default=20)
 parser.add_argument("-g_mean_shift", type=float, default=0)
 
 if 'ipykernel_launcher' in sys.argv:
-    args = parser.parse_args('-dataset GMM'.split())
-    args.nn_steps = 500
-    args.inv_steps = 500
-    args.batch_size = -1
+    # args = parser.parse_args('-dataset GMM'.split())
+    # args.nn_steps = 500
+    # args.inv_steps = 500
+    # args.batch_size = -1
+
     args.use_drive = False
+
+    args = parser.parse_args('-dataset CIFAR10'.split())
+    args.inv_steps = 1
+    args.batch_size = 64
 else:
     args = parser.parse_args()
 
@@ -214,12 +219,11 @@ path_cc = os.path.join(MODELDIR, "stats_inputs-CC.pt")
 mean_A, std_A = utility.collect_stats(
     identity, DATA_A, n_classes, class_conditional=False,
     std=True, path=path, device=DEVICE)
-mean_A_C_T, std_A_C = utility.collect_stats(
+mean_A_C, std_A_C = utility.collect_stats(
     identity, DATA_A, n_classes, class_conditional=True,
     std=True, path=path_cc, device=DEVICE)
 
 # mean_A = mean_A.reshape(-1, 1, 1)
-mean_A_C = mean_A_C_T.T.contiguous()
 
 
 def project_RP(data):
@@ -232,9 +236,6 @@ def project_RP_CC(data):
     X_proj_C = None
     for c in range(n_classes):
         X_proj_c = (X[Y == c] - mean_A_C[c]).reshape(-1, n_dims) @ RP
-        # print_t(X_proj_c)
-        # print_t(mean_A_C)
-        # print_t(X[Y == c] - mean_A_C[c])
         if X_proj_C is None:
             X_proj_C = torch.empty((X.shape[0], n_random_projections),
                                    dtype=X_proj_c.dtype, device=X.device)
@@ -243,10 +244,10 @@ def project_RP_CC(data):
 
 
 # Random ReLU Projections
-relu_bias = (torch.randn((1, n_random_projections), device=DEVICE)
-             * std_A.max())
-relu_bias_C = (torch.randn((n_classes, n_random_projections), device=DEVICE)
-               * std_A_C.max(dim=0, keepdims=True)[0].T)
+relu_bias = (torch.randn((1, n_random_projections),
+                         device=DEVICE) * std_A.max())
+relu_bias_C = (torch.randn((3, n_random_projections), device=DEVICE)
+               * std_A_C.max(dim=1, keepdims=True)[0])
 
 
 def project_RP_relu(data):
