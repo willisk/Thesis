@@ -247,8 +247,8 @@ def project_RP_CC(data):
 # Random ReLU Projections
 relu_bias = (torch.randn((1, n_random_projections),
                          device=DEVICE) * std_A.max())
-relu_bias_C = (torch.randn((3, n_random_projections), device=DEVICE)
-               * std_A_C.max(dim=1, keepdims=True)[0])
+relu_bias_C = (torch.randn((n_classes, n_random_projections), device=DEVICE)
+               * std_A_C.max(dim=1, keepdims=True)[0].reshape(n_classes, 1))
 
 
 def project_RP_relu(data):
