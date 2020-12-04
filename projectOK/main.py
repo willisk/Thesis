@@ -1,4 +1,4 @@
-"""Testing reconstruction methods on high-dimensional Gaussian Mixtures
+"""Testing reconstruction methods
 """
 import os
 import sys
@@ -27,8 +27,6 @@ if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
     importlib.reload(datasets)
 
 from utility import debug, print_t
-
-print("#", __doc__)
 
 
 # ======= Arg Parse =======
@@ -69,6 +67,10 @@ if 'ipykernel_launcher' in sys.argv:
     args.batch_size = 64
 else:
     args = parser.parse_args()
+
+
+print("#", __doc__)
+print("# on", args.dataset)
 
 
 # ======= Hyperparameters =======
