@@ -152,7 +152,6 @@ def perturb(X):
 
 # ======= Neural Network =======
 model_path, net = dataset.net()
-print('MODELPATH', model_path)
 net.to(DEVICE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)

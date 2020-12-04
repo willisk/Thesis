@@ -81,7 +81,7 @@ class CIFAR10(Dataset):
 
     def net(self):
         resnet = ResNet34()
-        model_path = os.path.join(self.data_dir, "net_resnet34")
+        model_path = os.path.join(self.data_dir, "net_resnet34.pt")
         return model_path, resnet
 
 
