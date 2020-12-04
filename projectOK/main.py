@@ -37,6 +37,7 @@ parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("--use_drive", action="store_true")
+parser.add_argument("--use_var", action="store_true")
 parser.add_argument("-perturb_strength", type=float, default=1.5)
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
@@ -217,15 +218,16 @@ RP = RP / RP.norm(2, dim=0)
 
 def identity(data): return data[0]
 
+STD = not args.use_var
 
 path = os.path.join(MODELDIR, "stats_inputs.pt")
 path_cc = os.path.join(MODELDIR, "stats_inputs-CC.pt")
 mean_A, std_A = utility.collect_stats(
     identity, DATA_A, n_classes, class_conditional=False,
-    std=True, path=path, device=DEVICE)
+    std=STD, path=path, device=DEVICE)
 mean_A_C, std_A_C = utility.collect_stats(
     identity, DATA_A, n_classes, class_conditional=True,
-    std=True, path=path_cc, device=DEVICE)
+    std=STD, path=path_cc, device=DEVICE)
 
 # mean_A = mean_A.reshape(-1, 1, 1)
 
@@ -313,13 +315,13 @@ def loss_fn_wrapper(name, project, class_conditional):
     stats_path = os.path.join(MODELDIR, f"stats_{name}.pt")
     m_a, s_a = utility.collect_stats(
         project, DATA_A, n_classes, class_conditional,
-        std=True, path=stats_path, device=DEVICE, use_drive=args.use_drive)
+        std=STD, path=stats_path, device=DEVICE, use_drive=args.use_drive)
 
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
         inputs, labels = data
         outputs = project(data)
         m, s = utility.get_stats(
-            outputs, labels, n_classes, class_conditional, std=True)
+            outputs, labels, n_classes, class_conditional, std=STD)
         return loss_stats(m_a, s_a, m, s)
     return name, _loss_fn
 
