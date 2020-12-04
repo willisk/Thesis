@@ -85,15 +85,38 @@ class CIFAR10(Dataset):
         return model_path, resnet
 
 
-# ========= GMMs ==========
+class MNIST(Dataset):
+    def __init__(self):
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.1307,), (0.3081,))])
+        train_set = torchvision.datasets.MNIST(
+            root=DATADIR, train=True, download=True, transform=transform)
+        test_set = torchvision.datasets.MNIST(
+            root=DATADIR, train=False, download=True, transform=transform)
 
+        A, B = split_dataset(train_set, split=0.8)
+        B_val = test_set
+
+        data_dir = os.path.join(MODELDIR, "MNIST")
+
+        super().__init__(n_dims=28 * 28,
+                         n_classes=10,
+                         A=A,
+                         B=B,
+                         B_val=B_val,
+                         data_dir=data_dir,
+                         transform=transform)
+
+    def net(self):
+        resnet = ResNet34()
+        model_path = os.path.join(self.data_dir, "net_resnet34.pt")
+        return model_path, resnet
+
+
+# ========= GMMs ==========
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal, ortho_group
-# nn_layer_dims = [n_dims] + [nn_width] * nn_depth + [n_classes]
-# nn_width = args.nn_width
-# nn_depth = args.nn_depth
-
-# Gaussian Mixture Model
 
 
 class MULTIGMM(Dataset):

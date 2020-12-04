@@ -1,5 +1,4 @@
-"""Testing reconstruction methods
-"""
+"""Testing reconstruction methods"""
 import os
 import sys
 
@@ -60,9 +59,13 @@ if 'ipykernel_launcher' in sys.argv:
     # args.inv_steps = 500
     # args.batch_size = -1
 
-    args = parser.parse_args('-dataset CIFAR10'.split())
+    args = parser.parse_args('-dataset MNIST'.split())
     args.inv_steps = 1
     args.batch_size = 64
+
+    # args = parser.parse_args('-dataset CIFAR10'.split())
+    # args.inv_steps = 1
+    # args.batch_size = 64
 
     args.use_drive = True
 else:
@@ -291,8 +294,14 @@ def preprocessing_model():
 # %%
 # ======= Loss Function =======
 def loss_stats(m_a, s_a, m_b, s_b):
-    loss_mean = ((m_a - m_b)**2).mean()
-    loss_std = ((s_a - s_b)**2).mean()
+    if isinstance(m_a, list):
+        loss_mean = sum(((ma - mb)**2).mean()
+                        for ma, mb in zip(m_a, m_b)) / len(m_a)
+        loss_std = sum(((sa - sb)**2).mean()
+                       for sa, sb in zip(s_a, s_b)) / len(m_a)
+    else:
+        loss_mean = ((m_a - m_b)**2).mean()
+        loss_std = ((s_a - s_b)**2).mean()
     return loss_mean + loss_std
 
 # from functools import wraps
@@ -316,16 +325,16 @@ def loss_fn_wrapper(name, project, class_conditional):
 
 
 methods = [
-    loss_fn_wrapper(
-        name="NN",
-        project=project_NN,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="NN CC",
-        project=project_NN,
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN",
+    #     project=project_NN,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN CC",
+    #     project=project_NN,
+    #     class_conditional=True,
+    # ),
     loss_fn_wrapper(
         name="NN ALL",
         project=project_NN_all,

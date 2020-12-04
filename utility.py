@@ -296,19 +296,19 @@ def c_stats(inputs, labels, n_classes, return_count=False, std=False):
     return mean, var
 
 
-# def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, dtype=torch.float):
-#     if isinstance(inputs, list):
-#         out = tuple(zip(*[_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count)
-#                           for x in inputs]))
-#         mean, var = out[0], out[1]
-#         if len(out) == 3:
-#             n = out[2][0]
-#             return mean, var, n
-#         return mean, var
-#     return _get_stats(inputs.to(dtype), labels, n_classes, class_conditional, std, return_count)
+def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, dtype=torch.float):
+    if isinstance(inputs, list):
+        out = tuple(zip(*[_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count)
+                          for x in inputs]))
+        mean, var = out[0], out[1]
+        if len(out) == 3:
+            n = out[2][0]
+            return mean, var, n
+        return mean, var
+    return _get_stats(inputs.to(dtype), labels, n_classes, class_conditional, std, return_count)
 
 
-def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False):
+def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False):
     if class_conditional:
         assert labels is not None and n_classes is not None
         return c_stats(inputs, labels, n_classes, std=std, return_count=return_count)
@@ -346,8 +346,8 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
     print("Beginning tracking stats.", flush=True)
 
     def update_mean_var(inputs, labels, old_mean=None, old_var=None, old_n=None):
-        new_mean, new_var, new_n = get_stats(inputs.double(), labels, n_classes, class_conditional,
-                                             std=False, return_count=True)
+        new_mean, new_var, new_n = _get_stats(inputs.double(), labels, n_classes, class_conditional,
+                                              std=False, return_count=True)
         if old_mean is None:
             return new_mean, new_var, new_n
 
