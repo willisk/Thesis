@@ -359,7 +359,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
             else:
                 mean, var, n = new_mean_var(outputs, labels, mean, var, n)
 
-    if isinstance(mean, list):
+    if isinstance(mean, tuple):
         save_mean = [m.cpu() for m in mean]
         save_var = [v.cpu() for v in var]
     else:
