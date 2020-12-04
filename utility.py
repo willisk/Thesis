@@ -332,12 +332,12 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
             if sqrt:
                 return_var = var.sqrt().to(t_type)
         return return_mean, return_var
-    
+
     save_path, load_path = save_load_path(path, use_drive=use_drive)
     if load_path and os.path.exists(load_path):
         print(f"Loading stats from {load_path}.")
         chkpt = torch.load(load_path, map_location=torch.device(device))
-        return convert_to(chkpt['mean'], chkpt['var'], torch.float(), sqrt=std)
+        return convert_to(chkpt['mean'], chkpt['var'], torch.float, sqrt=std)
 
     mean = var = n = None
     print("Beginning tracking stats.", flush=True)
