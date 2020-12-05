@@ -66,7 +66,8 @@ if 'ipykernel_launcher' in sys.argv:
     # args.inv_steps = 1
     # args.batch_size = 64
 
-    args.use_drive = False
+    args.use_drive = True
+    args.use_var = False
 else:
     args = parser.parse_args()
 
@@ -99,7 +100,7 @@ inv_steps = args.inv_steps
 
 # ======= Device =======
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-print(f"Running on '{DEVICE}'")
+print(f"Running on '{DEVICE}'\n")
 
 # ======= Create Dataset =======
 
@@ -156,6 +157,8 @@ def perturb(X):
 
 # ======= Neural Network =======
 model_path, net = dataset.net()
+# print(utility.get_child_modules(net))
+# print(len(utility.get_child_modules(net)))
 net.to(DEVICE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
@@ -187,9 +190,9 @@ net_layers = utility.get_child_modules(net)
 layer_activations = [None] * len(net_layers)
 
 
-def layer_hook_wrapper(l):
-    def hook(module, inputs, outputs):
-        layer_activations[l] = outputs
+def layer_hook_wrapper(idx):
+    def hook(_module, _inputs, outputs):
+        layer_activations[idx] = outputs
     return hook
 
 
@@ -327,51 +330,51 @@ def loss_fn_wrapper(name, project, class_conditional):
 
 
 methods = [
-    loss_fn_wrapper(
-        name="NN",
-        project=project_NN,
-        class_conditional=False,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN",
+    #     project=project_NN,
+    #     class_conditional=False,
+    # ),
     loss_fn_wrapper(
         name="NN CC",
         project=project_NN,
         class_conditional=True,
     ),
-    loss_fn_wrapper(
-        name="NN ALL",
-        project=project_NN_all,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="NN ALL CC",
-        project=project_NN_all,
-        class_conditional=True,
-    ),
-    loss_fn_wrapper(
-        name="RP",
-        project=project_RP,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="RP CC",
-        project=project_RP_CC,
-        class_conditional=True,
-    ),
-    loss_fn_wrapper(
-        name="RP ReLU",
-        project=project_RP_relu,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="RP ReLU CC",
-        project=project_RP_relu_CC,
-        class_conditional=True,
-    ),
-    loss_fn_wrapper(
-        name="combined",
-        project=combine(project_NN_all, project_RP_CC),
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN ALL",
+    #     project=project_NN_all,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
+    #     class_conditional=True,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP",
+    #     project=project_RP,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP CC",
+    #     project=project_RP_CC,
+    #     class_conditional=True,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP ReLU",
+    #     project=project_RP_relu,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP ReLU CC",
+    #     project=project_RP_relu_CC,
+    #     class_conditional=True,
+    # ),
+    # loss_fn_wrapper(
+    #     name="combined",
+    #     project=combine(project_NN_all, project_RP_CC),
+    #     class_conditional=True,
+    # ),
 ]
 
 

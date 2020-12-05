@@ -27,8 +27,10 @@ class ResNet(Net):
         self.layer2 = self._make_layer(16, 32, block_depth[1], stride=2)
         self.layer3 = self._make_layer(32, 64, block_depth[2], stride=2)
 
+        fc_dim = max([d for d, n in zip([16, 32, 64], block_depth) if n > 0])
+
         self.avgpool = nn.AdaptiveAvgPool2d(1)
-        self.fc = nn.Linear(64, n_classes)
+        self.fc = nn.Linear(fc_dim, n_classes)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -54,6 +56,11 @@ class ResNet(Net):
             in_channels = num_filters
 
         return nn.Sequential(*layers)
+
+
+class ResNet9(ResNet):
+    def __init__(self, in_channels, n_classes):
+        super().__init__(in_channels, n_classes, [2, 2, 0])
 
 
 class ResNet20(ResNet):
