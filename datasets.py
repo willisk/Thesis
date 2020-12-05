@@ -1,7 +1,7 @@
 import os
 import sys
 
-PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PWD = os.path.dirname(os.path.abspath(__file__))
 MODELDIR = os.path.join(PWD, "models")
 DATADIR = os.path.join(PWD, "data")
 
