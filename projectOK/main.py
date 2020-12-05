@@ -25,7 +25,7 @@ if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
     importlib.reload(inversion)
     importlib.reload(datasets)
 
-from utility import debug, print_t
+from utility import debug
 
 
 # ======= Arg Parse =======
@@ -61,13 +61,14 @@ if 'ipykernel_launcher' in sys.argv:
     args = parser.parse_args('-dataset MNIST'.split())
     args.inv_steps = 1
     args.batch_size = 64
+    args.n_random_projections = 1024
 
     # args = parser.parse_args('-dataset CIFAR10'.split())
     # args.inv_steps = 1
     # args.batch_size = 64
 
     args.use_drive = True
-    args.use_var = False
+    args.use_var = True
 else:
     args = parser.parse_args()
 
@@ -241,14 +242,22 @@ def project_RP(data):
     return (X - mean_A).reshape(-1, n_dims) @ RP
 
 
+# debug.silent = True
+
+
+@debug
 def project_RP_CC(data):
     X, Y = data
     X_proj_C = None
     for c in range(n_classes):
+        # debug(X[Y == c])
+        # debug(mean_A_C)
+        debug(X[Y == c] - mean_A_C[c])
         X_proj_c = (X[Y == c] - mean_A_C[c]).reshape(-1, n_dims) @ RP
         if X_proj_C is None:
             X_proj_C = torch.empty((X.shape[0], n_random_projections),
                                    dtype=X_proj_c.dtype, device=X.device)
+        # debug(X_proj_C)
         X_proj_C[Y == c] = X_proj_c
     return X_proj_C
 
@@ -264,6 +273,7 @@ def project_RP_relu(data):
     return F.relu(project_RP(data) + relu_bias)
 
 
+@debug
 def project_RP_relu_CC(data):
     X, Y = data
     return F.relu(project_RP_CC(data) + relu_bias_C[Y])
@@ -285,10 +295,12 @@ def combine(project1, project2):
 # ======= Preprocessing Model =======
 
 
+@debug
 def preprocessing_model():
     M = torch.eye(n_dims, requires_grad=True, device=DEVICE)
     b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
 
+    @debug
     def preprocessing_fn(X):
         X_shape = X.shape
         X = X.reshape(-1, n_dims)
@@ -298,7 +310,8 @@ def preprocessing_model():
 
 
 # ======= Loss Function =======
-def loss_stats(m_a, s_a, m_b, s_b):
+@debug
+def loss_stats(m_a, s_a, m_b, s_b, test=''):
     if isinstance(m_a, list):
         loss_mean = sum(((ma - mb)**2).mean()
                         for ma, mb in zip(m_a, m_b)) / len(m_a)
@@ -307,19 +320,23 @@ def loss_stats(m_a, s_a, m_b, s_b):
     else:
         loss_mean = ((m_a - m_b)**2).mean()
         loss_std = ((s_a - s_b)**2).mean()
+    assert False, '\n' + debug._stack
     return loss_mean + loss_std
 
-# from functools import wraps
+
+from functools import wraps
 # importlib.reload(utility)
 
 
+@debug
 def loss_fn_wrapper(name, project, class_conditional):
-    name = name.replace(' ', '-')
-    stats_path = os.path.join(MODELDIR, f"stats_{name}.pt")
+    _name = name.replace(' ', '-')
+    stats_path = os.path.join(MODELDIR, f"stats_{_name}.pt")
     m_a, s_a = utility.collect_stats(
         project, DATA_A, n_classes, class_conditional,
         std=STD, path=stats_path, device=DEVICE, use_drive=args.use_drive)
 
+    @debug
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
         inputs, labels = data
         outputs = project(data)
@@ -328,18 +345,31 @@ def loss_fn_wrapper(name, project, class_conditional):
         return loss_stats(m_a, s_a, m, s)
     return name, _loss_fn
 
+# %%
 
+
+name, fn = loss_fn_wrapper(
+    name="RP CC",
+    project=project_RP_CC,
+    class_conditional=True,
+)
+fn(next(iter(DATA_A)))
+import sys
+sys.exit()
+
+
+# %%
 methods = [
     # loss_fn_wrapper(
     #     name="NN",
     #     project=project_NN,
     #     class_conditional=False,
     # ),
-    loss_fn_wrapper(
-        name="NN CC",
-        project=project_NN,
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN CC",
+    #     project=project_NN,
+    #     class_conditional=True,
+    # ),
     # loss_fn_wrapper(
     #     name="NN ALL",
     #     project=project_NN_all,
@@ -355,11 +385,11 @@ methods = [
     #     project=project_RP,
     #     class_conditional=False,
     # ),
-    # loss_fn_wrapper(
-    #     name="RP CC",
-    #     project=project_RP_CC,
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="RP CC",
+        project=project_RP_CC,
+        class_conditional=True,
+    ),
     # loss_fn_wrapper(
     #     name="RP ReLU",
     #     project=project_RP_relu,
