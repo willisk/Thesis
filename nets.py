@@ -15,21 +15,20 @@ class Net(nn.Module):
 
 
 class ResNet(Net):
-    def __init__(self, num_classes, block_depth):
+    def __init__(self, in_channels, n_classes, block_depth):
         super().__init__()
 
-        self.in_channels = 16
-
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(
+            in_channels, 16, kernel_size=3, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(16)
         self.relu = nn.ReLU(inplace=True)
 
-        self.layer1 = self._make_layer(block_depth[0], 16, stride=1)
-        self.layer2 = self._make_layer(block_depth[1], 32, stride=2)
-        self.layer3 = self._make_layer(block_depth[2], 64, stride=2)
+        self.layer1 = self._make_layer(16, 16, block_depth[0], stride=1)
+        self.layer2 = self._make_layer(16, 32, block_depth[1], stride=2)
+        self.layer3 = self._make_layer(32, 64, block_depth[2], stride=2)
 
         self.avgpool = nn.AdaptiveAvgPool2d(1)
-        self.fc = nn.Linear(64, num_classes)
+        self.fc = nn.Linear(64, n_classes)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -46,20 +45,20 @@ class ResNet(Net):
 
         return x
 
-    def _make_layer(self, depth, num_filters, stride=1):
+    def _make_layer(self, in_channels, num_filters, depth, stride=1):
         layers = []
         for i in range(depth):
             if i != 0:
                 stride = 1
-            layers.append(ResidualBlock(self.in_channels, num_filters, stride))
-            self.in_channels = num_filters
+            layers.append(ResidualBlock(in_channels, num_filters, stride))
+            in_channels = num_filters
 
         return nn.Sequential(*layers)
 
 
 class ResNet20(ResNet):
-    def __init__(self, num_classes):
-        super().__init__(num_classes, [3, 3, 3])
+    def __init__(self, in_channels, n_classes):
+        super().__init__(in_channels, n_classes, [3, 3, 3])
 
 
 class ResidualBlock(nn.Module):

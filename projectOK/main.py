@@ -32,7 +32,7 @@ from utility import debug, print_t
 parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
 parser.add_argument(
     "-dataset", choices=['CIFAR10', 'GMM', 'MNIST'], required=True)
-parser.add_argument("-seed", type=int, default=333)
+parser.add_argument("-seed", type=int, default=0)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
@@ -41,8 +41,6 @@ parser.add_argument("--use_var", action="store_true")
 parser.add_argument("-perturb_strength", type=float, default=1.5)
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
-parser.add_argument("-nn_width", type=int, default=16)
-parser.add_argument("-nn_depth", type=int, default=4)
 parser.add_argument("-batch_size", type=int, default=64)
 parser.add_argument("-n_random_projections", type=int, default=256)
 parser.add_argument("-inv_lr", type=float, default=0.1)
@@ -55,20 +53,20 @@ parser.add_argument("-g_scale_cov", type=float, default=20)
 parser.add_argument("-g_mean_shift", type=float, default=0)
 
 if 'ipykernel_launcher' in sys.argv:
-    args = parser.parse_args('-dataset GMM'.split())
-    args.nn_steps = 500
-    args.inv_steps = 500
-    args.batch_size = -1
+    # args = parser.parse_args('-dataset GMM'.split())
+    # args.nn_steps = 500
+    # args.inv_steps = 500
+    # args.batch_size = -1
 
-    # args = parser.parse_args('-dataset MNIST'.split())
-    # args.inv_steps = 1
-    # args.batch_size = 64
+    args = parser.parse_args('-dataset MNIST'.split())
+    args.inv_steps = 1
+    args.batch_size = 64
 
     # args = parser.parse_args('-dataset CIFAR10'.split())
     # args.inv_steps = 1
     # args.batch_size = 64
 
-    args.use_drive = True
+    args.use_drive = False
 else:
     args = parser.parse_args()
 
@@ -120,6 +118,8 @@ if args.dataset == 'GMM':
     )
 elif args.dataset == 'CIFAR10':
     dataset = datasets.CIFAR10()
+elif args.dataset == 'MNIST':
+    dataset = datasets.MNIST()
 
 MODELDIR = dataset.data_dir
 

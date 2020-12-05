@@ -109,8 +109,8 @@ class MNIST(Dataset):
                          transform=transform)
 
     def net(self):
-        resnet = ResNet34()
-        model_path = os.path.join(self.data_dir, "net_resnet34.pt")
+        resnet = nets.ResNet20(1, self.n_classes)
+        model_path = os.path.join(self.data_dir, "net_resnet20.pt")
         return model_path, resnet
 
 
@@ -142,6 +142,10 @@ class MULTIGMM(Dataset):
         A = self.sample(int(n_samples_A / n_classes))
         B = self.sample(int(n_samples_B / n_classes))
         B_val = self.sample(int(n_samples_B_val / n_classes))
+
+        # A = (A[0].reshape(-1, 2, 5, 2), A[1])
+        # B = (B[0].reshape(-1, 2, 5, 2), B[1])
+        # B_val = (B_val[0].reshape(-1, 2, 5, 2), B_val[1])
 
         A = TensorDataset(*A)
         B = TensorDataset(*B)
