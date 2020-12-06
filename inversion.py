@@ -91,6 +91,7 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                    #    track_history_every=None,
                    plot=False,
                    use_amp=False,
+                   grad_multiplier_fn=None,
                    ):
 
     assert utility.valid_data_loader(
@@ -106,14 +107,18 @@ def deep_inversion(data_loader, loss_fn, optimizer,
 
     TRACKING = defaultdict(list)
 
-    def process_result(res, metrics):
+    def process_result(res, metrics_acc, batch_size):
         if isinstance(res, tuple):
             loss, info = res
-            for k, v in info.items():
-                metrics[k] += v
+            display_info = {**info}
         else:
             loss = res
-        metrics['loss'] += loss.item()
+            display_info = {}
+        display_info['loss'] = loss.item()
+        for k, v in display_info.items():
+            metrics_acc[k] += v / batch_size
+        pbar.set_postfix(**display_info, refresh=False)
+        pbar.update()
         return loss
 
     print("Beginning Inversion.", flush=True)
@@ -131,6 +136,11 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                 # if step == 1 and track_history_every:
                 #     history = [(inputs.detach().cpu().clone(), 0)]
 
+                if isinstance(data, torch.Tensor):
+                    batch_size = len(data)
+                else:
+                    batch_size = len(data[0])
+
                 if data_pre_fn is not None:
                     data = data_pre_fn(data)
 
@@ -144,23 +154,37 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                 if USE_AMP:
                     with autocast():
                         res = loss_fn(data)
-                        loss = process_result(res, METRICS)
+                        loss = process_result(res, METRICS, batch_size)
                     scaler.scale(loss).backward()
                     grad_scale = scaler.get_scale()
                 else:
                     res = loss_fn(data)
-                    loss = process_result(res, METRICS)
+                    loss = process_result(res, METRICS, batch_size)
                     loss.backward()
                     grad_scale = 1
 
                 grad_total = 0.
+                # if grad_penalty:
+                # params = []
                 for p_group in optimizer.param_groups:
+                    #     params += p_group['params']
                     for i, param in enumerate(p_group['params']):
+                        lr = p_group['lr']
                         # p_name = f"parpam_{'-'.join(map(str, param.shape))}"
-                        p_name = f'grad_{i}'
-                        p_grad = (param.grad.norm(2) / grad_scale).item()
-                        grad_total += p_grad
-                        METRICS[p_name] += p_grad
+                        grad_norm = (param.grad / grad_scale).norm()
+                        if grad_multiplier_fn:
+                            # param.grad.data.mul_(grad_penalty * grad_norm.sqrt())
+                            lambd = grad_multiplier_fn(grad_norm) / grad_norm
+                            param.grad.data.mul_(lambd)
+                        grad_total += grad_norm
+                        METRICS[f"grad_{i}"] += grad_norm.item()
+                # if params:
+                #     for p in params:
+                #         p.grad.data.mul_(0)
+                #     torch.nn.utils.clip_grad_norm_(params, 0)
+                # if grad_penalty:
+                #     grad_total *= grad_penalty
+                #     grad_total.backward()
 
                 if USE_AMP:
                     scaler.step(optimizer)
@@ -174,11 +198,9 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                 # total_count += bs
                 # for k in METRICS:
                 #     METRICS[k] *= bs / total_count
-                pbar.set_postfix(**METRICS, refresh=False)
-                pbar.update()
 
             for k, v in METRICS.items():
-                TRACKING[k].append(v)
+                TRACKING[k].append(v * len(data_loader))
 
             # if track_history_every and (
             #         step % track_history_every == 0 or step == steps):

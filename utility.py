@@ -71,7 +71,7 @@ def prettify_time(seconds):
         return "{}ms".format(int(seconds * 1000))
 
 
-def tensor_repr(t, raise_exception=False):
+def tensor_repr(t, assert_all=False, raise_exception=False):
     exception_encountered = False
     info = []
     shape = tuple(t.shape)
@@ -79,33 +79,48 @@ def tensor_repr(t, raise_exception=False):
         info.append(f"[{t.item()}]")
     else:
         info.append(f"({', '.join(map(repr, shape))})")
-    if not t.isfinite().all():
-        info.append(f"{(~ t.isfinite()).sum().item()} INVALID ENTRIES")
+    invalid_sum = (~t.isfinite()).sum().item()
+    if invalid_sum:
+        info.append(f"{invalid_sum} INVALID ENTRIES")
         exception_encountered = True
     if t.requires_grad:
         info.append("req_grad")
-    if t.grad and not t.grad.isfinite().all():
-        info.append(
-            f"GRAD {(~ t.grad.isfinite()).sum().item()} INVALID ENTRIES")
-        exception_encountered = True
+    if t.grad is not None:
+        grad_invalid_sum = (~t.grad.isfinite()).sum().item()
+        if grad_invalid_sum:
+            info.append(
+                f"GRAD {(~ t.grad.isfinite()).sum().item()} INVALID ENTRIES")
+            exception_encountered = True
+    if hasattr(debug, 'verbose') and debug.verbose:
+        info.append(f"|x|={t.float().norm()}")
+        if t.grad is not None:
+            info.append(f"|grad|={t.grad.float().norm()}")
     if t.dtype != torch.float:
         info.append(f"dtype={str(t.dtype).split('.')[-1]}")
     if t.device.type != 'cpu':
         info.append(f"device={t.device.type}")
     output = f"tensor({', '.join(info)})"
+    if assert_all:
+        assert_val = t.all()
+        if not assert_val:
+            exception_encountered = True
     if raise_exception and exception_encountered:
-        debug._indent = 0
         debug.silent = False
         debug.x = t
-        debug.args = debug._last_args
-        debug.func = debug._last_call
-        debug.recall = debug(debug._last_recall, raise_exception=False)
-        assert False, output + \
-            ('\nSTACK:' + debug._stack + output) if debug._stack else ''
+        if debug._indent:
+            debug.args = debug._last_args
+            debug.func = debug._last_call
+            debug.recall = debug(debug._last_recall, raise_exception=False)
+        debug._indent = 0
+        stack = output + ('\nSTACK:' + debug._stack +
+                          output) if debug._stack else ''
+        if assert_all and not assert_val:
+            assert False, "Assert did not pass on " + stack
+        assert False, "Invalid entries encountered in " + stack
     return output
 
 
-def _debug_log(output, var=None, indent='', raise_exception=False):
+def _debug_log(output, var=None, indent='', assert_true=False, raise_exception=False):
     debug._stack += indent + output
     if not debug.silent:
         print(indent + output, end='')
@@ -113,15 +128,17 @@ def _debug_log(output, var=None, indent='', raise_exception=False):
         if isinstance(var, str):
             _debug_log(f"'{var}'")
         elif isinstance(var, torch.Tensor):
-            _debug_log(tensor_repr(var, raise_exception))
+            _debug_log(tensor_repr(var, assert_true, raise_exception))
         elif is_iterable(var):
             _debug_log(f"{type(var).__name__} {{")
             if isinstance(var, dict):
                 for k, v in var.items():
-                    _debug_log(f"{k}: ", v, indent + 6 * ' ', raise_exception)
+                    _debug_log(f"'{k}': ", v, indent + 6 * ' ',
+                               assert_true, raise_exception)
             else:
                 for e in var:
-                    _debug_log('- ', e, indent + 6 * ' ', raise_exception)
+                    _debug_log('- ', e, indent + 6 * ' ',
+                               assert_true, raise_exception)
             _debug_log(indent + 4 * ' ' + '}')
         else:
             _debug_log(str(var))
@@ -131,12 +148,13 @@ def _debug_log(output, var=None, indent='', raise_exception=False):
             print()
 
 
-# %%
-def debug(arg, raise_exception=True):
+def debug(arg, assert_true=False, raise_exception=True):
 
     if not hasattr(debug, '_stack'):
         debug._stack = ""
         debug._indent = 0
+        if not hasattr(debug, 'verbose'):
+            debug.verbose = True
         if not hasattr(debug, 'silent'):
             debug.silent = False
 
@@ -146,7 +164,7 @@ def debug(arg, raise_exception=True):
         line = ''.join(inspect.stack()[1][4])
         argname = ')'.join('('.join(line.split('(')[1:]).split(')')[:-1])
         _debug_log(f"{{{argname}}}  =  ", arg, ' ' * 4 *
-                   debug._indent, raise_exception)
+                   debug._indent, assert_true, raise_exception)
         return
 
     func = arg
@@ -189,14 +207,14 @@ def debug(arg, raise_exception=True):
                 _debug_log(f"{argtype}:", indent=indent + ' ' * 6)
             for argname, arg in params:
                 _debug_log(f"- {argname}:  ", arg,
-                           indent=indent + ' ' * 8, raise_exception=raise_exception)
+                           indent + ' ' * 8, assert_true, raise_exception)
         debug._indent += 1
         out = func(*args, **kwargs)
         debug.out = out
         debug._indent -= 1
         if out is not None:
-            _debug_log("returned:  ", out, indent,
-                       raise_exception=raise_exception)
+            _debug_log("returned:  ", out,
+                       indent, assert_true, raise_exception)
         return out
     return _func
 
@@ -272,13 +290,13 @@ def exp_av_mean_var(m_a, v_a, m_b, v_b, gamma):
 
 
 def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, class_conditional=True, cap_gamma=1):
-    if class_conditional:
-        # n_a = expand_as_r(n_a, m_a)
-        # n_b = expand_as_r(n_b, m_a)
-        m_a = nan_to(m_a, 0)
-        m_b = nan_to(m_b, 0)
-        v_a = nan_to(v_a, 0)
-        v_b = nan_to(v_b, 0)
+    # if class_conditional:
+    #     n_a = expand_as_r(n_a, m_a)
+    #     n_b = expand_as_r(n_b, m_a)
+    #     m_a = nan_to(m_a, 0)
+    #     m_b = nan_to(m_b, 0)
+    #     v_a = nan_to(v_a, 0)
+    #     v_b = nan_to(v_b, 0)
     n = n_a + n_b
     gamma = expand_as_r(torch.clamp(n_a / n, max=cap_gamma), m_a)
     mean, var = exp_av_mean_var(m_a, v_a, m_b, v_b, gamma)
@@ -312,16 +330,24 @@ def nan_to(x, num):
 #         n[c] += (labels == c).to(n.dtype).sum()
 
 
-@debug
-def batch_feature_stats(x, keep_dims=[1], std=False):
-    dims_collapse = list(range(x.ndim))
+def batch_feature_stats(X, keep_dims=[1], std=False):
+    dims_collapse = list(range(X.ndim))
     for dim in keep_dims:
         dims_collapse.remove(dim)
     assert dims_collapse != [], "dims to collapse are empty"
-    mean = x.mean(dim=dims_collapse, keepdims=True)
-    if std:
-        return mean, x.std(dim=dims_collapse, keepdims=True)
-    return mean, x.var(dim=dims_collapse, keepdims=True)
+    mean = X.mean(dim=dims_collapse, keepdims=True)
+    valid_mean = len(X) > 0
+    valid_var = len(X) > 1
+    if not valid_mean:
+        mean = torch.zeros_like(mean)
+    if not valid_var:
+        var = torch.zeros_like(mean)
+    else:
+        if std:
+            var = X.std(dim=dims_collapse, keepdims=True)
+        else:
+            var = X.var(dim=dims_collapse, keepdims=True)
+    return mean, var
 
 
 def c_stats(inputs, labels, n_classes, return_count=False, std=False):
@@ -342,7 +368,6 @@ def c_stats(inputs, labels, n_classes, return_count=False, std=False):
     return mean, var
 
 
-@debug
 def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, dtype=torch.float):
     if isinstance(inputs, list):
         out = tuple(zip(*[_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count)
@@ -355,7 +380,6 @@ def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=
     return _get_stats(inputs.to(dtype), labels, n_classes, class_conditional, std, return_count)
 
 
-@debug
 def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False):
     if class_conditional:
         assert labels is not None and n_classes is not None

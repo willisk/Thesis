@@ -43,8 +43,9 @@ parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-batch_size", type=int, default=64)
 parser.add_argument("-n_random_projections", type=int, default=256)
-parser.add_argument("-inv_lr", type=float, default=0.1)
+parser.add_argument("-inv_lr", type=float, default=0.01)
 parser.add_argument("-inv_steps", type=int, default=100)
+parser.add_argument("-inv_grad_penalty", type=float, default=1.0)
 
 # GMM
 parser.add_argument("-g_modes", type=int, default=3)
@@ -62,13 +63,14 @@ if 'ipykernel_launcher' in sys.argv:
     args.inv_steps = 1
     args.batch_size = 64
     args.n_random_projections = 1024
+    args.inv_grad_penalty = 1000
 
     # args = parser.parse_args('-dataset CIFAR10'.split())
     # args.inv_steps = 1
     # args.batch_size = 64
 
     args.use_drive = True
-    args.use_var = True
+    # args.use_var = True
 else:
     args = parser.parse_args()
 
@@ -98,6 +100,7 @@ n_random_projections = args.n_random_projections
 # Inversion
 inv_lr = args.inv_lr
 inv_steps = args.inv_steps
+inv_grad_penalty = args.inv_grad_penalty
 
 # ======= Device =======
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -242,22 +245,14 @@ def project_RP(data):
     return (X - mean_A).reshape(-1, n_dims) @ RP
 
 
-# debug.silent = True
-
-
-@debug
 def project_RP_CC(data):
     X, Y = data
     X_proj_C = None
     for c in range(n_classes):
-        # debug(X[Y == c])
-        # debug(mean_A_C)
-        debug(X[Y == c] - mean_A_C[c])
         X_proj_c = (X[Y == c] - mean_A_C[c]).reshape(-1, n_dims) @ RP
         if X_proj_C is None:
             X_proj_C = torch.empty((X.shape[0], n_random_projections),
                                    dtype=X_proj_c.dtype, device=X.device)
-        # debug(X_proj_C)
         X_proj_C[Y == c] = X_proj_c
     return X_proj_C
 
@@ -273,7 +268,6 @@ def project_RP_relu(data):
     return F.relu(project_RP(data) + relu_bias)
 
 
-@debug
 def project_RP_relu_CC(data):
     X, Y = data
     return F.relu(project_RP_CC(data) + relu_bias_C[Y])
@@ -295,12 +289,10 @@ def combine(project1, project2):
 # ======= Preprocessing Model =======
 
 
-@debug
 def preprocessing_model():
     M = torch.eye(n_dims, requires_grad=True, device=DEVICE)
     b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
 
-    @debug
     def preprocessing_fn(X):
         X_shape = X.shape
         X = X.reshape(-1, n_dims)
@@ -310,7 +302,6 @@ def preprocessing_model():
 
 
 # ======= Loss Function =======
-@debug
 def loss_stats(m_a, s_a, m_b, s_b, test=''):
     if isinstance(m_a, list):
         loss_mean = sum(((ma - mb)**2).mean()
@@ -326,10 +317,7 @@ def loss_stats(m_a, s_a, m_b, s_b, test=''):
 from functools import wraps
 # importlib.reload(utility)
 
-debug.silent = True
 
-
-@debug
 def loss_fn_wrapper(name, project, class_conditional):
     _name = name.replace(' ', '-')
     stats_path = os.path.join(MODELDIR, f"stats_{_name}.pt")
@@ -337,7 +325,6 @@ def loss_fn_wrapper(name, project, class_conditional):
         project, DATA_A, n_classes, class_conditional,
         std=STD, path=stats_path, device=DEVICE, use_drive=args.use_drive)
 
-    @debug
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
         inputs, labels = data
         outputs = project(data)
@@ -348,51 +335,51 @@ def loss_fn_wrapper(name, project, class_conditional):
 
 
 methods = [
-    # loss_fn_wrapper(
-    #     name="NN",
-    #     project=project_NN,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN CC",
-    #     project=project_NN,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL",
-    #     project=project_NN_all,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL CC",
-    #     project=project_NN_all,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="RP",
-    #     project=project_RP,
-    #     class_conditional=False,
-    # ),
+    loss_fn_wrapper(
+        name="NN",
+        project=project_NN,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="NN CC",
+        project=project_NN,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="NN ALL",
+        project=project_NN_all,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="NN ALL CC",
+        project=project_NN_all,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="RP",
+        project=project_RP,
+        class_conditional=False,
+    ),
     loss_fn_wrapper(
         name="RP CC",
         project=project_RP_CC,
         class_conditional=True,
     ),
-    # loss_fn_wrapper(
-    #     name="RP ReLU",
-    #     project=project_RP_relu,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="RP ReLU CC",
-    #     project=project_RP_relu_CC,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="combined",
-    #     project=combine(project_NN_all, project_RP_CC),
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="RP ReLU",
+        project=project_RP_relu,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="RP ReLU CC",
+        project=project_RP_relu_CC,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="combined",
+        project=combine(project_NN_all, project_RP_CC),
+        class_conditional=True,
+    ),
 ]
 
 
@@ -418,6 +405,10 @@ for method, loss_fn in methods:
 
     optimizer = torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
+    debug.silent = True
+
+    def grad_multiplier(x):
+        return torch.sqrt(x) if x > 1 else x
 
     info = inversion.deep_inversion(DATA_B,
                                     loss_fn,
@@ -431,6 +422,7 @@ for method, loss_fn in methods:
                                     #    track_history_every=10,
                                     plot=True,
                                     use_amp=args.use_amp,
+                                    grad_multiplier_fn=grad_multiplier,
                                     )
 
     # ======= Result =======
