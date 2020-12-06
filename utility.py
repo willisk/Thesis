@@ -80,99 +80,69 @@ def tensor_repr(t, raise_exception=False):
     else:
         info.append(f"({', '.join(map(repr, shape))})")
     if not t.isfinite().all():
-        info.append(f"{t.isfinite().sum().item()} INVALIDS")
+        info.append(f"{(~ t.isfinite()).sum().item()} INVALID ENTRIES")
         exception_encountered = True
     if t.requires_grad:
-        info.append("requires_grad")
+        info.append("req_grad")
     if t.grad and not t.grad.isfinite().all():
-        info.append(f"GRAD {t.grad.isfinite().sum().item()} INVALIDS")
+        info.append(
+            f"GRAD {(~ t.grad.isfinite()).sum().item()} INVALID ENTRIES")
         exception_encountered = True
     if t.dtype != torch.float:
-        info.append(f"dtype={t.dtype}")
+        info.append(f"dtype={str(t.dtype).split('.')[-1]}")
     if t.device.type != 'cpu':
         info.append(f"device={t.device.type}")
     output = f"tensor({', '.join(info)})"
-    if raise_exception:
-        assert not exception_encountered, output + \
-            ('\nSTACK:\n' + debug._stack + output) if debug._stack else ''
+    if raise_exception and exception_encountered:
+        debug._indent = 0
+        debug.silent = False
+        debug.x = t
+        debug.args = debug._last_args
+        debug.func = debug._last_call
+        debug.recall = debug(debug._last_recall, raise_exception=False)
+        assert False, output + \
+            ('\nSTACK:' + debug._stack + output) if debug._stack else ''
     return output
-
-
-# def extra_repr(t, indent='', raise_exception=True):
-#     if isinstance(t, torch.Tensor):
-#         return _debug_log(tensor_repr(t, raise_exception))
-#     elif isinstance(t, str):
-#         return _debug_log(t)
-#     elif is_iterable(t):
-#         output = _debug_log(f"{type(t).__name__} {{")
-#         end = '\n' + indent + "}"
-#         indent += ' ' * 4
-#         if isinstance(t, dict):
-#             for k, v in t.items():
-#                 output += _debug_log(f"{k}: ", v, indent, raise_exception)
-#         else:
-#             for e in t:
-#                 output += _debug_log("", e, '', raise_exception)
-#         return output + end
-#     return str(t)
-
-
-# def extra_repr(t, indent='', raise_exception=True):
 
 
 def _debug_log(output, var=None, indent='', raise_exception=False):
     debug._stack += indent + output
-
+    if not debug.silent:
+        print(indent + output, end='')
     if var is not None:
-
         if isinstance(var, str):
-            var_repr = f"'{var}'"
-            debug._stack += var_repr + '\n'
-            if not debug.silent:
-                print(indent + output + var_repr)
-
+            _debug_log(f"'{var}'")
         elif isinstance(var, torch.Tensor):
-            var_repr = tensor_repr(var, raise_exception)
-            debug._stack += var_repr + '\n'
-            if not debug.silent:
-                print(indent + output + var_repr)
-
+            _debug_log(tensor_repr(var, raise_exception))
         elif is_iterable(var):
-            var_repr = f"{type(var).__name__} {{"
-            debug._stack += var_repr + '\n'
-            if not debug.silent:
-                print(indent + output + var_repr)
-
+            _debug_log(f"{type(var).__name__} {{")
             if isinstance(var, dict):
                 for k, v in var.items():
                     _debug_log(f"{k}: ", v, indent + 6 * ' ', raise_exception)
             else:
                 for e in var:
                     _debug_log('- ', e, indent + 6 * ' ', raise_exception)
-            end = indent + 4 * ' ' + '}'
-            debug._stack += end + '\n'
-            if not debug.silent:
-                print(end)
+            _debug_log(indent + 4 * ' ' + '}')
         else:
-            var_repr = str(var)
-            debug._stack += var_repr + '\n'
-            if not debug.silent:
-                print(indent + output + var_repr)
+            _debug_log(str(var))
     else:
         debug._stack += '\n'
-        print(indent + output)
+        if not debug.silent:
+            print()
 
 
+# %%
 def debug(arg, raise_exception=True):
 
-    if not hasattr(debug, '_initialized'):
-        debug._initialized = True
+    if not hasattr(debug, '_stack'):
         debug._stack = ""
         debug._indent = 0
         if not hasattr(debug, 'silent'):
             debug.silent = False
 
     if not hasattr(arg, '__call__'):
+        if debug._indent == 0:
+            debug._stack = ""
         line = ''.join(inspect.stack()[1][4])
         argname = ')'.join('('.join(line.split('(')[1:]).split(')')[:-1])
         _debug_log(f"{{{argname}}}  =  ", arg, ' ' * 4 *
@@ -180,42 +150,57 @@ def debug(arg, raise_exception=True):
         return
 
     func = arg
-    parameters = inspect.signature(func).parameters
-    argnames = [p.name for p in parameters.values()]
-    defaults = {
+    sig_parameters = inspect.signature(func).parameters
+    sig_argnames = [p.name for p in sig_parameters.values()]
+    sig_defaults = {
         k: v.default
-        for k, v in parameters.items()
+        for k, v in sig_parameters.items()
         if v.default is not inspect.Parameter.empty
     }
 
     @wraps(func)
     def _func(*args, **kwargs):
+        if debug._indent == 0:
+            debug._stack = ""
         indent = ' ' * 4 * debug._indent
+        _debug_log('\n')
         _debug_log(f"@{func.__name__}()", indent=indent)
 
-        for argtype, params in [
-            ("args", list(zip(argnames, args))),
-            ("kwargs", kwargs.items()),
-            ("defaults", {k: v
-                          for k, v in defaults.items()
-                          if k not in kwargs
-                          if k not in argnames[:len(args)]}.items())]:
+        args_kw = dict(zip(sig_argnames, args))
+        defaults = {k: v for k, v in sig_defaults.items()
+                    if k not in kwargs
+                    if k not in args_kw}
+        debug_args = {**args_kw, **defaults}
+
+        @wraps(func)
+        def _recall(*args, **kwargs):
+            call_args = {**debug_args, **kwargs,
+                         **dict(zip(sig_argnames, args))}
+            return func(**call_args)
+
+        debug._last_args = debug_args
+        debug._last_call = func
+        debug._last_recall = _recall
+
+        for argtype, params in [("args", args_kw.items()),
+                                ("kwargs", kwargs.items()),
+                                ("defaults", defaults.items())]:
             if params:
                 _debug_log(f"{argtype}:", indent=indent + ' ' * 6)
             for argname, arg in params:
                 _debug_log(f"- {argname}:  ", arg,
                            indent=indent + ' ' * 8, raise_exception=raise_exception)
-        _debug_log("")
         debug._indent += 1
         out = func(*args, **kwargs)
+        debug.out = out
         debug._indent -= 1
         if out is not None:
-            _debug_log(f"returned:  ", out, indent,
+            _debug_log("returned:  ", out, indent,
                        raise_exception=raise_exception)
-        if not debug._indent:
-            debug._stack = ""
         return out
     return _func
+
+# %%
 
 
 def is_iterable(x):
@@ -292,8 +277,8 @@ def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, class_conditional=True, cap_g
         # n_b = expand_as_r(n_b, m_a)
         m_a = nan_to(m_a, 0)
         m_b = nan_to(m_b, 0)
-        v_a = nan_to(v_a, 1)
-        v_b = nan_to(v_b, 1)
+        v_a = nan_to(v_a, 0)
+        v_b = nan_to(v_b, 0)
     n = n_a + n_b
     gamma = expand_as_r(torch.clamp(n_a / n, max=cap_gamma), m_a)
     mean, var = exp_av_mean_var(m_a, v_a, m_b, v_b, gamma)
@@ -327,6 +312,7 @@ def nan_to(x, num):
 #         n[c] += (labels == c).to(n.dtype).sum()
 
 
+@debug
 def batch_feature_stats(x, keep_dims=[1], std=False):
     dims_collapse = list(range(x.ndim))
     for dim in keep_dims:
@@ -356,6 +342,7 @@ def c_stats(inputs, labels, n_classes, return_count=False, std=False):
     return mean, var
 
 
+@debug
 def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, dtype=torch.float):
     if isinstance(inputs, list):
         out = tuple(zip(*[_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count)
@@ -368,6 +355,7 @@ def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=
     return _get_stats(inputs.to(dtype), labels, n_classes, class_conditional, std, return_count)
 
 
+@debug
 def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False):
     if class_conditional:
         assert labels is not None and n_classes is not None

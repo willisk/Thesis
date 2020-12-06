@@ -320,12 +320,13 @@ def loss_stats(m_a, s_a, m_b, s_b, test=''):
     else:
         loss_mean = ((m_a - m_b)**2).mean()
         loss_std = ((s_a - s_b)**2).mean()
-    assert False, '\n' + debug._stack
     return loss_mean + loss_std
 
 
 from functools import wraps
 # importlib.reload(utility)
+
+debug.silent = True
 
 
 @debug
@@ -345,20 +346,7 @@ def loss_fn_wrapper(name, project, class_conditional):
         return loss_stats(m_a, s_a, m, s)
     return name, _loss_fn
 
-# %%
 
-
-name, fn = loss_fn_wrapper(
-    name="RP CC",
-    project=project_RP_CC,
-    class_conditional=True,
-)
-fn(next(iter(DATA_A)))
-import sys
-sys.exit()
-
-
-# %%
 methods = [
     # loss_fn_wrapper(
     #     name="NN",
