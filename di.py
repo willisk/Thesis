@@ -373,7 +373,7 @@ for method, loss_fn in methods:
 
     batch = torch.randn((args.batch_size, *dataset.input_shape),
                         device=DEVICE, requires_grad=True)
-    labels = torch.Tensor(range(args.batch_size)).to(DEVICE) % n_classes
+    labels = torch.LongTensor(range(args.batch_size)).to(DEVICE) % n_classes
     DATA = (batch, labels)
 
     print("Before:")
