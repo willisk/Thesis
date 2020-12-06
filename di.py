@@ -34,7 +34,7 @@ from utility import debug
 # ======= Arg Parse =======
 parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
 parser.add_argument(
-    "-dataset", choices=['CIFAR10', 'GMM', 'MNIST'], required=True)
+    "-dataset", choices=['CIFAR10', 'MNIST'], required=True)
 parser.add_argument("-seed", type=int, default=0)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
@@ -259,10 +259,15 @@ def loss_stats(m_a, s_a, m_b, s_b):
     if isinstance(m_a, list):
         assert len(m_a) == len(m_b) and len(s_a) == len(s_b), \
             "lists need to of same length"
+        # REMOVEEEE XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # loss_mean = sum(((ma - mb)**2).mean()
+        #                 for ma, mb in zip(m_a, m_b)) / len(m_a)
+        # loss_std = sum(((sa - sb)**2).mean()
+        #                for sa, sb in zip(s_a, s_b)) / len(m_a)
         loss_mean = sum(((ma - mb)**2).mean()
-                        for ma, mb in zip(m_a, m_b)) / len(m_a)
+                        for ma, mb in zip(m_a[1:], m_b[1:])) / len(m_a[1:])
         loss_std = sum(((sa - sb)**2).mean()
-                       for sa, sb in zip(s_a, s_b)) / len(m_a)
+                       for sa, sb in zip(s_a[1:], s_b[1:])) / len(m_a[1:])
     else:
         loss_mean = ((m_a - m_b)**2).mean()
         loss_std = ((s_a - s_b)**2).mean()
