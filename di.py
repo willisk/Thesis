@@ -330,7 +330,7 @@ methods = [
 
 def im_show(batch):
     with torch.no_grad():
-        img_grid = torchvision.utils.make_grid(batch)
+        img_grid = torchvision.utils.make_grid(batch.cpu())
         plt.imshow(img_grid.permute(1, 2, 0))
         plt.show()
 
