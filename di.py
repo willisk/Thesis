@@ -61,13 +61,13 @@ if 'ipykernel_launcher' in sys.argv:
     # args.inv_steps = 500
     # args.batch_size = -1
 
-    args = parser.parse_args('-dataset MNIST'.split())
+    # args = parser.parse_args('-dataset MNIST'.split())
     args.inv_steps = 100
     args.batch_size = 64
     args.inv_lr = 0.001
     # args.perturb_strength = 0.03
 
-    # args = parser.parse_args('-dataset CIFAR10'.split())
+    args = parser.parse_args('-dataset CIFAR10'.split())
     # args.inv_steps = 1
     # args.batch_size = 64
 
@@ -251,8 +251,14 @@ def regularization(x):
     return loss_var
 
 
+# debug.expand = False
+
+
+# @debug
 def loss_stats(m_a, s_a, m_b, s_b):
     if isinstance(m_a, list):
+        assert len(m_a) == len(m_b) and len(s_a) == len(s_b), \
+            "lists need to of same length"
         loss_mean = sum(((ma - mb)**2).mean()
                         for ma, mb in zip(m_a, m_b)) / len(m_a)
         loss_std = sum(((sa - sb)**2).mean()
@@ -270,6 +276,7 @@ def loss_fn_wrapper(name, project, class_conditional):
         project, DATA_A, n_classes, class_conditional,
         std=STD, path=stats_path, device=DEVICE, use_drive=args.use_drive)
 
+    # @debug
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
         inputs, labels = data
         outputs = project(data)

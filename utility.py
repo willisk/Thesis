@@ -111,7 +111,7 @@ def tensor_repr(t, assert_all=False, raise_exception=False):
         if debug._indent:
             debug.args = debug._last_args
             debug.func = debug._last_call
-            debug.recall = debug(debug._last_recall, raise_exception=False)
+            debug.recall = debug._last_recall
         debug._indent = 0
         stack = output + ('\nSTACK:' + debug._stack +
                           output) if debug._stack else ''
@@ -131,16 +131,19 @@ def _debug_log(output, var=None, indent='', assert_true=False, raise_exception=F
         elif isinstance(var, torch.Tensor):
             _debug_log(tensor_repr(var, assert_true, raise_exception))
         elif is_iterable(var):
-            _debug_log(f"{type(var).__name__} {{")
-            if isinstance(var, dict):
-                for k, v in var.items():
-                    _debug_log(f"'{k}': ", v, indent + 6 * ' ',
-                               assert_true, raise_exception)
+            if debug.expand:
+                _debug_log(f"{type(var).__name__} {{")
+                if isinstance(var, dict):
+                    for k, v in var.items():
+                        _debug_log(f"'{k}': ", v, indent + 6 * ' ',
+                                   assert_true, raise_exception)
+                else:
+                    for e in var:
+                        _debug_log('- ', e, indent + 6 * ' ',
+                                   assert_true, raise_exception)
+                _debug_log(indent + 4 * ' ' + '}')
             else:
-                for e in var:
-                    _debug_log('- ', e, indent + 6 * ' ',
-                               assert_true, raise_exception)
-            _debug_log(indent + 4 * ' ' + '}')
+                _debug_log(f"{type(var).__name__}[{len(list(var))}]")
         else:
             _debug_log(str(var))
     else:
@@ -158,6 +161,12 @@ def debug(arg, assert_true=False, raise_exception=True):
             debug.verbose = True
         if not hasattr(debug, 'silent'):
             debug.silent = False
+        if not hasattr(debug, 'expand'):
+            debug.expand = True
+
+        def print_stack():
+            print(debug._stack)
+        debug.stack = print_stack
 
     if not hasattr(arg, '__call__'):
         if debug._indent == 0:
@@ -199,7 +208,7 @@ def debug(arg, assert_true=False, raise_exception=True):
 
         debug._last_args = debug_args
         debug._last_call = func
-        debug._last_recall = _recall
+        debug._last_recall = debug(_recall, raise_exception=False)
 
         for argtype, params in [("args", args_kw.items()),
                                 ("kwargs", kwargs.items()),
