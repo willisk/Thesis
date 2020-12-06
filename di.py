@@ -287,7 +287,12 @@ def loss_fn_wrapper(name, project, class_conditional):
         outputs = project(data)
         m, s = utility.get_stats(
             outputs, labels, n_classes, class_conditional, std=STD)
-        return loss_stats(m_a, s_a, m, s) + regularization(inputs)
+        loss = (10 * loss_stats(m_a, s_a, m, s)
+                + 2.5e-5 * regularization(inputs)
+                # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+                + criterion(layer_activations[-1], labels)
+                )
+        return loss
     return name, _loss_fn
 
 
@@ -358,6 +363,11 @@ def jitter(x):
     return x
 
 
+def grad_norm_fn(x):
+    return min(x, 10)  # torch.sqrt(x) if x > 1 else x
+    # return np.sqrt(x) if x > 1 else x
+
+
 for method, loss_fn in methods:
     print("\n## Method:", method)
 
@@ -378,10 +388,6 @@ for method, loss_fn in methods:
 
     optimizer = torch.optim.Adam([batch], lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
-
-    def grad_norm_fn(x):
-        return min(x, 10)  # torch.sqrt(x) if x > 1 else x
-        # return np.sqrt(x) if x > 1 else x
 
     info = inversion.deep_inversion([DATA],
                                     loss_fn,
