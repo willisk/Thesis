@@ -287,7 +287,7 @@ def loss_fn_wrapper(name, project, class_conditional):
         outputs = project(data)
         m, s = utility.get_stats(
             outputs, labels, n_classes, class_conditional, std=STD)
-        loss = (10 * loss_stats(m_a[1:], s_a[1:], m[1:], s[1:])
+        loss = (10 * loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
                 + 2.5e-5 * regularization(inputs)
                 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
                 + criterion(layer_activations[-1], labels)
@@ -347,8 +347,8 @@ methods = [
 
 def im_show(batch):
     with torch.no_grad():
-        img_grid = torchvision.utils.make_grid(batch.cpu())
-        plt.figure(figsize=(6, 6))
+        img_grid = torchvision.utils.make_grid(batch.cpu(), nrow=10)
+        plt.figure(figsize=(8, 8))
         plt.imshow(img_grid.permute(1, 2, 0))
         plt.show()
 
@@ -373,8 +373,7 @@ for method, loss_fn in methods:
 
     batch = torch.randn((args.batch_size, *dataset.input_shape),
                         device=DEVICE, requires_grad=True)
-    labels = torch.randint(n_classes, (args.batch_size,),
-                           device=DEVICE)
+    labels = torch.range(args.batch_size, device=DEVICE) % n_classes
     DATA = (batch, labels)
 
     print("Before:")
