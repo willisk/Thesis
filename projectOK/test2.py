@@ -17,13 +17,13 @@ sys.path.append(PWD)
 
 import utility
 import datasets
-import deepinversion
+import inversion
 
 if 'ipykernel_launcher' in sys.argv:
     import importlib
     importlib.reload(utility)
     importlib.reload(datasets)
-    importlib.reload(deepinversion)
+    importlib.reload(inversion)
 
 print(__doc__)
 
@@ -92,13 +92,13 @@ lr = 0.1
 steps = 400
 optimizer = torch.optim.Adam([A, b], lr=lr)
 
-deepinversion.deep_inversion([X_B],
-                             loss_fn,
-                             optimizer,
-                             steps=steps,
-                             pre_fn=preprocessing,
-                             plot=True,
-                             )
+inversion.deep_inversion([X_B],
+                         loss_fn,
+                         optimizer,
+                         steps=steps,
+                         data_pre_fn=preprocessing,
+                         plot=True,
+                         )
 
 # ======= Result =======
 X_B_proc = preprocessing(X_B).detach()

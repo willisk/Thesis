@@ -15,13 +15,13 @@ sys.path.append(PWD)
 
 import datasets
 import utility
-import deepinversion
+import inversion
 
 if 'ipykernel_launcher' in sys.argv:
     import importlib
     importlib.reload(utility)
     importlib.reload(datasets)
-    importlib.reload(deepinversion)
+    importlib.reload(inversion)
 
 print(__doc__)
 
@@ -114,14 +114,21 @@ steps = 400
 optimizer = torch.optim.Adam([A, b], lr=lr)
 # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-deepinversion.deep_inversion([X_B],
-                             loss_fn,
-                             optimizer,
-                             #  scheduler=scheduler,
-                             steps=steps,
-                             pre_fn=preprocessing,
-                             plot=True,
-                             )
+
+def grad_norm_fn(x):
+    return max(x, 1)
+
+
+    # return np.sqrt(x) if x > 1 else x
+inversion.deep_inversion([X_B],
+                         loss_fn,
+                         optimizer,
+                         #  scheduler=scheduler,
+                         steps=steps,
+                         data_pre_fn=preprocessing,
+                         #  grad_norm_fn=grad_norm_fn,
+                         plot=True,
+                         )
 
 # ======= Result =======
 X_B_proc = preprocessing(X_B).detach()

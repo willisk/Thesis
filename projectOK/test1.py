@@ -10,11 +10,7 @@ import matplotlib.pyplot as plt
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
 
-import deepinversion
-
-if 'ipykernel_launcher' in sys.argv:
-    import importlib
-    importlib.reload(deepinversion)
+import inversion
 
 print(__doc__)
 
@@ -47,6 +43,7 @@ b = torch.zeros((2), requires_grad=True)
 
 from utility import debug
 
+
 def preprocessing(X):
     return X @ A + b
 
@@ -58,13 +55,13 @@ def loss_fn(X):
 
 optimizer = torch.optim.Adam([A, b], lr=0.1)
 
-deepinversion.deep_inversion([X_B],
-                             loss_fn,
-                             optimizer,
-                             steps=200,
-                             pre_fn=preprocessing,
-                             plot=True,
-                             )
+inversion.deep_inversion([X_B],
+                         loss_fn,
+                         optimizer,
+                         steps=200,
+                         data_pre_fn=preprocessing,
+                         plot=True,
+                         )
 
 print("After Pre-Processing:")
 X_B_proc = preprocessing(X_B).detach()

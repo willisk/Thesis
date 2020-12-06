@@ -62,16 +62,16 @@ if 'ipykernel_launcher' in sys.argv:
     # args.batch_size = -1
 
     args = parser.parse_args('-dataset MNIST'.split())
-    args.inv_steps = 1
+    args.inv_steps = 100
     args.batch_size = 64
-    args.n_random_projections = 1024
     args.inv_lr = 0.001
-    args.perturb_strength = 0.03
+    # args.perturb_strength = 0.03
 
     # args = parser.parse_args('-dataset CIFAR10'.split())
     # args.inv_steps = 1
     # args.batch_size = 64
 
+    args.n_random_projections = 1024
     args.use_drive = True
     # args.use_var = True
 else:
@@ -110,20 +110,7 @@ print(f"Running on '{DEVICE}'\n")
 
 # ======= Create Dataset =======
 
-
-if args.dataset == 'GMM':
-    dataset = datasets.MULTIGMM(
-        n_dims=20,
-        n_classes=3,
-        n_modes=args.g_modes,
-        scale_mean=args.g_scale_mean,
-        scale_cov=args.g_scale_cov,
-        mean_shift=args.g_mean_shift,
-        n_samples_A=1000,
-        n_samples_B=100,
-        n_samples_B_val=100,
-    )
-elif args.dataset == 'CIFAR10':
+if args.dataset == 'CIFAR10':
     dataset = datasets.CIFAR10()
 elif args.dataset == 'MNIST':
     dataset = datasets.MNIST()
@@ -134,37 +121,16 @@ A, B, B_val = dataset.get_datasets()
 
 
 def data_loader(D):
-    batch_size = args.batch_size
-    if batch_size == -1:
-        batch_size = len(D)
-    return DataLoader(D, batch_size=batch_size, shuffle=True)
+    return DataLoader(D, batch_size=64, shuffle=True)
 
 
 DATA_A = data_loader(A)
-DATA_B = data_loader(B)
-DATA_B_val = data_loader(B_val)
 
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
 
-# ======= Perturbation =======
-perturb_strength = args.perturb_strength
-perturb_matrix = (torch.eye(n_dims) + perturb_strength *
-                  torch.randn((n_dims, n_dims))).to(DEVICE)
-perturb_shift = (perturb_strength * torch.randn(n_dims)).to(DEVICE)
-
-
-def perturb(X):
-    X_shape = X.shape
-    X = X.reshape(-1, n_dims)
-    out = X @ perturb_matrix + perturb_shift
-    return out.reshape(X_shape)
-
-
 # ======= Neural Network =======
 model_path, net = dataset.net()
-# print(utility.get_child_modules(net))
-# print(len(utility.get_child_modules(net)))
 net.to(DEVICE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
@@ -176,19 +142,6 @@ utility.train(net, DATA_A, criterion, optimizer,
               plot=True,
               use_drive=args.use_drive,
               )
-
-
-verifier_path, verifier_net = dataset.verifier_net()
-if verifier_net:
-    verifier_net.to(DEVICE)
-    optimizer = torch.optim.Adam(verifier_net.parameters(), lr=nn_lr)
-    utility.train(verifier_net, DATA_A, criterion, optimizer,
-                  model_path=verifier_path,
-                  epochs=nn_steps,
-                  resume_training=nn_resume_training,
-                  reset=nn_reset_training,
-                  use_drive=args.use_drive,
-                  )
 
 
 # ======= NN Project =======
@@ -239,8 +192,6 @@ mean_A_C, std_A_C = utility.collect_stats(
     identity, DATA_A, n_classes, class_conditional=True,
     std=STD, path=path_cc, device=DEVICE)
 
-# mean_A = mean_A.reshape(-1, 1, 1)
-
 
 def project_RP(data):
     X, Y = data
@@ -288,22 +239,18 @@ def combine(project1, project2):
         return out1 + out2
     return _combined_fn
 
-# ======= Preprocessing Model =======
-
-
-def preprocessing_model():
-    M = torch.eye(n_dims, requires_grad=True, device=DEVICE)
-    b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
-
-    def preprocessing_fn(X):
-        X_shape = X.shape
-        X = X.reshape(-1, n_dims)
-        return (X @ M + b).reshape(X_shape)
-
-    return preprocessing_fn, (M, b)
-
 
 # ======= Loss Function =======
+def regularization(x):
+    diff1 = x[:, :, :, :-1] - x[:, :, :, 1:]
+    diff2 = x[:, :, :-1, :] - x[:, :, 1:, :]
+    diff3 = x[:, :, 1:, :-1] - x[:, :, :-1, 1:]
+    diff4 = x[:, :, :-1, :-1] - x[:, :, 1:, 1:]
+    loss_var = torch.norm(diff1) + torch.norm(diff2) + \
+        torch.norm(diff3) + torch.norm(diff4)
+    return loss_var
+
+
 def loss_stats(m_a, s_a, m_b, s_b):
     if isinstance(m_a, list):
         loss_mean = sum(((ma - mb)**2).mean()
@@ -314,10 +261,6 @@ def loss_stats(m_a, s_a, m_b, s_b):
         loss_mean = ((m_a - m_b)**2).mean()
         loss_std = ((s_a - s_b)**2).mean()
     return loss_mean + loss_std
-
-
-from functools import wraps
-# importlib.reload(utility)
 
 
 def loss_fn_wrapper(name, project, class_conditional):
@@ -332,7 +275,7 @@ def loss_fn_wrapper(name, project, class_conditional):
         outputs = project(data)
         m, s = utility.get_stats(
             outputs, labels, n_classes, class_conditional, std=STD)
-        return loss_stats(m_a, s_a, m, s)
+        return loss_stats(m_a, s_a, m, s) + regularization(inputs)
     return name, _loss_fn
 
 
@@ -347,16 +290,16 @@ methods = [
     #     project=project_NN,
     #     class_conditional=True,
     # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL",
-    #     project=project_NN_all,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL CC",
-    #     project=project_NN_all,
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="NN ALL",
+        project=project_NN_all,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="NN ALL CC",
+        project=project_NN_all,
+        class_conditional=True,
+    ),
     # loss_fn_wrapper(
     #     name="RP",
     #     project=project_RP,
@@ -372,11 +315,11 @@ methods = [
     #     project=project_RP_relu,
     #     class_conditional=False,
     # ),
-    loss_fn_wrapper(
-        name="RP ReLU CC",
-        project=project_RP_relu_CC,
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="RP ReLU CC",
+    #     project=project_RP_relu_CC,
+    #     class_conditional=True,
+    # ),
     # loss_fn_wrapper(
     #     name="combined",
     #     project=combine(project_NN_all, project_RP_CC),
@@ -384,54 +327,57 @@ methods = [
     # ),
 ]
 
-batch = next(iter(DATA_A))[0][:10]
-print("Before:")
-img_grid = torchvision.utils.make_grid(batch, nrow=5)
-plt.imshow(img_grid.permute(1, 2, 0))
-plt.show()
 
-print("Perturbed:")
-with torch.no_grad():
-    img_grid = torchvision.utils.make_grid(perturb(batch), nrow=5)
-plt.imshow(img_grid.permute(1, 2, 0))
-plt.show()
+def im_show(batch):
+    with torch.no_grad():
+        img_grid = torchvision.utils.make_grid(batch)
+        plt.imshow(img_grid.permute(1, 2, 0))
+        plt.show()
+
 
 # ======= Optimize =======
 metrics = defaultdict(dict)
 
 
+def jitter(x):
+    off1, off2 = torch.randint(low=-2, high=2, size=(2, 1))
+    x = torch.roll(x, shifts=(off1, off2), dims=(2, 3))
+    return x
+
+
 for method, loss_fn in methods:
     print("\n## Method:", method)
 
-    preprocess, params = preprocessing_model()
+    batch = torch.randn((args.batch_size, *dataset.input_shape),
+                        device=DEVICE, requires_grad=True)
+    labels = torch.randint(n_classes, (args.batch_size,),
+                           device=DEVICE)
+    DATA = (batch, labels)
 
-    def data_pre_fn(data):
-        inputs, labels = data
-        inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
-        return (inputs, labels)
+    print("Before:")
+    im_show(batch)
 
-    def inputs_pre_fn(inputs):
-        with torch.no_grad():
-            inputs = perturb(inputs)
-        outputs = preprocess(inputs)
-        return outputs
+    # def inputs_pre_fn(inputs):
+    #     with torch.no_grad():
+    #         inputs = perturb(inputs)
+    #     outputs = preprocess(inputs)
+    #     return outputs
 
-    optimizer = torch.optim.Adam(params, lr=inv_lr)
+    optimizer = torch.optim.Adam([batch], lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
-    debug.silent = True
 
     def grad_norm_fn(x):
-        # return max(x, 10)  # torch.sqrt(x) if x > 1 else x
-        return np.sqrt(x) if x > 1 else x
+        return min(x, 10)  # torch.sqrt(x) if x > 1 else x
+        # return np.sqrt(x) if x > 1 else x
 
-    info = inversion.deep_inversion(DATA_B,
+    info = inversion.deep_inversion([DATA],
                                     loss_fn,
                                     optimizer,
                                     #    scheduler=scheduler,
                                     steps=inv_steps,
                                     # steps=2,
-                                    data_pre_fn=data_pre_fn,
-                                    inputs_pre_fn=inputs_pre_fn,
+                                    # data_pre_fn=data_pre_fn,
+                                    inputs_pre_fn=jitter,
                                     #    track_history=True,
                                     #    track_history_every=10,
                                     plot=True,
@@ -441,83 +387,4 @@ for method, loss_fn in methods:
 
     # ======= Result =======
     print("Inverted:")
-    with torch.no_grad():
-        img_grid = torchvision.utils.make_grid(
-            preprocess(perturb(batch)), nrow=5)
-    plt.imshow(img_grid.permute(1, 2, 0))
-    plt.show()
-
-    print("Results:")
-
-    # Loss
-    # loss = accumulate_fn(DATA_B, loss_fn)
-    loss = info['loss'][-1]
-    print(f"\tloss: {loss:.3f}")
-
-    # L2 Reconstruction Error
-    Id = torch.eye(n_dims, device=DEVICE)
-    l2_err = (preprocess(perturb(Id)) - Id).norm().item() / Id.norm().item()
-    print(f"\trel. l2 reconstruction error: {l2_err:.3f}")
-
-
-#     # NN Accuracy
-#     accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=inputs_pre_fn)
-#     accuracy_val = utility.net_accuracy(
-#         net, DATA_B_val, inputs_pre_fn=inputs_pre_fn)
-#     print(f"\tnn accuracy: {accuracy * 100:.1f} %")
-#     print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
-
-#     metrics[method]['acc'] = accuracy
-#     metrics[method]['acc(val)'] = accuracy_val
-
-#     if verifier_net:
-#         accuracy_ver = utility.net_accuracy(
-#             verifier_net, DATA_B, inputs_pre_fn=inputs_pre_fn)
-#         print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
-#         metrics[method]['acc(ver)'] = accuracy_ver
-#     metrics[method]['l2-err'] = l2_err
-#     metrics[method]['loss'] = loss
-
-# baseline = defaultdict(dict)
-
-
-# accuracy_A = utility.net_accuracy(net, DATA_A)
-# accuracy_B = utility.net_accuracy(net, DATA_B)
-# accuracy_B_val = utility.net_accuracy(
-#     net, DATA_B_val)
-
-# accuracy_B_pert = utility.net_accuracy(
-#     net, DATA_B, inputs_pre_fn=perturb)
-# accuracy_B_val_pert = utility.net_accuracy(
-#     net, DATA_B_val, inputs_pre_fn=perturb)
-
-# if verifier_net:
-#     accuracy_A_ver = utility.net_accuracy(
-#         verifier_net, DATA_A)
-#     accuracy_B_ver = utility.net_accuracy(
-#         verifier_net, DATA_B)
-#     accuracy_B_pert_ver = utility.net_accuracy(
-#         verifier_net, DATA_B, inputs_pre_fn=perturb)
-
-# baseline['B (original)']['acc'] = accuracy_B
-# baseline['B (original)']['acc(val)'] = accuracy_B_val
-
-# baseline['B (perturbed)']['acc'] = accuracy_B_pert
-# baseline['B (perturbed)']['acc(val)'] = accuracy_B_val_pert
-
-# baseline['A']['acc'] = accuracy_A
-
-# if verifier_net:
-#     baseline['B (perturbed)']['acc(ver)'] = accuracy_B_pert_ver
-#     baseline['B (original)']['acc(ver)'] = accuracy_B_ver
-#     baseline['A']['acc(ver)'] = accuracy_A_ver
-
-
-# print("\n# Summary")
-# print("=========\n")
-
-# utility.print_tabular(baseline, row_name="baseline")
-
-# print("\nReconstruction methods:")
-
-# utility.print_tabular(metrics, row_name="method")
+    im_show(batch)

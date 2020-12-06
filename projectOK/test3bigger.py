@@ -15,13 +15,13 @@ sys.path.append(PWD)
 
 import utility
 import datasets
-import deepinversion
+import inversion
 
 if 'ipykernel_launcher' in sys.argv:
     import importlib
     importlib.reload(utility)
     importlib.reload(datasets)
-    importlib.reload(deepinversion)
+    importlib.reload(inversion)
 
 print(__doc__)
 
@@ -35,17 +35,19 @@ torch.manual_seed(3)
 # ======= Create Dataset =======
 # Gaussian Mixture Model
 
-dataset = datasets.DatasetGMM(
+dataset = datasets.MULTIGMM(
     n_dims=2,
+    n_classes=2,
     n_modes=5,
     scale_mean=6,
     scale_cov=3,
     mean_shift=20,
-    n_classes=2,
-    n_samples_per_class=100,
+    n_samples_A=100,
+    n_samples_B=100,
 )
 
-X_A, Y_A = dataset.X, dataset.Y
+X_A, Y_A = dataset.A.tensors
+X_B, Y_B = dataset.B.tensors
 mean_A = X_A.mean(dim=0)
 
 # perturbed Dataset B
@@ -57,7 +59,7 @@ def perturb(X):
     return X @ perturb_matrix + perturb_shift
 
 
-X_B_orig, Y_B = dataset.sample(n_samples_per_class=100)
+X_B_orig, Y_B = X_B, Y_B
 X_B = perturb(X_B_orig)
 
 # ======= Random Projections =======
@@ -116,15 +118,15 @@ lr = 0.1
 steps = 600
 optimizer = torch.optim.Adam([A, b], lr=lr)
 
-deepinversion.deep_inversion([X_B],
-                             loss_fn,
-                             optimizer,
-                             steps=steps,
-                             pre_fn=preprocessing,
-                             #    track_history=True,
-                             #    track_history_every=10,
-                             plot=True,
-                             )
+inversion.deep_inversion([X_B],
+                         loss_fn,
+                         optimizer,
+                         steps=steps,
+                         data_pre_fn=preprocessing,
+                         #    track_history=True,
+                         #    track_history_every=10,
+                         plot=True,
+                         )
 
 # for x, step in zip(*zip(*history)):
 #     utility.plot_stats(x, colors=['r'] * len(history))

@@ -89,16 +89,20 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                    inputs_pre_fn=None,
                    scheduler=None,
                    #    track_history_every=None,
+                   tracking_step=0.01,
                    plot=False,
                    use_amp=False,
-                   grad_multiplier_fn=None,
+                   grad_norm_fn=None,
                    ):
 
     assert utility.valid_data_loader(
         data_loader), f"invalid data_loader: {data_loader}"
 
     # writer = shared.get_summary_writer()
-    device = optimizer.param_groups[0]['params'][0].device
+
+    params = sum((p_group['params']
+                  for p_group in optimizer.param_groups), [])
+    device = params[0].device
     USE_AMP = (device.type == 'cuda') and use_amp
     if USE_AMP:
         scaler = GradScaler()
@@ -106,32 +110,27 @@ def deep_inversion(data_loader, loss_fn, optimizer,
     # history = []
 
     TRACKING = defaultdict(list)
+    num_batches = len(data_loader)
 
-    def process_result(res, metrics_acc, batch_size):
+    def process_result(res):
         if isinstance(res, tuple):
             loss, info = res
-            display_info = {**info}
         else:
             loss = res
-            display_info = {}
-        display_info['loss'] = loss.item()
-        for k, v in display_info.items():
-            metrics_acc[k] += v / batch_size
-        pbar.set_postfix(**display_info, refresh=False)
-        pbar.update()
-        return loss
+            info = {}
+        info = {'loss': loss.item(), **info}
+        return loss, info
 
     print("Beginning Inversion.", flush=True)
 
     # with tqdm(range(1, steps + 1), desc="Epoch") as pbar:
     with tqdm(**utility.tqdm_fmt_dict(steps, len(data_loader))) as pbar:
 
-        for epoch in range(1, steps + 1):
+        for epoch in range(steps):
 
-            METRICS = defaultdict(float)
-            total_count = 0
+            for batch_i, data in enumerate(data_loader):
 
-            for data in data_loader:
+                step = epoch + batch_i / num_batches
 
                 # if step == 1 and track_history_every:
                 #     history = [(inputs.detach().cpu().clone(), 0)]
@@ -154,37 +153,28 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                 if USE_AMP:
                     with autocast():
                         res = loss_fn(data)
-                        loss = process_result(res, METRICS, batch_size)
+                    loss, info = process_result(res)
                     scaler.scale(loss).backward()
                     grad_scale = scaler.get_scale()
                 else:
                     res = loss_fn(data)
-                    loss = process_result(res, METRICS, batch_size)
+                    loss, info = process_result(res)
                     loss.backward()
                     grad_scale = 1
 
-                grad_total = 0.
-                # if grad_penalty:
-                # params = []
-                for p_group in optimizer.param_groups:
-                    #     params += p_group['params']
-                    for i, param in enumerate(p_group['params']):
-                        lr = p_group['lr']
-                        # p_name = f"parpam_{'-'.join(map(str, param.shape))}"
-                        grad_norm = (param.grad / grad_scale).norm()
-                        if grad_multiplier_fn:
-                            # param.grad.data.mul_(grad_penalty * grad_norm.sqrt())
-                            lambd = grad_multiplier_fn(grad_norm) / grad_norm
-                            param.grad.data.mul_(lambd)
-                        grad_total += grad_norm
-                        METRICS[f"grad_{i}"] += grad_norm.item()
-                # if params:
-                #     for p in params:
-                #         p.grad.data.mul_(0)
-                #     torch.nn.utils.clip_grad_norm_(params, 0)
-                # if grad_penalty:
-                #     grad_total *= grad_penalty
-                #     grad_total.backward()
+                for k in info:
+                    info[k] *= num_batches / batch_size
+
+                total_norm = torch.norm(torch.stack(
+                    [p.grad.detach().norm() / grad_scale for p in params])).item()
+                rescale_coef = 1
+
+                if grad_norm_fn:
+                    rescale_coef = grad_norm_fn(total_norm) / total_norm
+                    for param in params:
+                        param.grad.detach().mul_(rescale_coef)
+
+                info['grad'] = total_norm
 
                 if USE_AMP:
                     scaler.step(optimizer)
@@ -193,14 +183,14 @@ def deep_inversion(data_loader, loss_fn, optimizer,
                     optimizer.step()
 
                 if scheduler is not None:
-                    scheduler.step(grad_total)
+                    scheduler.step(total_norm)
 
-                # total_count += bs
-                # for k in METRICS:
-                #     METRICS[k] *= bs / total_count
+                pbar.set_postfix(**info, refresh=False)
+                pbar.update()
 
-            for k, v in METRICS.items():
-                TRACKING[k].append(v * len(data_loader))
+                TRACKING['step'].append(step)
+                for k, v in info.items():
+                    TRACKING[k].append(v)
 
             # if track_history_every and (
             #         step % track_history_every == 0 or step == steps):
