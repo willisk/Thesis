@@ -279,8 +279,8 @@ def loss_fn_wrapper(name, project, class_conditional):
         outputs = project(data)
         m, s = utility.get_stats(
             outputs, labels, n_classes, class_conditional, std=STD)
-        loss = (0.001 * loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
-                + 0.0001 * regularization(inputs)
+        loss = (10 * loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
+                + 0.001 * regularization(inputs)
                 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
                 + criterion(layer_activations[-1], labels)
                 )
