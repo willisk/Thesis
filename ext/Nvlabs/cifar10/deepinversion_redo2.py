@@ -165,7 +165,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='PyTorch CIFAR10 DeepInversion')
     parser.add_argument('--bs', default=128, type=int, help='batch size')
-    parser.add_argument('--iters_mi', default=1000, type=int,
+    parser.add_argument('--iters_mi', default=2000, type=int,
                         help='number of iterations for model inversion')
     parser.add_argument('--cig_scale', default=0.0,
                         type=float, help='competition score')
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     parser.add_argument('--teacher_weights', default="'./checkpoint/teacher_resnet34_only.weights'",
                         type=str, help='path to load weights of the model')
 
-    args = parser.parse_args([])
+    args = parser.parse_args()
 
     print("loading resnet34")
 
