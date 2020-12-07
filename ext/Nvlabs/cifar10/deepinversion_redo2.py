@@ -165,8 +165,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description='PyTorch CIFAR10 DeepInversion')
-    parser.add_argument('--bs', default=256, type=int, help='batch size')
-    parser.add_argument('--iters_mi', default=2000, type=int,
+    parser.add_argument('--bs', default=128, type=int, help='batch size')
+    parser.add_argument('--iters_mi', default=500, type=int,
                         help='number of iterations for model inversion')
     parser.add_argument('--cig_scale', default=0.0,
                         type=float, help='competition score')
