@@ -41,19 +41,12 @@ parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("--use_drive", action="store_true")
 parser.add_argument("--use_var", action="store_true")
-parser.add_argument("-perturb_strength", type=float, default=1.5)
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-batch_size", type=int, default=64)
 parser.add_argument("-n_random_projections", type=int, default=256)
 parser.add_argument("-inv_lr", type=float, default=0.01)
 parser.add_argument("-inv_steps", type=int, default=100)
-
-# GMM
-parser.add_argument("-g_modes", type=int, default=3)
-parser.add_argument("-g_scale_mean", type=float, default=2)
-parser.add_argument("-g_scale_cov", type=float, default=20)
-parser.add_argument("-g_mean_shift", type=float, default=0)
 
 if 'ipykernel_launcher' in sys.argv:
     # args = parser.parse_args('-dataset GMM'.split())
@@ -65,7 +58,6 @@ if 'ipykernel_launcher' in sys.argv:
     args.inv_steps = 100
     args.batch_size = 64
     args.inv_lr = 0.01
-    # args.perturb_strength = 0.03
 
     args = parser.parse_args('-dataset CIFAR10'.split())
     # args.inv_steps = 1
@@ -307,16 +299,16 @@ methods = [
     #     project=project_NN,
     #     class_conditional=True,
     # ),
-    loss_fn_wrapper(
-        name="NN ALL",
-        project=project_NN_all,
-        class_conditional=False,
-    ),
     # loss_fn_wrapper(
-    #     name="NN ALL CC",
+    #     name="NN ALL",
     #     project=project_NN_all,
-    #     class_conditional=True,
+    #     class_conditional=False,
     # ),
+    loss_fn_wrapper(
+        name="NN ALL CC",
+        project=project_NN_all,
+        class_conditional=True,
+    ),
     # loss_fn_wrapper(
     #     name="RP",
     #     project=project_RP,
