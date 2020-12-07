@@ -251,11 +251,6 @@ def loss_stats(m_a, s_a, m_b, s_b):
     if isinstance(m_a, list):
         assert len(m_a) == len(m_b) and len(s_a) == len(s_b), \
             "lists need to of same length"
-        # REMOVEEEE XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-        # loss_mean = sum(((ma - mb)**2).mean()
-        #                 for ma, mb in zip(m_a, m_b)) / len(m_a)
-        # loss_std = sum(((sa - sb)**2).mean()
-        #                for sa, sb in zip(s_a, s_b)) / len(m_a)
         loss_mean = sum(((ma - mb)**2).mean()
                         for ma, mb in zip(m_a, m_b)) / len(m_a)
         loss_std = sum(((sa - sb)**2).mean()
