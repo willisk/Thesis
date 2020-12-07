@@ -64,7 +64,7 @@ if 'ipykernel_launcher' in sys.argv:
     # args = parser.parse_args('-dataset MNIST'.split())
     args.inv_steps = 100
     args.batch_size = 64
-    args.inv_lr = 0.001
+    args.inv_lr = 0.01
     # args.perturb_strength = 0.03
 
     args = parser.parse_args('-dataset CIFAR10'.split())
@@ -287,8 +287,8 @@ def loss_fn_wrapper(name, project, class_conditional):
         outputs = project(data)
         m, s = utility.get_stats(
             outputs, labels, n_classes, class_conditional, std=STD)
-        loss = (10 * loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
-                + 2.5e-5 * regularization(inputs)
+        loss = (0.001 * loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
+                + 0.0001 * regularization(inputs)
                 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
                 + criterion(layer_activations[-1], labels)
                 )
