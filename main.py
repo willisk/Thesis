@@ -306,7 +306,7 @@ def preprocessing_model():
 
 
 # ======= Loss Function =======
-# @debug
+@debug
 def loss_stats(m_a, s_a, m_b, s_b):
     if isinstance(m_a, list):
         loss_mean = sum(((ma - mb)**2).mean()
@@ -326,7 +326,7 @@ from functools import wraps
 debug.silent = True
 
 
-@debug
+# @debug
 def loss_fn_wrapper(name, project, class_conditional):
     _name = name.replace(' ', '-')
     stats_path = os.path.join(MODELDIR, f"stats_{_name}.pt")
