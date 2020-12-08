@@ -75,7 +75,7 @@ class DeepInversionFeatureHook():
 
 
 def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
-               prefix=None, competitive_scale=0.01, train_writer=None, global_iteration=None,
+               prefix=None, train_writer=None, global_iteration=None,
                optimizer=None, inputs=None, bn_reg_scale=0.0, l2_coeff=0.0):
 
     best_cost = 1e6
@@ -219,7 +219,7 @@ if __name__ == "__main__":
     print("Starting model inversion")
 
     inputs = get_images(net=net_teacher, bs=args.bs, epochs=args.iters_mi, idx=batch_idx,
-                        prefix=prefix, competitive_scale=args.cig_scale,
+                        prefix=prefix,
                         train_writer=train_writer, global_iteration=global_iteration,
                         optimizer=optimizer_di, inputs=inputs, bn_reg_scale=args.r_feature_weight,
                         var_scale=args.di_var_scale, l2_coeff=args.di_l2_scale)

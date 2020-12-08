@@ -35,13 +35,12 @@ from utility import debug
 parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
 parser.add_argument(
     "-dataset", choices=['CIFAR10', 'GMM', 'MNIST'], required=True)
-parser.add_argument("-seed", type=int, default=0)
+parser.add_argument("-seed", type=int, default=7)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
-parser.add_argument("--use_drive", action="store_true")
 parser.add_argument("--use_var", action="store_true")
-parser.add_argument("-perturb_strength", type=float, default=1.5)
+parser.add_argument("-perturb_strength", type=float, default=0.03)
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-batch_size", type=int, default=64)
@@ -72,11 +71,13 @@ if 'ipykernel_launcher' in sys.argv:
     # args.inv_steps = 1
     # args.batch_size = 64
 
-    args.use_drive = True
     # args.use_var = True
 else:
-    args = parser.parse_args()
+    # args = parser.parse_args()
+    # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    args = parser.parse_args('-dataset MNIST'.split())
 
+USE_DRIVE = True
 
 print("#", __doc__)
 print("# on", args.dataset)
@@ -113,7 +114,7 @@ print(f"Running on '{DEVICE}'\n")
 
 if args.dataset == 'GMM':
     dataset = datasets.MULTIGMM(
-        n_dims=20,
+        input_shape=(20,),
         n_classes=3,
         n_modes=args.g_modes,
         scale_mean=args.g_scale_mean,
@@ -174,7 +175,7 @@ utility.train(net, DATA_A, criterion, optimizer,
               resume_training=nn_resume_training,
               reset=nn_reset_training,
               plot=True,
-              use_drive=args.use_drive,
+              use_drive=USE_DRIVE,
               )
 
 
@@ -187,7 +188,7 @@ if verifier_net:
                   epochs=nn_steps,
                   resume_training=nn_resume_training,
                   reset=nn_reset_training,
-                  use_drive=args.use_drive,
+                  use_drive=USE_DRIVE,
                   )
 
 
@@ -304,6 +305,7 @@ def preprocessing_model():
 
 
 # ======= Loss Function =======
+# @debug
 def loss_stats(m_a, s_a, m_b, s_b):
     if isinstance(m_a, list):
         loss_mean = sum(((ma - mb)**2).mean()
@@ -325,7 +327,7 @@ def loss_fn_wrapper(name, project, class_conditional):
     stats_path = os.path.join(MODELDIR, f"stats_{_name}.pt")
     m_a, s_a = utility.collect_stats(
         project, DATA_A, n_classes, class_conditional,
-        std=STD, path=stats_path, device=DEVICE, use_drive=args.use_drive)
+        std=STD, path=stats_path, device=DEVICE, use_drive=USE_DRIVE)
 
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
         inputs, labels = data
@@ -342,11 +344,11 @@ methods = [
     #     project=project_NN,
     #     class_conditional=False,
     # ),
-    # loss_fn_wrapper(
-    #     name="NN CC",
-    #     project=project_NN,
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="NN CC",
+        project=project_NN,
+        class_conditional=True,
+    ),
     # loss_fn_wrapper(
     #     name="NN ALL",
     #     project=project_NN_all,
@@ -372,11 +374,11 @@ methods = [
     #     project=project_RP_relu,
     #     class_conditional=False,
     # ),
-    loss_fn_wrapper(
-        name="RP ReLU CC",
-        project=project_RP_relu_CC,
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="RP ReLU CC",
+    #     project=project_RP_relu_CC,
+    #     class_conditional=True,
+    # ),
     # loss_fn_wrapper(
     #     name="combined",
     #     project=combine(project_NN_all, project_RP_CC),
@@ -418,7 +420,6 @@ for method, loss_fn in methods:
 
     optimizer = torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
-    debug.silent = True
 
     def grad_norm_fn(x):
         # return max(x, 10)  # torch.sqrt(x) if x > 1 else x

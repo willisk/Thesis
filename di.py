@@ -54,12 +54,12 @@ if 'ipykernel_launcher' in sys.argv:
     # args.inv_steps = 500
     # args.batch_size = -1
 
-    # args = parser.parse_args('-dataset MNIST'.split())
+    args = parser.parse_args('-dataset MNIST'.split())
     args.inv_steps = 100
     args.batch_size = 64
     args.inv_lr = 0.01
 
-    args = parser.parse_args('-dataset CIFAR10'.split())
+    # args = parser.parse_args('-dataset CIFAR10'.split())
     # args.inv_steps = 1
     # args.batch_size = 64
 
@@ -79,6 +79,7 @@ print("Hyperparameters:")
 print(utility.dict_to_str(vars(args), '\n'), end='\n\n')
 
 # ======= Set Seeds =======
+random.seed(args.seed)
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 
@@ -274,11 +275,12 @@ def loss_fn_wrapper(name, project, class_conditional):
         outputs = project(data)
         m, s = utility.get_stats(
             outputs, labels, n_classes, class_conditional, std=STD)
-        loss = (10 * loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
-                + 0.001 * regularization(inputs)
-                # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-                + criterion(layer_activations[-1], labels)
-                )
+        loss = loss_stats(m_a, s_a, m, s)
+        # loss = (10 * loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
+        #         + 0.001 * regularization(inputs)
+        #         # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        #         + criterion(layer_activations[-1], labels)
+        #         )
         return loss
     return name, _loss_fn
 
@@ -299,21 +301,21 @@ methods = [
     #     project=project_NN_all,
     #     class_conditional=False,
     # ),
-    loss_fn_wrapper(
-        name="NN ALL CC",
-        project=project_NN_all,
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
+    #     class_conditional=True,
+    # ),
     # loss_fn_wrapper(
     #     name="RP",
     #     project=project_RP,
     #     class_conditional=False,
     # ),
-    # loss_fn_wrapper(
-    #     name="RP CC",
-    #     project=project_RP_CC,
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="RP CC",
+        project=project_RP_CC,
+        class_conditional=True,
+    ),
     # loss_fn_wrapper(
     #     name="RP ReLU",
     #     project=project_RP_relu,
