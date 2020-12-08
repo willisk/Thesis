@@ -71,7 +71,6 @@ def prettify_time(seconds):
         return "{}ms".format(int(seconds * 1000))
 
 
-
 def is_iterable(x):
     return isinstance(x, Iterable)
 
@@ -224,6 +223,7 @@ def c_stats(inputs, labels, n_classes, return_count=False, std=False):
     return mean, var
 
 
+@debug
 def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, dtype=torch.float):
     if isinstance(inputs, list):
         out = tuple(zip(*[_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count)
@@ -236,6 +236,7 @@ def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=
     return _get_stats(inputs.to(dtype), labels, n_classes, class_conditional, std, return_count)
 
 
+@debug
 def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False):
     if class_conditional:
         assert labels is not None and n_classes is not None
@@ -246,6 +247,7 @@ def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std
     return batch_feature_stats(inputs, std=std)
 
 
+@debug
 def collect_stats(projection, data_loader, n_classes, class_conditional, std=False,
                   device='cpu', path=None, use_drive=True):
 
