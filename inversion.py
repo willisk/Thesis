@@ -6,7 +6,8 @@ import torch
 from torch.cuda.amp import autocast, GradScaler
 from scipy.stats import betabinom
 
-from tqdm.auto import tqdm
+# from tqdm.auto import tqdm
+from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 
