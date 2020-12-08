@@ -79,8 +79,8 @@ else:
 
 USE_DRIVE = True
 
-print("#", __doc__)
-print("# on", args.dataset)
+# print("#", __doc__)
+# print("# on", args.dataset)
 
 
 # ======= Hyperparameters =======
@@ -393,16 +393,16 @@ methods = [
 ]
 
 batch = next(iter(DATA_A))[0][:10]
-print("Before:", flush=True)
-img_grid = torchvision.utils.make_grid(batch, nrow=5)
-plt.imshow(img_grid.permute(1, 2, 0))
-plt.show()
+# print("Before:", flush=True)
+# img_grid = torchvision.utils.make_grid(batch, nrow=5)
+# plt.imshow(img_grid.permute(1, 2, 0))
+# plt.show()
 
-print("Perturbed:")
-with torch.no_grad():
-    img_grid = torchvision.utils.make_grid(perturb(batch), nrow=5)
-plt.imshow(img_grid.permute(1, 2, 0))
-plt.show()
+# print("Perturbed:")
+# with torch.no_grad():
+#     img_grid = torchvision.utils.make_grid(perturb(batch), nrow=5)
+# plt.imshow(img_grid.permute(1, 2, 0))
+# plt.show()
 
 # ======= Optimize =======
 metrics = defaultdict(dict)
