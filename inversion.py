@@ -80,6 +80,9 @@ def inversion(data_loader, loss_fn, optimizer,
 
             for batch_i, data in enumerate(data_loader):
 
+                # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
+                if batch_i == 9:
+                    return
                 step = epoch + batch_i / num_batches
 
                 # if step == 1 and track_history_every:

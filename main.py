@@ -393,16 +393,16 @@ methods = [
 ]
 
 batch = next(iter(DATA_A))[0][:10]
-# print("Before:")
-# img_grid = torchvision.utils.make_grid(batch, nrow=5)
-# plt.imshow(img_grid.permute(1, 2, 0))
-# plt.show()
+print("Before:")
+img_grid = torchvision.utils.make_grid(batch, nrow=5)
+plt.imshow(img_grid.permute(1, 2, 0))
+plt.show()
 
-# print("Perturbed:")
-# with torch.no_grad():
-#     img_grid = torchvision.utils.make_grid(perturb(batch), nrow=5)
-# plt.imshow(img_grid.permute(1, 2, 0))
-# plt.show()
+print("Perturbed:")
+with torch.no_grad():
+    img_grid = torchvision.utils.make_grid(perturb(batch), nrow=5)
+plt.imshow(img_grid.permute(1, 2, 0))
+plt.show()
 
 # ======= Optimize =======
 metrics = defaultdict(dict)
@@ -446,25 +446,25 @@ for method, loss_fn in methods:
                                grad_norm_fn=grad_norm_fn,
                                )
 
-    # ======= Result =======
-    print("Inverted:")
-    with torch.no_grad():
-        img_grid = torchvision.utils.make_grid(
-            preprocess(perturb(batch)), nrow=5)
-    plt.imshow(img_grid.permute(1, 2, 0))
-    plt.show()
+    # # ======= Result =======
+    # print("Inverted:")
+    # with torch.no_grad():
+    #     img_grid = torchvision.utils.make_grid(
+    #         preprocess(perturb(batch)), nrow=5)
+    # plt.imshow(img_grid.permute(1, 2, 0))
+    # plt.show()
 
-    print("Results:")
+    # print("Results:")
 
-    # Loss
-    # loss = accumulate_fn(DATA_B, loss_fn)
-    loss = info['loss'][-1]
-    print(f"\tloss: {loss:.3f}")
+    # # Loss
+    # # loss = accumulate_fn(DATA_B, loss_fn)
+    # loss = info['loss'][-1]
+    # print(f"\tloss: {loss:.3f}")
 
-    # L2 Reconstruction Error
-    Id = torch.eye(n_dims, device=DEVICE)
-    l2_err = (preprocess(perturb(Id)) - Id).norm().item() / Id.norm().item()
-    print(f"\trel. l2 reconstruction error: {l2_err:.3f}")
+    # # L2 Reconstruction Error
+    # Id = torch.eye(n_dims, device=DEVICE)
+    # l2_err = (preprocess(perturb(Id)) - Id).norm().item() / Id.norm().item()
+    # print(f"\trel. l2 reconstruction error: {l2_err:.3f}")
 
 
 #     # NN Accuracy
