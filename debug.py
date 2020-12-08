@@ -103,18 +103,6 @@ def _debug_log(output, var=None, indent='', assert_true=False):
 
 def debug(arg, assert_true=False):
 
-    if not hasattr(debug, '_stack'):
-        debug._stack = ""
-        debug._indent = 0
-        if not hasattr(debug, 'verbose'):
-            debug.verbose = True
-        if not hasattr(debug, 'silent'):
-            debug.silent = False
-        if not hasattr(debug, 'expand'):
-            debug.expand = True
-        if not hasattr(debug, 'raise_exception'):
-            debug.raise_exception = True
-
     if not hasattr(arg, '__call__'):
         if debug._indent == 0:
             debug._stack = ""
@@ -167,3 +155,16 @@ def debug(arg, assert_true=False):
                        indent, assert_true)
         return out
     return _func
+
+
+def debug_init():
+    print("init called")
+    debug._stack = ""
+    debug._indent = 0
+    debug.verbose = True
+    debug.silent = False
+    debug.expand = True
+    debug.raise_exception = True
+
+
+debug_init()
