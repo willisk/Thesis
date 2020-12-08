@@ -1,3 +1,6 @@
+import os
+import sys
+
 import torch
 import inspect
 from functools import reduce, wraps
@@ -43,8 +46,9 @@ def tensor_repr(t, assert_all=False):
         if not assert_val:
             exception_encountered = True
     if exception_encountered and (not hasattr(debug, 'raise_exception') or debug.raise_exception):
-        debug.raise_exception = False
-        debug.silent = False
+        if debug.restore_defaults_on_exception:
+            debug.raise_exception = False
+            debug.silent = False
         debug.x = t
         stack = output + ('\nSTACK:' + debug._stack +
                           output) if debug._stack else ''
@@ -158,12 +162,15 @@ def debug(arg, assert_true=False):
 
 
 def debug_init():
+    print("init called")
     debug._stack = ""
     debug._indent = 0
     debug.verbose = True
     debug.silent = False
     debug.expand = True
     debug.raise_exception = True
+    interactive_notebook = 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ
+    debug.restore_defaults_on_exception = not interactive_notebook
 
 
 debug_init()
