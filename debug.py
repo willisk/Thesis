@@ -158,7 +158,6 @@ def debug(arg, assert_true=False):
 
 
 def debug_init():
-    print("init called")
     debug._stack = ""
     debug._indent = 0
     debug.verbose = True
