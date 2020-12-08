@@ -393,7 +393,7 @@ methods = [
 ]
 
 batch = next(iter(DATA_A))[0][:10]
-print("Before:")
+print("Before:", flush=True)
 img_grid = torchvision.utils.make_grid(batch, nrow=5)
 plt.imshow(img_grid.permute(1, 2, 0))
 plt.show()
