@@ -17,7 +17,7 @@ if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
     import importlib
     importlib.reload(utility)
 
-from utility import debug
+from debug import debug
 
 
 def betabinom_distr(N, a=1, b=1):
@@ -32,17 +32,17 @@ def betabinom_distr(N, a=1, b=1):
 #     out = [factor * e / s for e in exponential]
 #     return out
 # @timing
-def deep_inversion(data_loader, loss_fn, optimizer,
-                   steps=10,
-                   data_pre_fn=None,
-                   inputs_pre_fn=None,
-                   scheduler=None,
-                   #    track_history_every=None,
-                   tracking_step=0.01,
-                   plot=False,
-                   use_amp=False,
-                   grad_norm_fn=None,
-                   ):
+def inversion(data_loader, loss_fn, optimizer,
+              steps=10,
+              data_pre_fn=None,
+              inputs_pre_fn=None,
+              scheduler=None,
+              #    track_history_every=None,
+              tracking_step=0.01,
+              plot=False,
+              use_amp=False,
+              grad_norm_fn=None,
+              ):
 
     assert utility.valid_data_loader(
         data_loader), f"invalid data_loader: {data_loader}"

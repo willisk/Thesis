@@ -2,6 +2,7 @@
 import os
 import sys
 
+import random
 import argparse
 from collections import defaultdict
 
@@ -28,14 +29,13 @@ if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
     importlib.reload(inversion)
     importlib.reload(datasets)
 
-from utility import debug
-
+from debug import debug
 
 # ======= Arg Parse =======
 parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
 parser.add_argument(
     "-dataset", choices=['CIFAR10', 'GMM', 'MNIST'], required=True)
-parser.add_argument("-seed", type=int, default=7)
+parser.add_argument("-seed", type=int, default=6)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
@@ -84,10 +84,11 @@ print("# on", args.dataset)
 
 
 # ======= Hyperparameters =======
-print("Hyperparameters:")
-print(utility.dict_to_str(vars(args), '\n'), end='\n\n')
+# print("Hyperparameters:")
+# print(utility.dict_to_str(vars(args), '\n'), end='\n\n')
 
 # ======= Set Seeds =======
+random.seed(args.seed)
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 
@@ -231,49 +232,49 @@ def identity(data): return data[0]
 
 STD = not args.use_var
 
-path = os.path.join(MODELDIR, "stats_inputs.pt")
-path_cc = os.path.join(MODELDIR, "stats_inputs-CC.pt")
-mean_A, std_A = utility.collect_stats(
-    identity, DATA_A, n_classes, class_conditional=False,
-    std=STD, path=path, device=DEVICE)
-mean_A_C, std_A_C = utility.collect_stats(
-    identity, DATA_A, n_classes, class_conditional=True,
-    std=STD, path=path_cc, device=DEVICE)
+# path = os.path.join(MODELDIR, "stats_inputs.pt")
+# path_cc = os.path.join(MODELDIR, "stats_inputs-CC.pt")
+# mean_A, std_A = utility.collect_stats(
+#     identity, DATA_A, n_classes, class_conditional=False,
+#     std=STD, path=path, device=DEVICE)
+# mean_A_C, std_A_C = utility.collect_stats(
+#     identity, DATA_A, n_classes, class_conditional=True,
+#     std=STD, path=path_cc, device=DEVICE)
 
-# mean_A = mean_A.reshape(-1, 1, 1)
-
-
-def project_RP(data):
-    X, Y = data
-    return (X - mean_A).reshape(-1, n_dims) @ RP
+# # mean_A = mean_A.reshape(-1, 1, 1)
 
 
-def project_RP_CC(data):
-    X, Y = data
-    X_proj_C = None
-    for c in range(n_classes):
-        X_proj_c = (X[Y == c] - mean_A_C[c]).reshape(-1, n_dims) @ RP
-        if X_proj_C is None:
-            X_proj_C = torch.empty((X.shape[0], n_random_projections),
-                                   dtype=X_proj_c.dtype, device=X.device)
-        X_proj_C[Y == c] = X_proj_c
-    return X_proj_C
+# def project_RP(data):
+#     X, Y = data
+#     return (X - mean_A).reshape(-1, n_dims) @ RP
 
 
-# Random ReLU Projections
-relu_bias = (torch.randn((1, n_random_projections),
-                         device=DEVICE) * std_A.max())
-relu_bias_C = (torch.randn((n_classes, n_random_projections), device=DEVICE)
-               * std_A_C.max(dim=1, keepdims=True)[0].reshape(n_classes, 1))
+# def project_RP_CC(data):
+#     X, Y = data
+#     X_proj_C = None
+#     for c in range(n_classes):
+#         X_proj_c = (X[Y == c] - mean_A_C[c]).reshape(-1, n_dims) @ RP
+#         if X_proj_C is None:
+#             X_proj_C = torch.empty((X.shape[0], n_random_projections),
+#                                    dtype=X_proj_c.dtype, device=X.device)
+#         X_proj_C[Y == c] = X_proj_c
+#     return X_proj_C
 
 
-def project_RP_relu(data):
-    return F.relu(project_RP(data) + relu_bias)
+# # Random ReLU Projections
+# relu_bias = (torch.randn((1, n_random_projections),
+#                          device=DEVICE) * std_A.max())
+# relu_bias_C = (torch.randn((n_classes, n_random_projections), device=DEVICE)
+#                * std_A_C.max(dim=1, keepdims=True)[0].reshape(n_classes, 1))
 
 
-def project_RP_relu_CC(data):
-    X, Y = data
-    return F.relu(project_RP_CC(data) + relu_bias_C[Y])
+# def project_RP_relu(data):
+#     return F.relu(project_RP(data) + relu_bias)
+
+
+# def project_RP_relu_CC(data):
+#     X, Y = data
+#     return F.relu(project_RP_CC(data) + relu_bias_C[Y])
 
 # ======= Combined =======
 
@@ -322,6 +323,10 @@ from functools import wraps
 # importlib.reload(utility)
 
 
+debug.silent = True
+
+
+@debug
 def loss_fn_wrapper(name, project, class_conditional):
     _name = name.replace(' ', '-')
     stats_path = os.path.join(MODELDIR, f"stats_{_name}.pt")
@@ -329,6 +334,7 @@ def loss_fn_wrapper(name, project, class_conditional):
         project, DATA_A, n_classes, class_conditional,
         std=STD, path=stats_path, device=DEVICE, use_drive=USE_DRIVE)
 
+    @debug
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
         inputs, labels = data
         outputs = project(data)
@@ -387,16 +393,16 @@ methods = [
 ]
 
 batch = next(iter(DATA_A))[0][:10]
-print("Before:")
-img_grid = torchvision.utils.make_grid(batch, nrow=5)
-plt.imshow(img_grid.permute(1, 2, 0))
-plt.show()
+# print("Before:")
+# img_grid = torchvision.utils.make_grid(batch, nrow=5)
+# plt.imshow(img_grid.permute(1, 2, 0))
+# plt.show()
 
-print("Perturbed:")
-with torch.no_grad():
-    img_grid = torchvision.utils.make_grid(perturb(batch), nrow=5)
-plt.imshow(img_grid.permute(1, 2, 0))
-plt.show()
+# print("Perturbed:")
+# with torch.no_grad():
+#     img_grid = torchvision.utils.make_grid(perturb(batch), nrow=5)
+# plt.imshow(img_grid.permute(1, 2, 0))
+# plt.show()
 
 # ======= Optimize =======
 metrics = defaultdict(dict)
@@ -425,20 +431,20 @@ for method, loss_fn in methods:
         # return max(x, 10)  # torch.sqrt(x) if x > 1 else x
         return np.sqrt(x) if x > 1 else x
 
-    info = inversion.deep_inversion(DATA_B,
-                                    loss_fn,
-                                    optimizer,
-                                    #    scheduler=scheduler,
-                                    steps=inv_steps,
-                                    # steps=2,
-                                    data_pre_fn=data_pre_fn,
-                                    inputs_pre_fn=inputs_pre_fn,
-                                    #    track_history=True,
-                                    #    track_history_every=10,
-                                    plot=True,
-                                    use_amp=args.use_amp,
-                                    grad_norm_fn=grad_norm_fn,
-                                    )
+    info = inversion.inversion(DATA_B,
+                               loss_fn,
+                               optimizer,
+                               #    scheduler=scheduler,
+                               steps=inv_steps,
+                               # steps=2,
+                               data_pre_fn=data_pre_fn,
+                               inputs_pre_fn=inputs_pre_fn,
+                               #    track_history=True,
+                               #    track_history_every=10,
+                               plot=True,
+                               use_amp=args.use_amp,
+                               grad_norm_fn=grad_norm_fn,
+                               )
 
     # ======= Result =======
     print("Inverted:")

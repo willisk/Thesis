@@ -2,6 +2,8 @@
 import os
 import sys
 
+import random
+
 import argparse
 from collections import defaultdict
 
@@ -28,7 +30,7 @@ if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
     importlib.reload(inversion)
     importlib.reload(datasets)
 
-from utility import debug
+from debug import debug
 
 
 # ======= Arg Parse =======
