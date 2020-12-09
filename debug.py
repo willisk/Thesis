@@ -51,8 +51,9 @@ def tensor_repr(t, assert_all=False):
             debug.raise_exception = False
             debug.silent = False
         debug.x = t
-        stack = output + ('\nSTACK:' + debug._stack +
-                          output) if debug._stack else ''
+        stack = output
+        if debug._indent and debug._stack:
+            stack += '\nSTACK:' + debug._stack + output
         if debug._indent:
             debug.args = debug._last_args
             debug.func = debug._last_call
@@ -154,10 +155,10 @@ def debug(arg, assert_true=False):
                            indent + ' ' * 8, assert_true)
         out = func(*args, **kwargs)
         debug.out = out
-        debug._indent -= 1
         if out is not None:
             _debug_log("returned:  ", out,
                        indent, assert_true)
+        debug._indent -= 1
         return out
     return _func
 
