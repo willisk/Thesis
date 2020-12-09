@@ -55,7 +55,7 @@ def tensor_repr(t, assert_all=False):
             debug.silent = False
         debug.x = t
         stack = output
-        if debug._stack:
+        if debug._stack and '\n' in debug._stack:
             stack += '\nSTACK:  ' + debug._stack + output
         if debug._indent:
             debug.args = debug._last_args
