@@ -143,6 +143,7 @@ def debug(arg, assert_true=False):
     def _func(*args, **kwargs):
         if debug._indent == 0:
             debug._stack = ""
+        stack_before = debug._stack
         indent = ' ' * 4 * debug._indent
         debug._indent += 1
 
@@ -165,7 +166,6 @@ def debug(arg, assert_true=False):
             for argname, arg in params:
                 _debug_log(f"- {argname}:  ", arg,
                            indent + ' ' * 8, assert_true)
-        stack_before = debug._stack
         out = func(*args, **kwargs)
         debug.out = out
         if out is not None:
