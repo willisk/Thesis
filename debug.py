@@ -45,7 +45,7 @@ def tensor_repr(t, assert_all=False):
         assert_val = t.all()
         if not assert_val:
             exception_encountered = True
-    if not exception_encountered:
+    if assert_all and not exception_encountered:
         output = "passed"
     else:
         if assert_all and not assert_val:
