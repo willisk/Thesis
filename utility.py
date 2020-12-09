@@ -182,7 +182,7 @@ def nan_to(x, num):
 #         n[c] += (labels == c).to(n.dtype).sum()
 
 
-# @debug
+@debug
 def batch_feature_stats(X, keep_dims=[1], std=False):
     dims_collapse = list(range(X.ndim))
     for dim in keep_dims:
@@ -208,7 +208,7 @@ def batch_feature_stats(X, keep_dims=[1], std=False):
     # return mean, var
 
 
-# @debug
+@debug
 def c_stats(inputs, labels, n_classes, return_count=False, std=False):
     shape = (n_classes, inputs.shape[1], *((len(inputs.shape) - 2) * [1]))
     mean = torch.zeros(shape,
@@ -227,7 +227,7 @@ def c_stats(inputs, labels, n_classes, return_count=False, std=False):
     return mean, var
 
 
-# @debug
+@debug
 def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, dtype=torch.float):
     if isinstance(inputs, list):
         out = tuple(zip(*[_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count)
@@ -240,7 +240,7 @@ def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=
     return _get_stats(inputs.to(dtype), labels, n_classes, class_conditional, std, return_count)
 
 
-# @debug
+@debug
 def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False):
     if class_conditional:
         assert labels is not None and n_classes is not None
@@ -251,7 +251,7 @@ def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std
     return batch_feature_stats(inputs, std=std)
 
 
-# @debug
+@debug
 def collect_stats(projection, data_loader, n_classes, class_conditional, std=False,
                   device='cpu', path=None, use_drive=True):
 
