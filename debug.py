@@ -117,8 +117,13 @@ def debug(arg, assert_true=False):
             debug._stack = ""
         line = ''.join(inspect.stack()[1][4])
         argname = ')'.join('('.join(line.split('(')[1:]).split(')')[:-1])
-        _debug_log(f"{'assert' if assert_true else ''}{{{argname}}}  =  ",
-                   arg, ' ' * 4 * debug._indent, assert_true)
+        if assert_true:
+            argname = ','.join(argname.split(',')[:-1])
+            _debug_log(f"assert{{{argname}}}  =  ",
+                       arg, ' ' * 4 * debug._indent, assert_true)
+        else:
+            _debug_log(f"{{{argname}}}  =  ",
+                       arg, ' ' * 4 * debug._indent, assert_true)
         return
 
     func = arg
