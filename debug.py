@@ -41,14 +41,14 @@ def tensor_repr(t, assert_all=False):
         info.append(f"dtype={str(t.dtype).split('.')[-1]}")
     if debug.verbose and t.device.type != 'cpu':
         info.append(f"device={t.device.type}")
-    if not assert_all:
-        output = f"tensor({', '.join(info)})"
-    else:
-        output = f"tensor({', '.join(info[:1])})"
     if assert_all:
         assert_val = t.all()
         if not assert_val:
             exception_encountered = True
+    if not exception_encountered:
+        output = "passed"
+    else:
+        output = f"tensor({', '.join(info)})"
     if exception_encountered and (not hasattr(debug, 'raise_exception') or debug.raise_exception):
         if debug.restore_defaults_on_exception:
             debug.raise_exception = False
@@ -119,7 +119,7 @@ def debug(arg, assert_true=False):
         argname = ')'.join('('.join(line.split('(')[1:]).split(')')[:-1])
         if assert_true:
             argname = ','.join(argname.split(',')[:-1])
-            _debug_log(f"assert{{{argname}}}  =  ",
+            _debug_log(f"assert{{{argname}}}  ",
                        arg, ' ' * 4 * debug._indent, assert_true)
         else:
             _debug_log(f"{{{argname}}}  =  ",
