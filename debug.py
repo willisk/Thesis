@@ -165,25 +165,29 @@ def debug(arg, assert_true=False):
             for argname, arg in params:
                 _debug_log(f"- {argname}:  ", arg,
                            indent + ' ' * 8, assert_true)
+        stack_before = debug._stack
         out = func(*args, **kwargs)
         debug.out = out
         if out is not None:
             _debug_log("returned:  ", out,
                        indent, assert_true)
         debug._indent -= 1
+        if not debug.full_stack:
+            debug._stack = stack_before
         return out
     return _func
 
 
 def debug_init():
-    debug._stack = ""
-    debug._indent = 0
     debug.verbose = 2
     debug.silent = False
     debug.expand = True
     debug.raise_exception = True
+    debug.full_stack = True
     interactive_notebook = 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ
     debug.restore_defaults_on_exception = not interactive_notebook
+    debug._indent = 0
+    debug._stack = ""
 
 
 debug_init()
