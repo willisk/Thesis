@@ -13,7 +13,6 @@ def is_iterable(x):
 
 def tensor_repr(t, assert_all=False):
     exception_encountered = False
-    verbose = debug.verbose
     info = []
     shape = tuple(t.shape)
     if shape == () or shape == (1,):
@@ -24,7 +23,7 @@ def tensor_repr(t, assert_all=False):
     if invalid_sum:
         info.append(f"{invalid_sum} INVALID ENTRIES")
         exception_encountered = True
-    if verbose and t.requires_grad:
+    if debug.verbose and t.requires_grad:
         info.append("req_grad")
     if t.is_leaf and t.grad is not None:
         grad_invalid_sum = (~t.grad.isfinite()).sum().item()
@@ -32,17 +31,20 @@ def tensor_repr(t, assert_all=False):
             info.append(
                 f"GRAD {(~ t.grad.isfinite()).sum().item()} INVALID ENTRIES")
             exception_encountered = True
-    if verbose > 1:
+    if debug.verbose > 1:
         info.append(f"|x|={t.float().norm():.1f}")
         if t.numel():
             info.append(f"x in [{t.min():.1f}, {t.max():.1f}]")
         if t.is_leaf and t.grad is not None:
             info.append(f"|grad|={t.grad.float().norm()}")
-    if verbose and t.dtype != torch.float:
+    if debug.verbose and t.dtype != torch.float:
         info.append(f"dtype={str(t.dtype).split('.')[-1]}")
-    if verbose and t.device.type != 'cpu':
+    if debug.verbose and t.device.type != 'cpu':
         info.append(f"device={t.device.type}")
-    output = f"tensor({', '.join(info)})"
+    if not assert_all:
+        output = f"tensor({', '.join(info)})"
+    else:
+        output = f"tensor({', '.join(info[:1])})"
     if assert_all:
         assert_val = t.all()
         if not assert_val:
