@@ -33,7 +33,8 @@ def tensor_repr(t, assert_all=False):
             exception_encountered = True
     if hasattr(debug, 'verbose') and debug.verbose:
         info.append(f"|x|={t.float().norm():.1f}")
-        info.append(f"x in [{t.min():.1f}, {t.max():.1f}]")
+        if t.numel():
+            info.append(f"x in [{t.min():.1f}, {t.max():.1f}]")
         if t.is_leaf and t.grad is not None:
             info.append(f"|grad|={t.grad.float().norm()}")
     if t.dtype != torch.float:
@@ -162,7 +163,6 @@ def debug(arg, assert_true=False):
 
 
 def debug_init():
-    print("init called")
     debug._stack = ""
     debug._indent = 0
     debug.verbose = True
