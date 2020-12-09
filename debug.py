@@ -32,10 +32,11 @@ def tensor_repr(t, assert_all=False):
                 f"GRAD {(~ t.grad.isfinite()).sum().item()} INVALID ENTRIES")
             exception_encountered = True
     if debug.verbose > 1:
-        info.append(f"|x|={t.float().norm():.1f}")
-        if t.numel():
-            info.append(f"x in [{t.min():.1f}, {t.max():.1f}]")
-        if t.is_leaf and t.grad is not None:
+        if not invalid_sum:
+            info.append(f"|x|={t.float().norm():.1f}")
+            if t.numel():
+                info.append(f"x in [{t.min():.1f}, {t.max():.1f}]")
+        if t.is_leaf and t.grad is not None and not grad_invalid_sum:
             info.append(f"|grad|={t.grad.float().norm()}")
     if debug.verbose and t.dtype != torch.float:
         info.append(f"dtype={str(t.dtype).split('.')[-1]}")
