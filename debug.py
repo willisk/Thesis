@@ -48,7 +48,10 @@ def tensor_repr(t, assert_all=False):
     if not exception_encountered:
         output = "passed"
     else:
-        output = f"tensor({', '.join(info)})"
+        if assert_all and not assert_val:
+            output = f"tensor({info[0]})"
+        else:
+            output = f"tensor({', '.join(info)})"
     if exception_encountered and (not hasattr(debug, 'raise_exception') or debug.raise_exception):
         if debug.restore_defaults_on_exception:
             debug.raise_exception = False
