@@ -182,7 +182,7 @@ def nan_to(x, num):
 #         n[c] += (labels == c).to(n.dtype).sum()
 
 
-@debug
+# @debug
 def batch_feature_stats(X, keep_dims=[1], std=False):
     dims_collapse = list(range(X.ndim))
     for dim in keep_dims:
