@@ -175,7 +175,7 @@ def debug(arg, assert_true=False):
         indent = ' ' * 4 * debug._indent
         debug._indent += 1
 
-        _debug_log('\n')
+        _debug_log('', indent=indent)
         _debug_log(f"@{func.__name__}()", indent=indent)
 
         args_kw = dict(zip(sig_argnames, args))
@@ -204,7 +204,7 @@ def debug(arg, assert_true=False):
         if out is not None:
             _debug_log("returned:  ", out,
                        indent, assert_true)
-        _debug_log('\n')
+        _debug_log('', indent=indent)
         debug._indent -= 1
         if not debug.full_stack:
             debug._stack = stack_before
