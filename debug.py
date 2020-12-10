@@ -194,7 +194,12 @@ def debug(arg, assert_true=False):
             for argname, arg in params:
                 _debug_log(f"- {argname}:  ", arg,
                            indent + ' ' * 8, assert_true)
-        out = func(*args, **kwargs)
+        try:
+            out = func(*args, **kwargs)
+        except:
+            debug._stack = ""
+            debug._indent = 0
+            raise
         debug.out = out
         if out is not None:
             _debug_log("returned:  ", out,
