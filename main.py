@@ -326,7 +326,7 @@ from functools import wraps
 debug.silent = True
 
 
-# @debug
+@debug
 def loss_fn_wrapper(name, project, class_conditional):
     _name = name.replace(' ', '-')
     stats_path = os.path.join(MODELDIR, f"stats_{_name}.pt")
