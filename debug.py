@@ -207,8 +207,8 @@ def debug(arg, assert_true=False):
                        indent, assert_true)
         _debug_log('', indent=indent)
         debug._indent -= 1
-        if not debug.full_stack:
-            debug._stack = stack_before
+        # if not debug.full_stack:
+        #     debug._stack = stack_before
         return out
     return _func
 
