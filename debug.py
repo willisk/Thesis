@@ -114,8 +114,12 @@ def _debug_log(output, var=None, indent='', assert_true=False):
             expand = debug.expand_ignore != '*'
             type_str = type(var).__name__
             if expand:
-                for ignore in debug.expand_ignore:
-                    if type_str in ignore:
+                if is_iterable(debug.expand_ignore):
+                    for ignore in debug.expand_ignore:
+                        if type_str in ignore:
+                            expand = False
+                else:
+                    if type_str == debug.expand_ignore:
                         expand = False
             if expand:
                 _debug_log(f"{type_str} {{")
