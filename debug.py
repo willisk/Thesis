@@ -95,9 +95,9 @@ def tensor_repr(t, assert_all=False):
 
             debug.recall = _recall
         debug._indent = 0
-        if assert_all and not assert_val:
-            assert False, "Assert did not pass on " + stack
-        assert False, "Invalid entries encountered in " + stack
+        if assert_all:
+            assert assert_val, "Assert did not pass on " + stack
+        raise Exception("Invalid entries encountered in " + stack)
     return output
 
 
