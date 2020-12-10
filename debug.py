@@ -38,7 +38,8 @@ def tensor_repr(t, assert_all=False):
         info.append(f"({', '.join(map(repr, shape))})")
     invalid_sum = (~t.isfinite()).sum().item()
     if invalid_sum:
-        info.append(f"{invalid_sum} INVALID ENTR{'Y' if invalid_sum == 1 else 'IES'}")
+        info.append(
+            f"{invalid_sum} INVALID ENTR{'Y' if invalid_sum == 1 else 'IES'}")
         exception_encountered = True
     if debug.verbose and t.requires_grad:
         info.append("req_grad")
@@ -117,7 +118,7 @@ def _debug_log(output, var=None, indent='', assert_true=False):
                     if type_str in ignore:
                         expand = False
             if expand:
-                _debug_log(f"<{type_str}> {{")
+                _debug_log(f"{type_str} {{")
                 if isinstance(var, dict):
                     for k, v in var.items():
                         _debug_log(f"'{k}': ", v, indent + 6 * ' ',
