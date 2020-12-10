@@ -38,7 +38,7 @@ def tensor_repr(t, assert_all=False):
         info.append(f"({', '.join(map(repr, shape))})")
     invalid_sum = (~t.isfinite()).sum().item()
     if invalid_sum:
-        info.append(f"{invalid_sum} INVALID ENTRIES")
+        info.append(f"{invalid_sum} INVALID ENTR{'Y' if invalid_sum == 1 else 'IES'}")
         exception_encountered = True
     if debug.verbose and t.requires_grad:
         info.append("req_grad")
@@ -46,7 +46,7 @@ def tensor_repr(t, assert_all=False):
         grad_invalid_sum = (~t.grad.isfinite()).sum().item()
         if grad_invalid_sum:
             info.append(
-                f"GRAD {(~ t.grad.isfinite()).sum().item()} INVALID ENTRIES")
+                f"GRAD {grad_invalid_sum} INVALID ENTR{'Y' if grad_invalid_sum == 1 else 'IES'}")
             exception_encountered = True
     if debug.verbose > 1:
         if not invalid_sum:
