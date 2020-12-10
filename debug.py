@@ -204,6 +204,7 @@ def debug(arg, assert_true=False):
         if out is not None:
             _debug_log("returned:  ", out,
                        indent, assert_true)
+        _debug_log('\n')
         debug._indent -= 1
         if not debug.full_stack:
             debug._stack = stack_before
