@@ -6,6 +6,23 @@ import inspect
 from functools import reduce, wraps
 from collections.abc import Iterable
 
+try:
+    get_ipython()
+    interactive_notebook = True
+except:
+    interactive_notebook = False
+
+
+def debug_init():
+    debug.verbose = 2
+    debug.silent = False
+    debug.expand_ignore = []
+    debug.raise_exception = True
+    debug.full_stack = True
+    debug.restore_defaults_on_exception = not interactive_notebook
+    debug._indent = 0
+    debug._stack = ""
+
 
 def is_iterable(x):
     return isinstance(x, Iterable)
@@ -93,8 +110,14 @@ def _debug_log(output, var=None, indent='', assert_true=False):
         elif isinstance(var, torch.Tensor):
             _debug_log(tensor_repr(var, assert_true))
         elif is_iterable(var):
-            if debug.expand:
-                _debug_log(f"{type(var).__name__} {{")
+            expand = debug.expand_ignore != '*'
+            type_str = type(var).__name__
+            if expand:
+                for ignore in debug.expand_ignore:
+                    if type_str in ignore:
+                        expand = False
+            if expand:
+                _debug_log(f"<{type_str}> {{")
                 if isinstance(var, dict):
                     for k, v in var.items():
                         _debug_log(f"'{k}': ", v, indent + 6 * ' ',
@@ -105,7 +128,7 @@ def _debug_log(output, var=None, indent='', assert_true=False):
                                    assert_true)
                 _debug_log(indent + 4 * ' ' + '}')
             else:
-                _debug_log(f"{type(var).__name__}[{len(list(var))}]")
+                _debug_log(f"{type_str}[{len(list(var))}]")
         else:
             _debug_log(str(var))
     else:
@@ -176,18 +199,6 @@ def debug(arg, assert_true=False):
             debug._stack = stack_before
         return out
     return _func
-
-
-def debug_init():
-    debug.verbose = 2
-    debug.silent = False
-    debug.expand = True
-    debug.raise_exception = True
-    debug.full_stack = True
-    interactive_notebook = 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ
-    debug.restore_defaults_on_exception = not interactive_notebook
-    debug._indent = 0
-    debug._stack = ""
 
 
 debug_init()
