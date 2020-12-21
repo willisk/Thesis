@@ -251,10 +251,11 @@ def loss_fn(data):
     outputs = net(inputs)
     # m, s = utility.get_stats(
     #     layer_activations, labels, n_classes, class_conditional=False, std=False)
-    nch = inputs[0].shape[1]
+    nch = inputs.shape[1]
     m = [ip.mean([0, 2, 3]) for ip in layer_activations]
     s = [ip.permute(1, 0, 2, 3).contiguous().view(
         [nch, -1]).var(1, unbiased=False) for ip in layer_activations]
+
     loss = 10 * loss_stats(m_a, s_a, m, s)
     loss += 0.001 * regularization(inputs)
     loss += criterion(outputs, labels)
