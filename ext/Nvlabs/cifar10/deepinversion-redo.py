@@ -71,7 +71,7 @@ def regularization(x):
 if __name__ == "__main__":
 
     bs = 256
-    iters = 600
+    iters = 1000
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -133,6 +133,7 @@ if __name__ == "__main__":
         if isinstance(module, nn.BatchNorm2d):
             module.register_forward_hook(layer_hook_wrapper(l))
             l += 1
+    print(l)
     # for l, layer in enumerate(net_layers):
     #     layer.register_forward_hook(layer_hook_wrapper(l))
 
