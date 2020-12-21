@@ -226,8 +226,8 @@ def loss_fn(data):
     m, s = utility.get_stats(
         outputs, labels, n_classes, class_conditional=False, std=STD)
 
-    loss = loss_stats(m_a, s_a, m, s)
-    loss += regularization(inputs)
+    loss = 10 * loss_stats(m_a, s_a, m, s)
+    # loss += regularization(inputs)
     loss += criterion(last_layer, labels)
     return loss
 
