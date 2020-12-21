@@ -367,7 +367,8 @@ methods = [
 
 def im_show(batch):
     with torch.no_grad():
-        img_grid = torchvision.utils.make_grid(batch.cpu(), nrow=10)
+        img_grid = torchvision.utils.make_grid(
+            batch.cpu(), nrow=10, normalize=True, scale_each=True)
         plt.figure(figsize=(16, 32))
         plt.imshow(img_grid.permute(1, 2, 0))
         plt.show()
@@ -396,8 +397,8 @@ for method, loss_fn in methods:
     labels = torch.LongTensor(range(args.batch_size)).to(DEVICE) % n_classes
     DATA = (batch, labels)
 
-    print("Before:")
-    im_show(batch)
+    # print("Before:")
+    # im_show(batch)
 
     # def inputs_pre_fn(inputs):
     #     with torch.no_grad():
