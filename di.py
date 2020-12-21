@@ -249,12 +249,12 @@ s_a = [m.running_var for m in net_layers]
 def loss_fn(data):
     inputs, labels = data
     outputs = net(inputs)
-    m, s = utility.get_stats(
-        layer_activations, labels, n_classes, class_conditional=False, std=False)
-    # m = [ip.mean([0, 2, 3]) for ip in layer_activations]
+    # m, s = utility.get_stats(
+    #     layer_activations, labels, n_classes, class_conditional=False, std=False)
+    m = [ip.mean([0, 2, 3]) for ip in layer_activations]
     # # s = [ip.permute(1, 0, 2, 3).contiguous().view(
     # #     [ip.shape[1], -1]).var(1, unbiased=False) for ip in layer_activations]
-    # s = [ip.var([0, 2, 3]) for ip in layer_activations]
+    s = [ip.var([0, 2, 3], unbiased=False) for ip in layer_activations]
 
     loss = 10 * loss_stats(m_a, s_a, m, s)
     loss += 0.001 * regularization(inputs)
