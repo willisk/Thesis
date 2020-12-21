@@ -254,6 +254,7 @@ m_a, s_a = utility.collect_stats(
 
 
 def loss_fn(data):
+    inputs, labels = data
     outputs = project_NN_all(data)
 
     m, s = utility.get_stats(
