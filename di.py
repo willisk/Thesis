@@ -154,7 +154,7 @@ net_output = None
 
 def layer_hook_wrapper(idx):
     def hook(module, inputs, outputs):
-        layer_activations[idx] = outputs
+        layer_activations[idx] = inputs[0]
     return hook
 
 
@@ -227,7 +227,7 @@ def loss_fn(data):
         outputs, labels, n_classes, class_conditional=False, std=STD)
 
     loss = 10 * loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
-    loss += regularization(inputs)
+    loss += 0.001 * regularization(inputs)
     loss += criterion(last_layer, labels)
     return loss
 
