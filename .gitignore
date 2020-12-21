@@ -11,3 +11,6 @@ models/*
 **cifar10-inversion
 
 **example_logs
+
+**.DS_Store
+drive

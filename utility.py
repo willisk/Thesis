@@ -1,3 +1,4 @@
+from matplotlib.axes._axes import _log as matplotlib_axes_logger
 import os
 
 import numpy as np
@@ -353,9 +354,8 @@ def save_load_path(path, use_drive=True):
         save_dir = os.path.dirname(save_path)
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-    else:
-        save_path, load_path = None, None
-    return save_path, load_path
+        return save_path, load_path
+    return None, None
 
 
 def search_drive(path):
@@ -753,7 +753,6 @@ def logsumexp(a, dim=None, b=None):
 
 
 # stupid matplotlib....
-from matplotlib.axes._axes import _log as matplotlib_axes_logger
 matplotlib_axes_logger.setLevel('ERROR')
 
 
