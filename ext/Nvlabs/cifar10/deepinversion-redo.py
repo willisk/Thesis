@@ -84,48 +84,18 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
                prefix=None, competitive_scale=0.01, global_iteration=None,
                optimizer=None, inputs=None, bn_reg_scale=0.0, random_labels=False,
                device='cpu'):
-    '''
-    Function returns inverted images from the pretrained model, parameters are tight to CIFAR dataset
-    args in:
-        net: network to be inverted
-        bs: batch size
-        epochs: total number of iterations to generate inverted images, training longer helps a lot!
-        idx: an external flag for printing purposes: only print in the first round, set as -1 to disable
-        var_scale: the scaling factor for variance loss regularization. this may vary depending on bs
-            larger - more blurred but less noise
-        net_student: model to be used for Adaptive DeepInversion
-        prefix: defines the path to store images
-        competitive_scale: coefficient for Adaptive DeepInversion
-        global_iteration: indexer to be used for tensorboard
-        optimizer: potimizer to be used for model inversion
-        inputs: data place holder for optimization, will be reinitialized to noise
-        bn_reg_scale: weight for r_feature_regularization
-        random_labels: sample labels from random distribution or use columns of the same class
-        l2_coeff: coefficient for L2 loss on input
-    return:
-        A tensor on GPU with shape (bs, 3, 32, 32) for CIFAR
-    '''
 
     best_cost = 1e6
 
-    # initialize gaussian inputs
     inputs.data = torch.randn(
         (bs, 3, 32, 32), requires_grad=True, device=device)
-    # if use_amp:
-    #     inputs.data = inputs.data.half()
 
-    # set up criteria for optimization
     criterion = nn.CrossEntropyLoss()
 
     optimizer.state = collections.defaultdict(dict)  # Reset state of optimizer
 
-    # target outputs to generate
-    if random_labels:
-        targets = torch.LongTensor([random.randint(0, 9)
-                                    for _ in range(bs)]).to(device)
-    else:
-        targets = torch.LongTensor(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] * 25 + [0, 1, 2, 3, 4, 5]).to(device)
+    targets = torch.LongTensor(
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] * 25 + [0, 1, 2, 3, 4, 5]).to(device)
 
     # Create hooks for feature statistics catching
     loss_r_feature_layers = []
@@ -144,7 +114,6 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
 
         # foward with jit images
         optimizer.zero_grad()
-        net.zero_grad()
         outputs = net(inputs_jit)
         loss = criterion(outputs, targets)
         loss_target = loss.item()
@@ -174,11 +143,7 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
             best_inputs = inputs.data
 
         # backward pass
-        if USE_APEX:
-            with amp.scale_loss(loss, optimizer) as scaled_loss:
-                scaled_loss.backward()
-        else:
-            loss.backward()
+        loss.backward()
 
         optimizer.step()
 
@@ -225,41 +190,23 @@ if __name__ == "__main__":
 
     print("loading resnet34")
 
-    net_teacher = ResNet34()
+    net = ResNet34()
     model_path = os.path.join(PWD, 'models/CIFAR10/net_resnet34.pt')
     save_path, load_path = utility.save_load_path(model_path, True)
     checkpoint = torch.load(load_path, map_location=device)
 
-    net_teacher = net_teacher.to(device)
+    net = net.to(device)
 
     criterion = nn.CrossEntropyLoss()
 
     # place holder for inputs
-    data_type = torch.half if USE_APEX else torch.float
+    data_type = torch.float
     inputs = torch.randn((args.bs, 3, 32, 32),
                          requires_grad=True, device=device, dtype=data_type)
 
     optimizer_di = optim.Adam([inputs], lr=args.di_lr)
 
-    if USE_APEX:
-        opt_level = "O1"
-        loss_scale = 'dynamic'
-
-        [net_teacher], optimizer_di = amp.initialize(
-            [net_teacher], optimizer_di,
-            opt_level=opt_level,
-            loss_scale=loss_scale)
-
-    net_teacher.load_state_dict(checkpoint)
-    net_teacher.eval()  # important, otherwise generated images will be non natural
-    if USE_APEX:
-        # need to do this trick for FP16 support of batchnorms
-        net_teacher.train()
-        for module in net_teacher.modules():
-            if isinstance(module, nn.BatchNorm2d):
-                module.eval().half()
-
-    cudnn.benchmark = True
+    net.load_state_dict(checkpoint)
 
     batch_idx = 0
     prefix = "runs/data_generation/" + args.exp_descr + "/"
@@ -272,7 +219,7 @@ if __name__ == "__main__":
 
     print("Starting model inversion")
 
-    inputs = get_images(net=net_teacher, bs=args.bs, epochs=args.iters_mi, idx=batch_idx,
+    inputs = get_images(net=net, bs=args.bs, epochs=args.iters_mi, idx=batch_idx,
                         prefix=prefix,
                         global_iteration=global_iteration,
                         optimizer=optimizer_di, inputs=inputs, bn_reg_scale=args.r_feature_weight,
