@@ -250,7 +250,7 @@ def loss_fn_wrapper(name, project, class_conditional):
 # s_a = [m.running_var for m in net_layers]
 m_a, s_a = utility.collect_stats(
     project_NN_all, DATA_A, n_classes, class_conditional=False,
-    std=STD, path="stats_test.pt", device=DEVICE, use_drive=args.use_drive)
+    std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=args.use_drive)
 
 
 def loss_fn(data):
