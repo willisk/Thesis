@@ -141,6 +141,8 @@ if __name__ == "__main__":
                                #    grad_norm_fn=grad_norm_fn,
                                )
 
+    import matplotlib.pyplot as plt
+
     def im_show(batch):
         with torch.no_grad():
             img_grid = torchvision.utils.make_grid(batch.cpu(), nrow=10)
