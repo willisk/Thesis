@@ -26,7 +26,14 @@ import datasets
 
 from debug import debug
 
-if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
+try:
+    get_ipython()
+    interactive_notebook = True
+except:
+    interactive_notebook = False
+
+
+if interactive_notebook:
     import importlib
     importlib.reload(utility)
     importlib.reload(inversion)
@@ -50,7 +57,7 @@ parser.add_argument("-n_random_projections", type=int, default=256)
 parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
 
-if 'ipykernel_launcher' in sys.argv:
+if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset GMM'.split())
     # args.nn_steps = 500
     # args.inv_steps = 500
@@ -78,7 +85,7 @@ print("# on", args.dataset)
 
 # ======= Hyperparameters =======
 print("Hyperparameters:")
-print(utility.dict_to_str(vars(args), '\n\n'))
+print(utility.dict_to_str(vars(args), '\n'), '\n')
 
 # ======= Set Seeds =======
 random.seed(args.seed)
@@ -106,21 +113,21 @@ print(f"Running on '{DEVICE}'\n")
 # ======= Create Dataset =======
 
 if args.dataset == 'CIFAR10':
-    dataset = datasets.CIFAR10(load_data=False)
+    dataset = datasets.CIFAR10(load_data=True)
 elif args.dataset == 'MNIST':
     dataset = datasets.MNIST()
 
 MODELDIR = dataset.data_dir
 
-# A, B, B_val = dataset.get_datasets()
+A, B, B_val = dataset.get_datasets()
 
 
-# def data_loader(D):
-#     return DataLoader(D, batch_size=64, shuffle=True)
+def data_loader(D):
+    return DataLoader(D, batch_size=64, shuffle=True)
 
 
-# DATA_A = data_loader(A)
-DATA_A = None
+DATA_A = data_loader(A)
+# DATA_A = None
 
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
@@ -141,7 +148,7 @@ utility.train(net, DATA_A, criterion, optimizer,
 
 
 # ======= NN Project =======
-net_layers = utility.get_child_modules(net)
+net_layers = utility.get_bn_layers(net)
 layer_activations = [None] * len(net_layers)
 
 
@@ -244,7 +251,7 @@ def regularization(x):
     diff4 = x[:, :, :-1, :-1] - x[:, :, 1:, 1:]
     loss_var = torch.norm(diff1) + torch.norm(diff2) + \
         torch.norm(diff3) + torch.norm(diff4)
-    return loss_var
+    return loss_var * 0.001
 
 
 # debug.expand = False
@@ -278,12 +285,12 @@ def loss_fn_wrapper(name, project, class_conditional):
         outputs = project(data)
         m, s = utility.get_stats(
             outputs, labels, n_classes, class_conditional, std=STD)
-        loss = loss_stats(m_a, s_a, m, s)
-        # loss = (10 * loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
-        #         + 0.001 * regularization(inputs)
-        #         # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-        #         + criterion(layer_activations[-1], labels)
-        #         )
+        # loss = loss_stats(m_a, s_a, m, s)
+        loss = (10 * loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
+                + 0.001 * regularization(inputs)
+                # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+                + criterion(layer_activations[-1], labels)
+                )
         return loss
     return name, _loss_fn
 
@@ -380,20 +387,20 @@ for method, loss_fn in methods:
     optimizer = torch.optim.Adam([batch], lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    info = inversion.deep_inversion([DATA],
-                                    loss_fn,
-                                    optimizer,
-                                    #    scheduler=scheduler,
-                                    steps=inv_steps,
-                                    # steps=2,
-                                    # data_pre_fn=data_pre_fn,
-                                    inputs_pre_fn=jitter,
-                                    #    track_history=True,
-                                    #    track_history_every=10,
-                                    plot=True,
-                                    use_amp=args.use_amp,
-                                    grad_norm_fn=grad_norm_fn,
-                                    )
+    info = inversion.inversion([DATA],
+                               loss_fn,
+                               optimizer,
+                               #    scheduler=scheduler,
+                               steps=inv_steps,
+                               # steps=2,
+                               # data_pre_fn=data_pre_fn,
+                               inputs_pre_fn=jitter,
+                               #    track_history=True,
+                               #    track_history_every=10,
+                               plot=True,
+                               use_amp=args.use_amp,
+                               grad_norm_fn=grad_norm_fn,
+                               )
 
     # ======= Result =======
     print("Inverted:")

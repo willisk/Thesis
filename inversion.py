@@ -4,7 +4,7 @@ from collections import defaultdict
 
 import torch
 from torch.cuda.amp import autocast, GradScaler
-from scipy.stats import betabinom
+# from scipy.stats import betabinom
 
 # from tqdm.auto import tqdm
 from tqdm import tqdm
@@ -21,9 +21,9 @@ if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
 from debug import debug
 
 
-def betabinom_distr(N, a=1, b=1):
-    rv = betabinom(N - 1, a, b)
-    return [rv.pmf(k) for k in range(N)]
+# def betabinom_distr(N, a=1, b=1):
+#     rv = betabinom(N - 1, a, b)
+#     return [rv.pmf(k) for k in range(N)]
 
 
 # def inversion_weights(N, slope=0, power=1, factor=1):

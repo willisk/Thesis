@@ -390,9 +390,6 @@ def train(net, data_loader, criterion, optimizer,
           scheduler=None, plot=False, use_amp=False):
     "Training Loop"
 
-    assert valid_data_loader(
-        data_loader), f"invalid data_loader: {data_loader}"
-
     device = next(net.parameters()).device
 
     save_path, load_path = save_load_path(model_path, use_drive)
@@ -406,14 +403,17 @@ def train(net, data_loader, criterion, optimizer,
             net.load_state_dict(checkpoint)
             init_epoch = 1
         print("Training Checkpoint restored: " + load_path)
-        net.eval()
         if not resume_training:
+            net.eval()
             return
     else:
         print("No Checkpoint found / Reset.")
         if save_path:
             print("Path: " + save_path)
         init_epoch = 1
+
+    assert valid_data_loader(
+        data_loader), f"invalid data_loader: {data_loader}"
 
     net.train()
 
@@ -842,6 +842,24 @@ def get_child_modules(net):
             all_layers.append(layer)
         else:
             all_layers += get_child_modules(layer)
+    return all_layers
+
+
+def get_bn_layers(net):
+    ignore_types = ['activation', 'loss', 'container', 'pooling']
+    all_layers = []
+    for layer in net.children():
+        if len(list(layer.children())) == 0:
+            skip = False
+            for ignore in ignore_types:
+                if ignore in layer.__module__:
+                    skip = True
+            if skip:
+                continue
+            if 'batchnorm' in layer.__module__:
+                all_layers.append(layer)
+        else:
+            all_layers += get_bn_layers(layer)
     return all_layers
 
 
