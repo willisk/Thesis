@@ -181,11 +181,14 @@ def project_NN(data):
     return outputs
 
 
-def project_NN_all(data):
+def project_NN_all(data, add_output=False):
     inputs, labels = data
     outputs = net(inputs)
     # return [inputs] + layer_activations + [outputs]
-    return layer_activations + [outputs]
+    if add_output:
+        return layer_activations + [outputs]
+    else:
+        return layer_activations
     # XXXXXXXXXXXXXXXXX no outputs
 
 
@@ -255,7 +258,7 @@ m_a, s_a = utility.collect_stats(
 
 def loss_fn(data):
     inputs, labels = data
-    outputs = project_NN_all(data)
+    outputs = project_NN_all(data, True)
     last_layer = outputs.pop(-1)
 
     m, s = utility.get_stats(
