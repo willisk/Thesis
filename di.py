@@ -245,9 +245,6 @@ def loss_fn_wrapper(name, project, class_conditional):
 m_a = [m.running_mean for m in net_layers]
 s_a = [m.running_var for m in net_layers]
 
-t = layer_activations[0]
-t.var()
-
 
 def loss_fn(data):
     inputs, labels = data
