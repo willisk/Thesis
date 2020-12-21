@@ -110,6 +110,8 @@ inv_steps = args.inv_steps
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f"Running on '{DEVICE}'\n")
 
+STD = False
+
 # ======= Create Dataset =======
 
 if args.dataset == 'CIFAR10':
@@ -118,6 +120,7 @@ elif args.dataset == 'MNIST':
     dataset = datasets.MNIST()
 
 MODELDIR = dataset.data_dir
+
 
 A, B, B_val = dataset.get_datasets()
 
@@ -181,7 +184,8 @@ def project_NN(data):
 def project_NN_all(data):
     inputs, labels = data
     outputs = net(inputs)
-    return [inputs] + layer_activations + [outputs]
+    # return [inputs] + layer_activations + [outputs]
+    return layer_activations + [outputs]
     # XXXXXXXXXXXXXXXXX no outputs
 
 
@@ -242,28 +246,19 @@ def loss_fn_wrapper(name, project, class_conditional):
     return name, _loss_fn
 
 
-m_a = [m.running_mean for m in net_layers]
-s_a = [m.running_var for m in net_layers]
-
-DONE = False
+# m_a = [m.running_mean for m in net_layers]
+# s_a = [m.running_var for m in net_layers]
+m_a, s_a = utility.collect_stats(
+    project_NN_all, DATA_A, n_classes, class_conditional=False,
+    std=STD, path="stats_test.pt", device=DEVICE, use_drive=args.use_drive)
 
 
 def loss_fn(data):
     inputs, labels = data
     outputs = net(inputs)
-    m = [ip.mean([0, 2, 3]) for ip in layer_activations]
-    # # s = [ip.permute(1, 0, 2, 3).contiguous().view(
-    # #     [ip.shape[1], -1]).var(1, unbiased=False) for ip in layer_activations]
-    s = [ip.var([0, 2, 3], unbiased=False) for ip in layer_activations]
+
     m, s = utility.get_stats(
         layer_activations, labels, n_classes, class_conditional=False, std=False)
-
-    global DONE
-    if not DONE:
-        for i, _ in enumerate(m):
-            m_a[i] = m_a[i].reshape(m[i].shape)
-            s_a[i] = s_a[i].reshape(s[i].shape)
-        DONE = True
 
     loss = 10 * loss_stats(m_a, s_a, m, s)
     loss += 0.001 * regularization(inputs)
