@@ -103,8 +103,6 @@ if __name__ == "__main__":
 
     print("Starting model inversion")
 
-    best_cost = 1e6
-
     criterion = nn.CrossEntropyLoss()
 
     targets = torch.LongTensor(range(bs)).to(device) % 10
@@ -152,18 +150,3 @@ if __name__ == "__main__":
             plt.show()
 
     im_show(inputs)
-    # for epoch in range(iters):
-    #     inputs_jit = jitter(inputs)
-
-    #     optimizer.zero_grad()
-    #     loss = loss_fn((inputs, targets))
-
-    #     if debug_output and epoch % 200 == 0:
-    #         print(f"It {epoch}\t Losses: total: {loss.item():3.3f}")
-    #         vutils.save_image(inputs.data.clone(),
-    #                           './{}/output_{}.png'.format(prefix,
-    #                                                       epoch // 200),
-    #                           normalize=True, scale_each=True, nrow=10)
-    #     loss.backward()
-
-    # optimizer.step()

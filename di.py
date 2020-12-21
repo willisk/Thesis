@@ -368,7 +368,7 @@ methods = [
 def im_show(batch):
     with torch.no_grad():
         img_grid = torchvision.utils.make_grid(batch.cpu(), nrow=10)
-        plt.figure(figsize=(8, 8))
+        plt.figure(figsize=(16, 32))
         plt.imshow(img_grid.permute(1, 2, 0))
         plt.show()
 
