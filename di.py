@@ -262,7 +262,7 @@ def loss_fn(data):
 
     loss = 10 * loss_stats(m_a, s_a, m, s)
     loss += 0.001 * regularization(inputs)
-    loss += criterion(outputs, labels)
+    loss += criterion(outputs[-1], labels)
     return loss
 
 
