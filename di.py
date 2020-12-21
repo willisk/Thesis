@@ -185,7 +185,7 @@ def project_NN_all(data):
     inputs, labels = data
     outputs = net(inputs)
     # return [inputs] + layer_activations + [outputs]
-    return layer_activations  # + [outputs]
+    return layer_activations + [outputs]
     # XXXXXXXXXXXXXXXXX no outputs
 
 
