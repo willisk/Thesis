@@ -171,7 +171,8 @@ def project_NN(data):
 def project_NN_all(data):
     inputs, labels = data
     outputs = net(inputs)
-    return [inputs] + layer_activations  # + [outputs]
+    return [inputs] + layer_activations + [outputs]
+    # XXXXXXXXXXXXXXXXX no outputs
 
 
 # ======= Random Projections =======
@@ -281,11 +282,11 @@ def loss_fn_wrapper(name, project, class_conditional):
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
         inputs, labels = data
         outputs = project(data)
-        last_layer = outputs.pop(-1)
+        last_layer = outputs[-1]
         m, s = utility.get_stats(
             outputs, labels, n_classes, class_conditional, std=STD)
         # loss = loss_stats(m_a, s_a, m, s)
-        loss = (10 * loss_stats(m_a[1:], s_a[1:], m[1:], s[1:])
+        loss = (10 * loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
                 + 0.001 * regularization(inputs)
                 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
                 + criterion(last_layer, labels)
