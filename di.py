@@ -198,9 +198,9 @@ def loss_stats(m_a, s_a, m_b, s_b):
         # loss_std = sum((sa - sb).norm(2)
         #                for sa, sb in zip(s_a, s_b))  # / len(m_a)
         loss_mean = sum(((ma - mb)**2).mean()
-                        for ma, mb in zip(m_a, m_b))  # / len(m_a)
+                        for ma, mb in zip(m_a, m_b)) / len(m_a)
         loss_std = sum(((sa - sb)**2).mean()
-                       for sa, sb in zip(s_a, s_b))  # / len(m_a)
+                       for sa, sb in zip(s_a, s_b)) / len(m_a)
         # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     else:
         loss_mean = ((m_a - m_b)**2).mean()
@@ -245,7 +245,7 @@ def loss_fn_wrapper(name, project, class_conditional):
         m, s = utility.get_stats(
             outputs, labels, n_classes, class_conditional, std=STD)
         # loss = loss_stats(m_a, s_a, m, s)
-        loss = (10 * loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
+        loss = (loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
                 + 0.001 * regularization(inputs)
                 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
                 + criterion(last_layer, labels)
