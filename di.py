@@ -27,7 +27,7 @@ import datasets
 from debug import debug
 
 try:
-    get_ipython()
+    get_ipython()   # pylint: disable=undefined-variable
     interactive_notebook = True
 except:
     interactive_notebook = False
