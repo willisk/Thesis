@@ -213,7 +213,7 @@ STD = ~args.use_var
 # m_a = [m.running_mean for m in net_layers]
 # s_a = [m.running_var for m in net_layers]
 m_a, s_a = utility.collect_stats(
-    project_NN_all, DATA_A, n_classes, class_conditional=False,
+    project_NN_all, DATA_A, n_classes, class_conditional=True,
     std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=args.use_drive)
 
 
@@ -223,7 +223,7 @@ def loss_fn(data):
     last_layer = outputs[-1]
 
     m, s = utility.get_stats(
-        outputs, labels, n_classes, class_conditional=False, std=STD)
+        outputs, labels, n_classes, class_conditional=True, std=STD)
 
     loss = loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
     loss += regularization(inputs)
