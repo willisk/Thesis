@@ -254,11 +254,10 @@ m_a, s_a = utility.collect_stats(
 
 
 def loss_fn(data):
-    inputs, labels = data
-    outputs = net(inputs)
+    outputs = project_NN_all(data)
 
     m, s = utility.get_stats(
-        layer_activations, labels, n_classes, class_conditional=False, std=False)
+        outputs, labels, n_classes, class_conditional=False, std=False)
 
     loss = 10 * loss_stats(m_a, s_a, m, s)
     loss += 0.001 * regularization(inputs)
