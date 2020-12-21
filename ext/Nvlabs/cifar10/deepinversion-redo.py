@@ -226,7 +226,7 @@ if __name__ == "__main__":
     print("loading resnet34")
 
     net_teacher = ResNet34()
-    model_path = '/Users/k/git/Thesis/models/CIFAR10/net_resnet34.pt'
+    model_path = os.path.join(PWD, 'models/CIFAR10/net_resnet34.pt')
     save_path, load_path = utility.save_load_path(model_path, True)
     checkpoint = torch.load(load_path, map_location=device)
 
