@@ -406,6 +406,7 @@ def train(net, data_loader, criterion, optimizer,
             net.load_state_dict(checkpoint)
             init_epoch = 1
         print("Training Checkpoint restored: " + load_path)
+        net.eval()
         if not resume_training:
             return
     else:

@@ -114,7 +114,6 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
 
         # foward with jit images
         optimizer.zero_grad()
-        net.zero_grad()
         outputs = net(inputs_jit)
         loss = criterion(outputs, targets)
         loss_target = loss.item()
