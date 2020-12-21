@@ -270,7 +270,7 @@ def regularization(x):
 def loss_stats(m_a, s_a, m_b, s_b):
     if isinstance(m_a, list):
         assert len(m_a) == len(m_b) and len(s_a) == len(s_b), \
-            "lists need to of same length"
+            "lists need to be of same length"
         loss_mean = sum(((ma - mb)**2).mean()
                         for ma, mb in zip(m_a, m_b))  # / len(m_a)
         loss_std = sum(((sa - sb)**2).mean()
@@ -313,7 +313,7 @@ def loss_fn(data):
     inputs, labels = data
     outputs = net(inputs)
     m, s = utility.get_stats(
-        outputs, labels, n_classes, class_conditional=False, std=False)
+        layer_activations, labels, n_classes, class_conditional=False, std=False)
     loss = 10 * loss_stats(m_a, s_a, m, s)
     loss += 0.001 * regularization(inputs)
     loss += criterion(outputs, labels)
