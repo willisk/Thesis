@@ -120,6 +120,7 @@ MODELDIR = dataset.data_dir
 
 
 # DATA_A = data_loader(A)
+DATA_A = None
 
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
