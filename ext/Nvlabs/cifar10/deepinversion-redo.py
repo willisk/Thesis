@@ -34,6 +34,7 @@ PWD = os.path.dirname(os.path.dirname(os.path.dirname(
 sys.path.append(PWD)
 import utility
 import importlib
+import inversion
 importlib.reload(utility)
 # from resnet_cifar import ResNet34, ResNet18
 
@@ -83,17 +84,15 @@ if __name__ == "__main__":
     checkpoint = torch.load(load_path, map_location=device)
 
     net.to(device)
+    net.load_state_dict(checkpoint)
     net.eval()
 
     criterion = nn.CrossEntropyLoss()
 
-    # place holder for inputs
     inputs = torch.randn((256, 3, 32, 32),
                          requires_grad=True, device=device)
 
     optimizer = optim.Adam([inputs], lr=0.1)
-
-    net.load_state_dict(checkpoint)
 
     batch_idx = 0
     prefix = "runs/data_generation/" + "try1" + "/"
@@ -108,12 +107,9 @@ if __name__ == "__main__":
 
     criterion = nn.CrossEntropyLoss()
 
-    optimizer.state = collections.defaultdict(dict)  # Reset state of optimizer
-
     targets = torch.LongTensor(range(bs)).to(device) % 10
 
     net_layers = utility.get_bn_layers(net)
-    # layer_activations = [None] * len(net_layers)
     layer_losses = [None] * len(net_layers)
 
     def layer_hook_wrapper(idx):
@@ -127,46 +123,35 @@ if __name__ == "__main__":
             layer_losses[idx] = r_feature
         return hook
 
-        # Create hooks for feature statistics catching
-    l = 0
-    for module in net.modules():
-        if isinstance(module, nn.BatchNorm2d):
-            module.register_forward_hook(layer_hook_wrapper(l))
-            l += 1
-    print(l)
-    # for l, layer in enumerate(net_layers):
-    #     layer.register_forward_hook(layer_hook_wrapper(l))
+    for l, module in enumerate(net_layers):
+        module.register_forward_hook(layer_hook_wrapper(l))
 
-    for epoch in range(iters):
-        inputs_jit = jitter(inputs)
+    info = inversion.inversion([(inputs, targets)],
+                               loss_fn,
+                               optimizer,
+                               #    scheduler=scheduler,
+                               steps=iters,
+                               # steps=2,
+                               # data_pre_fn=data_pre_fn,
+                               inputs_pre_fn=jitter,
+                               #    track_history=True,
+                               #    track_history_every=10,
+                               plot=True,
+                               #    use_amp=args.use_amp,
+                               #    grad_norm_fn=grad_norm_fn,
+                               )
+    # for epoch in range(iters):
+    #     inputs_jit = jitter(inputs)
 
-        optimizer.zero_grad()
-        loss = loss_fn((inputs, targets))
+    #     optimizer.zero_grad()
+    #     loss = loss_fn((inputs, targets))
 
-        if debug_output and epoch % 200 == 0:
-            print(f"It {epoch}\t Losses: total: {loss.item():3.3f}")
-            vutils.save_image(inputs.data.clone(),
-                              './{}/output_{}.png'.format(prefix,
-                                                          epoch // 200),
-                              normalize=True, scale_each=True, nrow=10)
+    #     if debug_output and epoch % 200 == 0:
+    #         print(f"It {epoch}\t Losses: total: {loss.item():3.3f}")
+    #         vutils.save_image(inputs.data.clone(),
+    #                           './{}/output_{}.png'.format(prefix,
+    #                                                       epoch // 200),
+    #                           normalize=True, scale_each=True, nrow=10)
+    #     loss.backward()
 
-        if best_cost > loss.item():
-            best_cost = loss.item()
-            best_inputs = inputs.data
-
-        # backward pass
-        loss.backward()
-
-        optimizer.step()
-
-    outputs = net(best_inputs)
-    _, predicted_teach = outputs.max(1)
-
-    name_use = "best_images"
-    if prefix is not None:
-        name_use = prefix + name_use
-    next_batch = len(glob.glob("./%s/*.png" % name_use)) // 1
-
-    vutils.save_image(best_inputs[:20].clone(),
-                      './{}/output_{}.png'.format(name_use, next_batch),
-                      normalize=True, scale_each=True, nrow=10)
+    # optimizer.step()
