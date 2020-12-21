@@ -185,7 +185,7 @@ def project_NN_all(data):
     inputs, labels = data
     outputs = net(inputs)
     # return [inputs] + layer_activations + [outputs]
-    return layer_activations + [outputs]
+    return layer_activations  # + [outputs]
     # XXXXXXXXXXXXXXXXX no outputs
 
 
@@ -256,13 +256,14 @@ m_a, s_a = utility.collect_stats(
 def loss_fn(data):
     inputs, labels = data
     outputs = project_NN_all(data)
+    last_layer = outputs.pop(-1)
 
     m, s = utility.get_stats(
         outputs, labels, n_classes, class_conditional=False, std=False)
 
     loss = 10 * loss_stats(m_a, s_a, m, s)
     loss += 0.001 * regularization(inputs)
-    loss += criterion(outputs[-1], labels)
+    loss += criterion(last_layer, labels)
     return loss
 
 
