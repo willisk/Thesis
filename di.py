@@ -149,7 +149,6 @@ utility.train(net, DATA_A, criterion, optimizer,
 # ======= NN Project =======
 net_layers = utility.get_bn_layers(net)
 layer_activations = [None] * len(net_layers)
-net_output = None
 
 
 def layer_hook_wrapper(idx):
