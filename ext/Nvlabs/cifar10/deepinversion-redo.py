@@ -72,7 +72,7 @@ def regularization(x):
 if __name__ == "__main__":
 
     bs = 256
-    iters = 1000
+    iters = 400
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -140,6 +140,15 @@ if __name__ == "__main__":
                                #    use_amp=args.use_amp,
                                #    grad_norm_fn=grad_norm_fn,
                                )
+
+    def im_show(batch):
+        with torch.no_grad():
+            img_grid = torchvision.utils.make_grid(batch.cpu(), nrow=10)
+            plt.figure(figsize=(8, 8))
+            plt.imshow(img_grid.permute(1, 2, 0))
+            plt.show()
+
+    im_show(inputs)
     # for epoch in range(iters):
     #     inputs_jit = jitter(inputs)
 
