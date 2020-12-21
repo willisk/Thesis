@@ -24,13 +24,13 @@ import utility
 import inversion
 import datasets
 
+from debug import debug
+
 if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
     import importlib
     importlib.reload(utility)
     importlib.reload(inversion)
     importlib.reload(datasets)
-
-from debug import debug
 
 
 # ======= Arg Parse =======
@@ -47,7 +47,7 @@ parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-batch_size", type=int, default=64)
 parser.add_argument("-n_random_projections", type=int, default=256)
-parser.add_argument("-inv_lr", type=float, default=0.01)
+parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
 
 if 'ipykernel_launcher' in sys.argv:
@@ -56,14 +56,14 @@ if 'ipykernel_launcher' in sys.argv:
     # args.inv_steps = 500
     # args.batch_size = -1
 
-    args = parser.parse_args('-dataset MNIST'.split())
-    args.inv_steps = 100
-    args.batch_size = 64
-    args.inv_lr = 0.01
-
-    # args = parser.parse_args('-dataset CIFAR10'.split())
-    # args.inv_steps = 1
+    # args = parser.parse_args('-dataset MNIST'.split())
+    # args.inv_steps = 100
     # args.batch_size = 64
+    # args.inv_lr = 0.01
+
+    args = parser.parse_args('-dataset CIFAR10'.split())
+    args.inv_steps = 600
+    args.batch_size = 256
 
     args.n_random_projections = 1024
     args.use_drive = True
@@ -78,7 +78,7 @@ print("# on", args.dataset)
 
 # ======= Hyperparameters =======
 print("Hyperparameters:")
-print(utility.dict_to_str(vars(args), '\n'), end='\n\n')
+print(utility.dict_to_str(vars(args), '\n\n'))
 
 # ======= Set Seeds =======
 random.seed(args.seed)
@@ -106,20 +106,20 @@ print(f"Running on '{DEVICE}'\n")
 # ======= Create Dataset =======
 
 if args.dataset == 'CIFAR10':
-    dataset = datasets.CIFAR10()
+    dataset = datasets.CIFAR10(load_data=False)
 elif args.dataset == 'MNIST':
     dataset = datasets.MNIST()
 
 MODELDIR = dataset.data_dir
 
-A, B, B_val = dataset.get_datasets()
+# A, B, B_val = dataset.get_datasets()
 
 
-def data_loader(D):
-    return DataLoader(D, batch_size=64, shuffle=True)
+# def data_loader(D):
+#     return DataLoader(D, batch_size=64, shuffle=True)
 
 
-DATA_A = data_loader(A)
+# DATA_A = data_loader(A)
 
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes

@@ -13,7 +13,7 @@ import torchvision
 from torch.utils.data import random_split, DataLoader, TensorDataset
 import torchvision.transforms as transforms
 
-from ext.cifar10pretrained.cifar10_models.resnet import resnet34 as ResNet34
+from ext.cifar10pretrained.cifar10_models import resnet34 as ResNet34
 from ext.cifar10pretrained.cifar10_download import main as download_resnet
 # download_resnet()
 import utility
@@ -57,18 +57,21 @@ class Dataset():
 
 
 class CIFAR10(Dataset):
-    def __init__(self):
+    def __init__(self, load_data):
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ])
-        train_set = torchvision.datasets.CIFAR10(
-            root=DATADIR, train=True, download=True, transform=transform)
-        test_set = torchvision.datasets.CIFAR10(
-            root=DATADIR, train=False, download=True, transform=transform)
+        if load_data:
+            train_set = torchvision.datasets.CIFAR10(
+                root=DATADIR, train=True, download=True, transform=transform)
+            test_set = torchvision.datasets.CIFAR10(
+                root=DATADIR, train=False, download=True, transform=transform)
 
-        A, B = split_dataset(train_set, split=0.8)
-        B_val = test_set
+            A, B = split_dataset(train_set, split=0.8)
+            B_val = test_set
+        else:
+            A, B, B_val = None, None, None
 
         data_dir = os.path.join(MODELDIR, "CIFAR10")
 
