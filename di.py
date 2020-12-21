@@ -74,7 +74,6 @@ if 'ipykernel_launcher' in sys.argv[0]:
 
     args.n_random_projections = 1024
     args.use_drive = True
-    # args.use_var = True
 else:
     args = parser.parse_args()
 
@@ -110,8 +109,6 @@ inv_steps = args.inv_steps
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f"Running on '{DEVICE}'\n")
 
-STD = False
-
 # ======= Create Dataset =======
 
 if args.dataset == 'CIFAR10':
@@ -130,7 +127,6 @@ def data_loader(D):
 
 
 DATA_A = data_loader(A)
-# DATA_A = None
 
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
@@ -153,21 +149,12 @@ utility.train(net, DATA_A, criterion, optimizer,
 # ======= NN Project =======
 net_layers = utility.get_bn_layers(net)
 layer_activations = [None] * len(net_layers)
-# layer_losses = [None] * len(net_layers)
+net_output = None
 
 
 def layer_hook_wrapper(idx):
     def hook(module, inputs, outputs):
-        layer_activations[idx] = inputs[0]
-        # XXXXXXXXXXXXX
-
-        # nch = inputs[0].shape[1]
-        # mean = inputs[0].mean([0, 2, 3])
-        # var = inputs[0].permute(1, 0, 2, 3).contiguous().view(
-        #     [nch, -1]).var(1, unbiased=False)
-        # r_feature = torch.norm(module.running_var.data.type(var.type()) - var, 2) + torch.norm(
-        #     module.running_mean.data.type(var.type()) - mean, 2)
-        # layer_losses[idx] = r_feature
+        layer_activations[idx] = outputs
     return hook
 
 
@@ -181,15 +168,10 @@ def project_NN(data):
     return outputs
 
 
-def project_NN_all(data, add_output=False):
+def project_NN_all(data):
     inputs, labels = data
     outputs = net(inputs)
-    # return [inputs] + layer_activations + [outputs]
-    if add_output:
-        return layer_activations + [outputs]
-    else:
-        return layer_activations
-    # XXXXXXXXXXXXXXXXX no outputs
+    return [inputs] + layer_activations + [outputs]
 
 
 # ======= Loss Function =======
@@ -207,6 +189,7 @@ def regularization(x):
 
 
 # @debug
+
 def loss_stats(m_a, s_a, m_b, s_b):
     if isinstance(m_a, list):
         assert len(m_a) == len(m_b) and len(s_a) == len(s_b), \
@@ -224,6 +207,9 @@ def loss_stats(m_a, s_a, m_b, s_b):
         loss_mean = ((m_a - m_b)**2).mean()
         loss_std = ((s_a - s_b)**2).mean()
     return loss_mean + loss_std
+
+
+STD = ~args.use_var
 
 
 def loss_fn_wrapper(name, project, class_conditional):
@@ -258,14 +244,14 @@ m_a, s_a = utility.collect_stats(
 
 def loss_fn(data):
     inputs, labels = data
-    outputs = project_NN_all(data, True)
-    last_layer = outputs.pop(-1)
+    outputs = project_NN_all(data)
+    last_layer = outputs[-1]
 
     m, s = utility.get_stats(
         outputs, labels, n_classes, class_conditional=False, std=False)
 
-    loss = 10 * loss_stats(m_a, s_a, m, s)
-    loss += 0.001 * regularization(inputs)
+    loss = loss_stats(m_a, s_a, m, s)
+    loss += regularization(inputs)
     loss += criterion(last_layer, labels)
     return loss
 
