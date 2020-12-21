@@ -185,73 +185,6 @@ def project_NN_all(data):
     # XXXXXXXXXXXXXXXXX no outputs
 
 
-# ======= Random Projections =======
-RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
-RP = RP / RP.norm(2, dim=0)
-
-
-def identity(data): return data[0]
-
-
-STD = not args.use_var
-
-path = os.path.join(MODELDIR, "stats_inputs.pt")
-path_cc = os.path.join(MODELDIR, "stats_inputs-CC.pt")
-mean_A, std_A = utility.collect_stats(
-    identity, DATA_A, n_classes, class_conditional=False,
-    std=STD, path=path, device=DEVICE)
-mean_A_C, std_A_C = utility.collect_stats(
-    identity, DATA_A, n_classes, class_conditional=True,
-    std=STD, path=path_cc, device=DEVICE)
-
-
-def project_RP(data):
-    X, Y = data
-    return (X - mean_A).reshape(-1, n_dims) @ RP
-
-
-def project_RP_CC(data):
-    X, Y = data
-    X_proj_C = None
-    for c in range(n_classes):
-        X_proj_c = (X[Y == c] - mean_A_C[c]).reshape(-1, n_dims) @ RP
-        if X_proj_C is None:
-            X_proj_C = torch.empty((X.shape[0], n_random_projections),
-                                   dtype=X_proj_c.dtype, device=X.device)
-        X_proj_C[Y == c] = X_proj_c
-    return X_proj_C
-
-
-# Random ReLU Projections
-relu_bias = (torch.randn((1, n_random_projections),
-                         device=DEVICE) * std_A.max())
-relu_bias_C = (torch.randn((n_classes, n_random_projections), device=DEVICE)
-               * std_A_C.max(dim=1, keepdims=True)[0].reshape(n_classes, 1))
-
-
-def project_RP_relu(data):
-    return F.relu(project_RP(data) + relu_bias)
-
-
-def project_RP_relu_CC(data):
-    X, Y = data
-    return F.relu(project_RP_CC(data) + relu_bias_C[Y])
-
-# ======= Combined =======
-
-
-def combine(project1, project2):
-    def _combined_fn(data):
-        out1 = project1(data)
-        out2 = project2(data)
-        if not isinstance(out1, list):
-            out1 = [out1]
-        if not isinstance(out2, list):
-            out2 = [out2]
-        return out1 + out2
-    return _combined_fn
-
-
 # ======= Loss Function =======
 def regularization(x):
     diff1 = x[:, :, :, :-1] - x[:, :, :, 1:]
@@ -316,8 +249,12 @@ s_a = [m.running_var for m in net_layers]
 def loss_fn(data):
     inputs, labels = data
     outputs = net(inputs)
-    m, s = utility.get_stats(
-        layer_activations, labels, n_classes, class_conditional=False, std=False)
+    # m, s = utility.get_stats(
+    #     layer_activations, labels, n_classes, class_conditional=False, std=False)
+    nch = inputs[0].shape[1]
+    m = [ip.mean([0, 2, 3]) for ip in inputs]
+    s = [ip.permute(1, 0, 2, 3).contiguous().view(
+        [nch, -1]).var(1, unbiased=False) for ip in inputs]
     loss = 10 * loss_stats(m_a, s_a, m, s)
     loss += 0.001 * regularization(inputs)
     loss += criterion(outputs, labels)
