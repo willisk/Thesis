@@ -197,6 +197,7 @@ if __name__ == "__main__":
     checkpoint = torch.load(load_path, map_location=device)
 
     net.to(device)
+    net.eval()
 
     criterion = nn.CrossEntropyLoss()
 
