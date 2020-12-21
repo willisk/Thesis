@@ -258,6 +258,7 @@ def loss_fn(data):
     m, s = utility.get_stats(
         layer_activations, labels, n_classes, class_conditional=False, std=False)
 
+    global DONE
     if not DONE:
         for i, _ in enumerate(m):
             m_a[i] = m_a[i].reshape(m[i].shape)
