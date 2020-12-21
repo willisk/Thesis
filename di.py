@@ -171,7 +171,7 @@ def project_NN(data):
 def project_NN_all(data):
     inputs, labels = data
     outputs = net(inputs)
-    return [inputs] + layer_activations + [outputs]
+    return [inputs] + layer_activations  # + [outputs]
 
 
 # ======= Random Projections =======
