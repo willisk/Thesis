@@ -150,11 +150,21 @@ utility.train(net, DATA_A, criterion, optimizer,
 # ======= NN Project =======
 net_layers = utility.get_bn_layers(net)
 layer_activations = [None] * len(net_layers)
+layer_losses = [None] * len(net_layers)
 
 
 def layer_hook_wrapper(idx):
-    def hook(_module, _inputs, outputs):
-        layer_activations[idx] = outputs
+    def hook(module, inputs, outputs):
+        # layer_activations[idx] = outputs
+        # XXXXXXXXXXXXX
+
+        nch = inputs[0].shape[1]
+        mean = inputs[0].mean([0, 2, 3])
+        var = inputs[0].permute(1, 0, 2, 3).contiguous().view(
+            [nch, -1]).var(1, unbiased=False)
+        r_feature = torch.norm(module.running_var.data.type(var.type()) - var, 2) + torch.norm(
+            module.running_mean.data.type(var.type()) - mean, 2)
+        layer_losses[idx] = r_feature
     return hook
 
 
@@ -262,9 +272,10 @@ def loss_stats(m_a, s_a, m_b, s_b):
         assert len(m_a) == len(m_b) and len(s_a) == len(s_b), \
             "lists need to of same length"
         loss_mean = sum(((ma - mb)**2).mean()
-                        for ma, mb in zip(m_a, m_b)) / len(m_a)
+                        for ma, mb in zip(m_a, m_b))  # / len(m_a)
         loss_std = sum(((sa - sb)**2).mean()
-                       for sa, sb in zip(s_a, s_b)) / len(m_a)
+                       for sa, sb in zip(s_a, s_b))  # / len(m_a)
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     else:
         loss_mean = ((m_a - m_b)**2).mean()
         loss_std = ((s_a - s_b)**2).mean()
@@ -295,6 +306,15 @@ def loss_fn_wrapper(name, project, class_conditional):
     return name, _loss_fn
 
 
+def loss_fn(data):
+    inputs, labels = data
+    outputs = net(inputs)
+    loss = 10 * sum(layer_losses)
+    loss += 0.001 * regularization(inputs)
+    loss += criterion(outputs, labels)
+    return loss
+
+
 methods = [
     # loss_fn_wrapper(
     #     name="NN",
@@ -306,11 +326,12 @@ methods = [
     #     project=project_NN,
     #     class_conditional=True,
     # ),
-    loss_fn_wrapper(
-        name="NN ALL",
-        project=project_NN_all,
-        class_conditional=False,
-    ),
+    ("DI TEST", loss_fn)
+    # loss_fn_wrapper(
+    #     name="NN ALL",
+    #     project=project_NN_all,
+    #     class_conditional=False,
+    # ),
     # loss_fn_wrapper(
     #     name="NN ALL CC",
     #     project=project_NN_all,
@@ -399,7 +420,7 @@ for method, loss_fn in methods:
                                #    track_history_every=10,
                                plot=True,
                                use_amp=args.use_amp,
-                               grad_norm_fn=grad_norm_fn,
+                               #    grad_norm_fn=grad_norm_fn,
                                )
 
     # ======= Result =======

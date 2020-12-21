@@ -80,6 +80,12 @@ class DeepInversionFeatureHook():
         self.hook.remove()
 
 
+def jitter(x):
+    off1, off2 = torch.randint(low=-2, high=2, size=(2, 1))
+    x = torch.roll(x, shifts=(off1, off2), dims=(2, 3))
+    return x
+
+
 def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
                prefix=None, competitive_scale=0.01, global_iteration=None,
                optimizer=None, inputs=None, bn_reg_scale=0.0, random_labels=False,
@@ -94,8 +100,7 @@ def get_images(net, bs=256, epochs=1000, idx=-1, var_scale=0.00005,
 
     optimizer.state = collections.defaultdict(dict)  # Reset state of optimizer
 
-    targets = torch.LongTensor(
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] * 25 + [0, 1, 2, 3, 4, 5]).to(device)
+    targets = torch.LongTensor(range(bs)).to(device) % 10
 
     # Create hooks for feature statistics catching
     loss_r_feature_layers = []
