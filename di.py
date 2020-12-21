@@ -211,6 +211,26 @@ def loss_stats(m_a, s_a, m_b, s_b):
 
 STD = ~args.use_var
 
+# m_a = [m.running_mean for m in net_layers]
+# s_a = [m.running_var for m in net_layers]
+m_a, s_a = utility.collect_stats(
+    project_NN_all, DATA_A, n_classes, class_conditional=False,
+    std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=args.use_drive)
+
+
+def loss_fn(data):
+    inputs, labels = data
+    outputs = project_NN_all(data)
+    last_layer = outputs[-1]
+
+    m, s = utility.get_stats(
+        outputs, labels, n_classes, class_conditional=False, std=STD)
+
+    loss = loss_stats(m_a, s_a, m, s)
+    loss += regularization(inputs)
+    loss += criterion(last_layer, labels)
+    return loss
+
 
 def loss_fn_wrapper(name, project, class_conditional):
     stats_path = os.path.join(MODELDIR, f"stats_{name.replace(' ', '-')}.pt")
@@ -233,27 +253,6 @@ def loss_fn_wrapper(name, project, class_conditional):
                 )
         return loss
     return name, _loss_fn
-
-
-# m_a = [m.running_mean for m in net_layers]
-# s_a = [m.running_var for m in net_layers]
-m_a, s_a = utility.collect_stats(
-    project_NN_all, DATA_A, n_classes, class_conditional=False,
-    std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=args.use_drive)
-
-
-def loss_fn(data):
-    inputs, labels = data
-    outputs = project_NN_all(data)
-    last_layer = outputs[-1]
-
-    m, s = utility.get_stats(
-        outputs, labels, n_classes, class_conditional=False, std=False)
-
-    loss = loss_stats(m_a, s_a, m, s)
-    loss += regularization(inputs)
-    loss += criterion(last_layer, labels)
-    return loss
 
 
 methods = [
