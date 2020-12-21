@@ -193,9 +193,9 @@ def batch_feature_stats(X, keep_dims=[1], std=False):
     valid_mean = len(X) > 0
     valid_var = len(X) > 1
     if std:
-        var = X.std(dim=dims_collapse, keepdims=True)
+        var = X.std(dim=dims_collapse, unbiased=False, keepdims=True)
     else:
-        var = X.var(dim=dims_collapse, keepdims=True)
+        var = X.var(dim=dims_collapse, unbiased=False, keepdims=True)
     return mean, var
     # if not valid_mean:
     #     mean = torch.zeros_like(mean)
