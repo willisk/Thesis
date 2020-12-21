@@ -150,21 +150,21 @@ utility.train(net, DATA_A, criterion, optimizer,
 # ======= NN Project =======
 net_layers = utility.get_bn_layers(net)
 layer_activations = [None] * len(net_layers)
-layer_losses = [None] * len(net_layers)
+# layer_losses = [None] * len(net_layers)
 
 
 def layer_hook_wrapper(idx):
     def hook(module, inputs, outputs):
-        # layer_activations[idx] = outputs
+        layer_activations[idx] = outputs
         # XXXXXXXXXXXXX
 
-        nch = inputs[0].shape[1]
-        mean = inputs[0].mean([0, 2, 3])
-        var = inputs[0].permute(1, 0, 2, 3).contiguous().view(
-            [nch, -1]).var(1, unbiased=False)
-        r_feature = torch.norm(module.running_var.data.type(var.type()) - var, 2) + torch.norm(
-            module.running_mean.data.type(var.type()) - mean, 2)
-        layer_losses[idx] = r_feature
+        # nch = inputs[0].shape[1]
+        # mean = inputs[0].mean([0, 2, 3])
+        # var = inputs[0].permute(1, 0, 2, 3).contiguous().view(
+        #     [nch, -1]).var(1, unbiased=False)
+        # r_feature = torch.norm(module.running_var.data.type(var.type()) - var, 2) + torch.norm(
+        #     module.running_mean.data.type(var.type()) - mean, 2)
+        # layer_losses[idx] = r_feature
     return hook
 
 
@@ -283,8 +283,7 @@ def loss_stats(m_a, s_a, m_b, s_b):
 
 
 def loss_fn_wrapper(name, project, class_conditional):
-    _name = name.replace(' ', '-')
-    stats_path = os.path.join(MODELDIR, f"stats_{_name}.pt")
+    stats_path = os.path.join(MODELDIR, f"stats_{name.replace(' ', '-')}.pt")
     m_a, s_a = utility.collect_stats(
         project, DATA_A, n_classes, class_conditional,
         std=STD, path=stats_path, device=DEVICE, use_drive=args.use_drive)
@@ -306,10 +305,16 @@ def loss_fn_wrapper(name, project, class_conditional):
     return name, _loss_fn
 
 
+m_a = [m.running_mean for m in net_layers]
+s_a = [m.running_var for m in net_layers]
+
+
 def loss_fn(data):
     inputs, labels = data
     outputs = net(inputs)
-    loss = 10 * sum(layer_losses)
+    m, s = utility.get_stats(
+        outputs, labels, n_classes, class_conditional=False, std=False)
+    loss = 10 * loss_stats(m_a, s_a, m, s)
     loss += 0.001 * regularization(inputs)
     loss += criterion(outputs, labels)
     return loss
