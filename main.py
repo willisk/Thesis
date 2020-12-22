@@ -23,19 +23,27 @@ import utility
 import inversion
 import datasets
 
-if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
+from debug import debug
+
+try:
+    get_ipython()   # pylint: disable=undefined-variable
+    interactive_notebook = True
+except:
+    interactive_notebook = False
+
+
+if interactive_notebook:
     import importlib
     importlib.reload(utility)
     importlib.reload(inversion)
     importlib.reload(datasets)
 
-from debug import debug
 
 # ======= Arg Parse =======
 parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
 parser.add_argument(
     "-dataset", choices=['CIFAR10', 'GMM', 'MNIST'], required=True)
-parser.add_argument("-seed", type=int, default=6)
+parser.add_argument("-seed", type=int, default=0)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
@@ -54,7 +62,7 @@ parser.add_argument("-g_scale_mean", type=float, default=2)
 parser.add_argument("-g_scale_cov", type=float, default=20)
 parser.add_argument("-g_mean_shift", type=float, default=0)
 
-if 'ipykernel_launcher' in sys.argv:
+if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset GMM'.split())
     # args.nn_steps = 500
     # args.inv_steps = 500
@@ -71,21 +79,21 @@ if 'ipykernel_launcher' in sys.argv:
     # args.inv_steps = 1
     # args.batch_size = 64
 
-    # args.use_var = True
-else:
+    args.use_var = True
+# else:
     # args = parser.parse_args()
     # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    args = parser.parse_args('-dataset MNIST'.split())
+    # args = parser.parse_args('-dataset MNIST'.split())
 
 USE_DRIVE = True
 
-# print("#", __doc__)
-# print("# on", args.dataset)
+print("#", __doc__)
+print("# on", args.dataset)
 
 
 # ======= Hyperparameters =======
-# print("Hyperparameters:")
-# print(utility.dict_to_str(vars(args), '\n'), end='\n\n')
+print("Hyperparameters:")
+print(utility.dict_to_str(vars(args), '\n'), '\n')
 
 # ======= Set Seeds =======
 random.seed(args.seed)
@@ -136,9 +144,7 @@ A, B, B_val = dataset.get_datasets()
 
 
 def data_loader(D):
-    batch_size = args.batch_size
-    if batch_size == -1:
-        batch_size = len(D)
+    batch_size = args.batch_size if args.batch_size != -1 else len(D)
     return DataLoader(D, batch_size=batch_size, shuffle=True)
 
 
@@ -196,6 +202,7 @@ if verifier_net:
 # ======= NN Project =======
 net_layers = utility.get_child_modules(net)
 layer_activations = [None] * len(net_layers)
+last_net_outputs = None
 
 
 def layer_hook_wrapper(idx):
@@ -209,17 +216,18 @@ for l, layer in enumerate(net_layers):
 
 
 def project_NN(data):
+    global last_net_outputs
     inputs, labels = data
-    net(inputs)
-    outputs = layer_activations[-1]
+    outputs = net(inputs)
+    last_net_outputs = outputs
     return outputs
 
 
 def project_NN_all(data):
+    global last_net_outputs
     inputs, labels = data
-    net(inputs)
-    outputs = [inputs] + layer_activations
-    return outputs
+    last_net_outputs = net(inputs)
+    return [inputs] + layer_activations
 
 
 # ======= Random Projections =======
@@ -306,16 +314,21 @@ def preprocessing_model():
 
 
 # ======= Loss Function =======
-@debug
 def loss_stats(m_a, s_a, m_b, s_b):
     if isinstance(m_a, list):
-        loss_mean = sum(((ma - mb)**2).mean()
-                        for ma, mb in zip(m_a, m_b)) / len(m_a)
-        loss_std = sum(((sa - sb)**2).mean()
-                       for sa, sb in zip(s_a, s_b)) / len(m_a)
+        assert len(m_a) == len(m_b) and len(s_a) == len(s_b), \
+            "lists need to be of same length"
+        loss_mean = sum((ma - mb).norm()
+                        for ma, mb in zip(m_a, m_b))  # / len(m_a)
+        loss_std = sum((sa - sb).norm()
+                       for sa, sb in zip(s_a, s_b))  # / len(m_a)
+        # loss_mean = sum(((ma - mb)**2).mean()
+        #                 for ma, mb in zip(m_a, m_b)) / len(m_a)
+        # loss_std = sum(((sa - sb)**2).mean()
+        #                for sa, sb in zip(s_a, s_b)) / len(m_a)
     else:
-        loss_mean = ((m_a - m_b)**2).mean()
-        loss_std = ((s_a - s_b)**2).mean()
+        loss_mean = (m_a - m_b).norm()
+        loss_std = (s_a - s_b).norm()
     return loss_mean + loss_std
 
 
@@ -326,21 +339,30 @@ from functools import wraps
 debug.silent = True
 
 
-@debug
-def loss_fn_wrapper(name, project, class_conditional):
+def loss_fn_wrapper(name, project, class_conditional, use_criterion=False):
     _name = name.replace(' ', '-')
     stats_path = os.path.join(MODELDIR, f"stats_{_name}.pt")
     m_a, s_a = utility.collect_stats(
         project, DATA_A, n_classes, class_conditional,
         std=STD, path=stats_path, device=DEVICE, use_drive=USE_DRIVE)
 
-    @debug
     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
+        global last_net_outputs
+        last_net_outputs = None
+
         inputs, labels = data
         outputs = project(data)
         m, s = utility.get_stats(
             outputs, labels, n_classes, class_conditional, std=STD)
-        return loss_stats(m_a, s_a, m, s)
+
+        loss = loss_stats(m_a, s_a, m, s)
+
+        if use_criterion:
+            if not last_net_outputs:
+                last_net_outputs = net(inputs)
+            loss += criterion(last_net_outputs, labels)
+
+        return loss
     return name, _loss_fn
 
 
@@ -350,16 +372,16 @@ methods = [
     #     project=project_NN,
     #     class_conditional=False,
     # ),
-    loss_fn_wrapper(
-        name="NN CC",
-        project=project_NN,
-        class_conditional=True,
-    ),
     # loss_fn_wrapper(
-    #     name="NN ALL",
-    #     project=project_NN_all,
-    #     class_conditional=False,
+    #     name="NN CC",
+    #     project=project_NN,
+    #     class_conditional=True,
     # ),
+    loss_fn_wrapper(
+        name="NN ALL",
+        project=project_NN_all,
+        class_conditional=False,
+    ),
     # loss_fn_wrapper(
     #     name="NN ALL CC",
     #     project=project_NN_all,
@@ -392,20 +414,30 @@ methods = [
     # ),
 ]
 
-batch = next(iter(DATA_A))[0][:10]
-# print("Before:", flush=True)
-# img_grid = torchvision.utils.make_grid(batch, nrow=5)
-# plt.imshow(img_grid.permute(1, 2, 0))
-# plt.show()
 
-# print("Perturbed:")
-# with torch.no_grad():
-#     img_grid = torchvision.utils.make_grid(perturb(batch), nrow=5)
-# plt.imshow(img_grid.permute(1, 2, 0))
-# plt.show()
+def im_show(batch):
+    with torch.no_grad():
+        img_grid = torchvision.utils.make_grid(
+            batch.cpu(), nrow=5, normalize=True, scale_each=True)
+        plt.figure(figsize=(16, 32))
+        plt.imshow(img_grid.permute(1, 2, 0))
+        plt.show()
+
+
+batch = next(iter(DATA_B))[0][:10]
+
+print("ground truth:", flush=True)
+im_show(batch)
+
+print("perturbed:")
+im_show(perturb(batch))
 
 # ======= Optimize =======
 metrics = defaultdict(dict)
+
+
+def grad_norm_fn(x):
+    return min(x, 10)  # torch.sqrt(x) if x > 1 else x
 
 
 for method, loss_fn in methods:
@@ -416,43 +448,31 @@ for method, loss_fn in methods:
     def data_pre_fn(data):
         inputs, labels = data
         inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
-        return (inputs, labels)
-
-    def inputs_pre_fn(inputs):
         with torch.no_grad():
             inputs = perturb(inputs)
-        outputs = preprocess(inputs)
-        return outputs
+        inputs = preprocess(inputs)
+        return (inputs, labels)
 
     optimizer = torch.optim.Adam(params, lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    def grad_norm_fn(x):
-        # return max(x, 10)  # torch.sqrt(x) if x > 1 else x
-        return np.sqrt(x) if x > 1 else x
+    info = inversion.invert(DATA_B,
+                            loss_fn,
+                            optimizer,
+                            #    scheduler=scheduler,
+                            steps=inv_steps,
+                            # steps=2,
+                            data_pre_fn=data_pre_fn,
+                            #    track_history=True,
+                            #    track_history_every=10,
+                            plot=True,
+                            use_amp=args.use_amp,
+                            grad_norm_fn=grad_norm_fn,
+                            )
 
-    info = inversion.inversion(DATA_B,
-                               loss_fn,
-                               optimizer,
-                               #    scheduler=scheduler,
-                               steps=inv_steps,
-                               # steps=2,
-                               data_pre_fn=data_pre_fn,
-                               inputs_pre_fn=inputs_pre_fn,
-                               #    track_history=True,
-                               #    track_history_every=10,
-                               plot=True,
-                               use_amp=args.use_amp,
-                               grad_norm_fn=grad_norm_fn,
-                               )
-
-    # # ======= Result =======
-    # print("Inverted:")
-    # with torch.no_grad():
-    #     img_grid = torchvision.utils.make_grid(
-    #         preprocess(perturb(batch)), nrow=5)
-    # plt.imshow(img_grid.permute(1, 2, 0))
-    # plt.show()
+    # ======= Result =======
+    print("Inverted:")
+    im_show(preprocess(perturb(batch)))
 
     # print("Results:")
 

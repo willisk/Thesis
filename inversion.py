@@ -7,7 +7,8 @@ from torch.cuda.amp import autocast, GradScaler
 # from scipy.stats import betabinom
 
 # from tqdm.auto import tqdm
-from tqdm import tqdm
+# from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 
 import matplotlib.pyplot as plt
 
@@ -33,16 +34,15 @@ from debug import debug
 #     out = [factor * e / s for e in exponential]
 #     return out
 # @timing
-def inversion(data_loader, loss_fn, optimizer,
-              steps=10,
-              data_pre_fn=None,
-              inputs_pre_fn=None,
-              scheduler=None,
-              #    track_history_every=None,
-              plot=False,
-              use_amp=False,
-              grad_norm_fn=None,
-              ):
+def invert(data_loader, loss_fn, optimizer,
+           steps=10,
+           data_pre_fn=None,
+           scheduler=None,
+           #    track_history_every=None,
+           plot=False,
+           use_amp=False,
+           grad_norm_fn=None,
+           ):
 
     assert utility.valid_data_loader(
         data_loader), f"invalid data_loader: {data_loader}"
@@ -91,11 +91,6 @@ def inversion(data_loader, loss_fn, optimizer,
 
                 if data_pre_fn is not None:
                     data = data_pre_fn(data)
-
-                if inputs_pre_fn is not None:
-                    inputs, labels = data
-                    inputs = inputs_pre_fn(inputs)
-                    data = inputs, labels
 
                 optimizer.zero_grad()
 

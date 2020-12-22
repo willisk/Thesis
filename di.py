@@ -48,7 +48,6 @@ parser.add_argument("-seed", type=int, default=0)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
-parser.add_argument("--use_drive", action="store_true")
 parser.add_argument("--use_var", action="store_true")
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
@@ -77,6 +76,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
 else:
     args = parser.parse_args()
 
+USE_DRIVE = True
 
 print("#", __doc__)
 print("# on", args.dataset)
@@ -142,7 +142,7 @@ utility.train(net, DATA_A, criterion, optimizer,
               resume_training=nn_resume_training,
               reset=nn_reset_training,
               plot=True,
-              use_drive=args.use_drive,
+              use_drive=USE_DRIVE,
               )
 
 
@@ -152,7 +152,7 @@ layer_activations = [None] * len(net_layers)
 
 
 def layer_hook_wrapper(idx):
-    def hook(module, inputs, outputs):
+    def hook(_module, inputs, outputs):
         layer_activations[idx] = inputs[0]
     return hook
 
@@ -189,6 +189,9 @@ def regularization(x):
 
 # @debug
 
+STD = not args.use_var
+
+
 def loss_stats(m_a, s_a, m_b, s_b):
     if isinstance(m_a, list):
         assert len(m_a) == len(m_b) and len(s_a) == len(s_b), \
@@ -207,8 +210,6 @@ def loss_stats(m_a, s_a, m_b, s_b):
         loss_std = ((s_a - s_b)**2).mean()
     return loss_mean + loss_std
 
-
-STD = ~args.use_var
 
 # m_a = [m.running_mean for m in net_layers]
 # s_a = [m.running_var for m in net_layers]
@@ -334,7 +335,7 @@ for method, loss_fn in methods:
     batch = torch.randn((args.batch_size, *dataset.input_shape),
                         device=DEVICE, requires_grad=True)
     labels = torch.LongTensor(range(args.batch_size)).to(DEVICE) % n_classes
-    DATA = (batch, labels)
+    DATA = [(batch, labels)]
 
     # print("Before:")
     # im_show(batch)
@@ -348,20 +349,20 @@ for method, loss_fn in methods:
     optimizer = torch.optim.Adam([batch], lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    info = inversion.inversion([DATA],
-                               loss_fn,
-                               optimizer,
-                               #    scheduler=scheduler,
-                               steps=inv_steps,
-                               # steps=2,
-                               # data_pre_fn=data_pre_fn,
-                               inputs_pre_fn=jitter,
-                               #    track_history=True,
-                               #    track_history_every=10,
-                               plot=True,
-                               use_amp=args.use_amp,
-                               #    grad_norm_fn=grad_norm_fn,
-                               )
+    info = inversion.invert(DATA,
+                            loss_fn,
+                            optimizer,
+                            #    scheduler=scheduler,
+                            steps=inv_steps,
+                            # steps=2,
+                            # data_pre_fn=data_pre_fn,
+                            inputs_pre_fn=jitter,
+                            #    track_history=True,
+                            #    track_history_every=10,
+                            plot=True,
+                            use_amp=args.use_amp,
+                            #    grad_norm_fn=grad_norm_fn,
+                            )
 
     # ======= Result =======
     print("Inverted:")

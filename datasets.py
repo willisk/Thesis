@@ -57,7 +57,7 @@ class Dataset():
 
 
 class CIFAR10(Dataset):
-    def __init__(self, load_data):
+    def __init__(self, load_data=True):
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465),
