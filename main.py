@@ -46,7 +46,7 @@ from debug import debug
 parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
 parser.add_argument(
     "-dataset", choices=['CIFAR10', 'GMM', 'MNIST'], required=True)
-parser.add_argument("-seed", type=int, default=0)
+parser.add_argument("-seed", type=int, default=-1)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
@@ -104,15 +104,22 @@ print("Hyperparameters:")
 print(utility.dict_to_str(vars(args), '\n'), '\n')
 
 # ======= Set Seeds =======
-random.seed(args.seed)
-np.random.seed(args.seed)
-torch.manual_seed(args.seed)
-torch.cuda.manual_seed(args.seed)
-torch.cuda.manual_seed_all(args.seed)
-torch.backends.cudnn.enabled = False
-torch.backends.cudnn.benchmark = False
-torch.backends.cudnn.deterministic = True
-os.environ['PYTHONHASHSEED'] = str(args.seed)
+
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.enabled = False
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+    os.environ['PYTHONHASHSEED'] = str(seed)
+
+
+if args.seed != -1:
+    set_seed(args.seed)
 
 # Neural Network
 nn_lr = args.nn_lr
@@ -158,8 +165,10 @@ A, B, B_val = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B)
 
 def data_loader(D):
     batch_size = args.batch_size if args.batch_size != -1 else len(D)
-    return DataLoader(D, batch_size=batch_size, shuffle=True,
-                      worker_init_fn=lambda x: np.random.seed(args.seed + x))
+    if args.seed != -1:
+        return DataLoader(D, batch_size=batch_size, shuffle=True,
+                          worker_init_fn=lambda x: np.random.seed(args.seed + x))
+    return DataLoader(D, batch_size=batch_size, shuffle=True)
 
 
 DATA_A = data_loader(A)
