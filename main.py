@@ -167,8 +167,9 @@ class perturb_model(nn.Module):
         nch = input_shape[0]
         self.conv1 = nn.Conv2d(nch, nch, kernel_size, padding=1)
         self.conv2 = nn.Conv2d(nch, nch, kernel_size, padding=1)
-        self.noise = torch.randn(input_shape).unsqueeze(
-            0) * args.perturb_strength
+        self.noise = nn.Parameter(
+            torch.randn(input_shape).unsqueeze(
+                0) * args.perturb_strength)
 
     def forward(self, inputs):
         outputs = inputs
@@ -181,6 +182,7 @@ class perturb_model(nn.Module):
 
 perturb = perturb_model()
 perturb.to(DEVICE)
+print(perturb)
 
 
 # ======= Preprocessing Model =======
@@ -191,7 +193,7 @@ class preprocessing_model(nn.Module):
         kernel_size = 3
         self.conv1 = nn.Conv2d(nch, nch, kernel_size, padding=1)
         self.conv2 = nn.Conv2d(nch, nch, kernel_size, padding=1)
-        self.shift = torch.zeros(input_shape).unsqueeze(0)
+        self.shift = nn.Parameter(torch.zeros(input_shape).unsqueeze(0))
 
     def forward(self, inputs):
         outputs = inputs
