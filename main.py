@@ -455,7 +455,7 @@ def im_show(batch):
         plt.show()
 
 
-batch = next(iter(DATA_B))[0][:10]
+batch = next(iter(DATA_B))[0][:10].to(DEVICE)
 
 print("ground truth:", flush=True)
 im_show(batch)
