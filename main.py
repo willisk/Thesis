@@ -214,13 +214,17 @@ class preprocessing_model(nn.Module):
         kernel_size = 3
         self.conv1 = nn.Conv2d(nch, nch, kernel_size, padding=1)
         self.conv2 = nn.Conv2d(nch, nch, kernel_size, padding=1)
+        self.conv3 = nn.Conv2d(nch, nch, kernel_size, padding=1)
+        self.conv4 = nn.Conv2d(nch, nch, kernel_size, padding=1)
         self.shift = nn.Parameter(torch.zeros(input_shape).unsqueeze(0))
 
     def forward(self, inputs):
         outputs = inputs
+        outputs = outputs + self.shift
         outputs = self.conv1(outputs)
         outputs = self.conv2(outputs)
-        outputs = outputs + self.shift
+        outputs = self.conv3(outputs)
+        outputs = self.conv4(outputs)
         return outputs
 
 
