@@ -7,10 +7,12 @@ from functools import reduce, wraps
 from collections.abc import Iterable
 
 try:
-    get_ipython()
+    get_ipython()  # pylint: disable=undefined-variable
     interactive_notebook = True
 except:
     interactive_notebook = False
+
+_NONE = "__UNSET_VARIABLE__"
 
 
 def debug_init():
@@ -76,54 +78,60 @@ def tensor_repr(t, assert_all=False):
             debug.raise_exception = False
             debug.silent = False
         debug.x = t
-        stack = output
+        msg = output
+        debug._stack += output
         if debug._stack and '\n' in debug._stack:
-            stack += '\nSTACK:  ' + debug._stack + output
-        if debug._indent:
-            debug.args = debug._last_args
-            debug.func = debug._last_call
-
-            @wraps(debug.func)
-            def _recall(*args, **kwargs):
-                call_args = {**debug.args, **kwargs,
-                             **dict(zip(debug._last_args_sig, args))}
-                return debug(debug.func)(**call_args)
-
-            def print_stack():
-                print(stack)
-            debug.stack = print_stack
-
-            debug.recall = _recall
-        debug._indent = 0
+            msg += '\nSTACK:  ' + debug._stack
         if assert_all:
-            assert assert_val, "Assert did not pass on " + stack
-        raise Exception("Invalid entries encountered in " + stack)
+            assert assert_val, "Assert did not pass on " + msg
+        raise Exception("Invalid entries encountered in " + msg)
     return output
 
 
-def _debug_log(output, var=None, indent='', assert_true=False):
+def _debug_crash_save():
+    if debug._indent:
+        debug.args = debug._last_args
+        debug.func = debug._last_call
+
+        @wraps(debug.func)
+        def _recall(*args, **kwargs):
+            call_args = {**debug.args, **kwargs,
+                         **dict(zip(debug._last_args_sig, args))}
+            return debug(debug.func)(**call_args)
+
+        def print_stack(stack=debug._stack):
+            print('\nSTACK:  ' + stack)
+        debug.stack = print_stack
+
+        debug.recall = _recall
+    debug._indent = 0
+
+
+def _debug_log(output, var=_NONE, indent='', assert_true=False):
     debug._stack += indent + output
     if not debug.silent:
         print(indent + output, end='')
-    if var is not None:
-        if isinstance(var, str):
+    if var is not _NONE:
+        if var is None:
+            _debug_log('None')
+        elif isinstance(var, str):
             _debug_log(f"'{var}'")
         elif isinstance(var, torch.Tensor):
             _debug_log(tensor_repr(var, assert_true))
         elif is_iterable(var):
             expand = debug.expand_ignore != '*'
-            type_str = type(var).__name__
+            type_str = type(var).__name__.lower()
             if expand:
-                if not isinstance(debug.expand_ignore, str) \
-                        and is_iterable(debug.expand_ignore):
-                    for ignore in debug.expand_ignore:
-                        if type_str in ignore:
-                            expand = False
-                else:
-                    if type_str == debug.expand_ignore:
+                if isinstance(debug.expand_ignore, str):
+                    if type_str == str(debug.expand_ignore).lower():
                         expand = False
+                elif is_iterable(debug.expand_ignore):
+                    for ignore in debug.expand_ignore:
+                        if type_str == ignore.lower():
+                            expand = False
+            length = len(var) if hasattr(var, '__len__') else len(list(var))
             if expand:
-                _debug_log(f"{type_str} {{")
+                _debug_log(f"{type_str}[{length}] {{")
                 if isinstance(var, dict):
                     for k, v in var.items():
                         _debug_log(f"'{k}': ", v, indent + 6 * ' ',
@@ -134,7 +142,7 @@ def _debug_log(output, var=None, indent='', assert_true=False):
                                    assert_true)
                 _debug_log(indent + 4 * ' ' + '}')
             else:
-                _debug_log(f"{type_str}[{len(list(var))}]")
+                _debug_log(f"{type_str}[{length}]")
         else:
             _debug_log(str(var))
     else:
@@ -198,13 +206,12 @@ def debug(arg, assert_true=False):
         try:
             out = func(*args, **kwargs)
         except:
+            _debug_crash_save()
             debug._stack = ""
             debug._indent = 0
             raise
         debug.out = out
-        if out is not None:
-            _debug_log("returned:  ", out,
-                       indent, assert_true)
+        _debug_log("returned:  ", out, indent, assert_true)
         _debug_log('', indent=indent)
         debug._indent -= 1
         if not debug.full_stack:

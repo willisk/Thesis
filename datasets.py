@@ -10,7 +10,7 @@ sys.path.append(PWD)
 import numpy as np
 import torch
 import torchvision
-from torch.utils.data import random_split, DataLoader, TensorDataset
+from torch.utils.data import random_split, DataLoader, TensorDataset, Subset
 import torchvision.transforms as transforms
 
 from ext.cifar10pretrained.cifar10_models import resnet34 as ResNet34
@@ -46,8 +46,19 @@ class Dataset():
 
         self.transform = transform
 
-    def get_datasets(self):
+    def get_datasets(self, size_A=-1, size_B=-1, size_B_val=-1):
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXX
         return self.A, self.B, self.B_val
+        size_A = min(size_A, len(self.A)) if size_A != -1 else len(self.A)
+        size_B = min(size_B, len(self.B)) if size_B != -1 else len(self.B)
+        size_B_val = min(size_B_val, len(self.B_val)
+                         ) if size_B_val != -1 else len(self.B_val)
+
+        A = Subset(self.A, torch.randperm(len(self.A))[:size_A])
+        B = Subset(self.B, torch.randperm(len(self.B))[:size_B])
+        B_val = Subset(self.B_val, torch.randperm(
+            len(self.B_val))[:size_B_val])
+        return A, B, B_val
 
     def net(self):
         return None, None
@@ -94,7 +105,8 @@ class MNIST(Dataset):
     def __init__(self):
         transform = torchvision.transforms.Compose([
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize((0.1307,), (0.3081,))])
+            torchvision.transforms.Normalize((0.1307,), (0.3081,))
+        ])
         train_set = torchvision.datasets.MNIST(
             root=DATADIR, train=True, download=True, transform=transform)
         test_set = torchvision.datasets.MNIST(

@@ -192,21 +192,21 @@ def batch_feature_stats(X, keep_dims=[1], std=False):
     mean = X.mean(dim=dims_collapse, keepdims=True)
     valid_mean = len(X) > 0
     valid_var = len(X) > 1
-    if std:
-        var = X.std(dim=dims_collapse, unbiased=False, keepdims=True)
-    else:
-        var = X.var(dim=dims_collapse, unbiased=False, keepdims=True)
-    return mean, var
-    # if not valid_mean:
-    #     mean = torch.zeros_like(mean)
-    # if not valid_var:
-    #     var = torch.zeros_like(mean)
+    # if std:
+    #     var = X.std(dim=dims_collapse, unbiased=False, keepdims=True)
     # else:
-    #     if std:
-    #         var = X.std(dim=dims_collapse, keepdims=True)
-    #     else:
-    #         var = X.var(dim=dims_collapse, keepdims=True)
+    #     var = X.var(dim=dims_collapse, unbiased=False, keepdims=True)
     # return mean, var
+    if not valid_mean:
+        mean = torch.zeros_like(mean)
+    if not valid_var:
+        var = torch.zeros_like(mean)
+    else:
+        if std:
+            var = X.std(dim=dims_collapse, unbiased=False, keepdims=True)
+        else:
+            var = X.var(dim=dims_collapse, unbiased=False, keepdims=True)
+    return mean, var
 
 
 # @debug
@@ -231,13 +231,12 @@ def c_stats(inputs, labels, n_classes, return_count=False, std=False):
 # @debug
 def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, dtype=torch.float):
     if isinstance(inputs, list):
-        out = tuple(zip(*[_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count)
-                          for x in inputs]))
-        mean, var = out[0], out[1]
-        if len(out) == 3:
-            n = out[2][0]
-            return mean, var, n
-        return mean, var
+        return [_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count) for x in inputs]
+        # return tuple(zip(*[_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count)
+        #                    for x in inputs]))
+        # if return_count:
+        #     return out[0], out[1], out[2][0]
+        # return out
     return _get_stats(inputs.to(dtype), labels, n_classes, class_conditional, std, return_count)
 
 
@@ -252,9 +251,76 @@ def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std
     return batch_feature_stats(inputs, std=std)
 
 
+def collect_min_max(data_loader, device='cpu', path=None, use_drive=True):
+
+    def min_max(data):
+        inputs, labels = data
+        return inputs.min().item(), inputs.max().item()
+
+    def accumulate_fn(old, new):
+        return min(old[0], new[0]), max(old[1], new[1])
+
+    return collect_data(data_loader, min_max, accumulate_fn,
+                        map_location=device, path=path, use_drive=use_drive)
+
+
 # @debug
-def collect_stats(projection, data_loader, n_classes, class_conditional, std=False,
+def collect_data(data_loader, data_fn, accumulate_fn,
+                 final_fn=None, map_location='cpu', path=None, use_drive=True):
+
+    save_path, load_path = save_load_path(path, use_drive=use_drive)
+
+    if load_path and os.path.exists(load_path):
+        print(f"Loading data from {load_path}.", flush=True)
+        return torch.load(load_path, map_location=map_location)
+
+    print(flush=True)
+
+    output = None
+    with torch.no_grad(), tqdm(data_loader, unit="batch") as pbar:
+        for data in pbar:
+            if output is None:
+                output = data_fn(data)
+            else:
+                output = accumulate_fn(output, data_fn(data))
+
+    if final_fn:
+        output = final_fn(output)
+
+    if save_path:
+        torch.save(output, save_path)
+        print(f"Saving data to {save_path}.", flush=True)
+    print(flush=True)
+    return output
+
+
+# @debug
+def collect_stats(data_loader, projection, n_classes, class_conditional, std=False,
                   device='cpu', path=None, use_drive=True):
+
+    def data_fn(data):
+        inputs, labels = data
+        inputs, labels = inputs.to(device), labels.to(device)
+        outputs = projection((inputs, labels))
+        stats = get_stats(outputs, labels, n_classes, class_conditional,
+                          std=False, return_count=True, dtype=torch.double)
+        return stats
+
+    def update_fn(old, new):
+        if isinstance(old, list):
+            return [combine_mean_var(*o, *n) for o, n in zip(old, new)]
+        return combine_mean_var(*old, *new)
+
+    stats = collect_data(data_loader, data_fn, update_fn,
+                         map_location=device, path=path, use_drive=use_drive)
+
+    if isinstance(stats, list):
+        return [(m.float(), v.sqrt().float() if std else v.float()) for m, v, _ in stats]
+    return stats[0].float(), stats[1].sqrt().float() if std else stats[1].float()
+
+
+def collect_stats_old(projection, data_loader, n_classes, class_conditional, std=False,
+                      device='cpu', path=None, use_drive=True):
 
     def convert_to(_mean, _var, t_type, sqrt=False):
         if isinstance(_mean, tuple) or isinstance(_mean, list):
@@ -310,7 +376,7 @@ def collect_stats(projection, data_loader, n_classes, class_conditional, std=Fal
             'mean': save_mean,
             'var': save_var,
         }, save_path)
-        print(f"Saving stats in {load_path}.", flush=True)
+        print(f"Saving stats in {save_path}.", flush=True)
     print(flush=True)
 
     return convert_to(mean, var, torch.float, sqrt=std)
