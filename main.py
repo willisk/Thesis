@@ -81,8 +81,8 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.batch_size = 64
 
     # args.use_var = True
-# else:
-    # args = parser.parse_args()
+else:
+    args = parser.parse_args()
     # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     # args = parser.parse_args('-dataset MNIST'.split())
 
