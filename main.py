@@ -367,7 +367,7 @@ from functools import wraps
 # importlib.reload(utility)
 
 
-debug.silent = True
+debug.silent = False
 
 
 def loss_fn_wrapper(name, project, class_conditional, use_criterion=False):
@@ -456,7 +456,7 @@ def im_show(batch):
         plt.show()
 
 
-DATA_B = next(iter(DATA_B))
+DATA_B = [next(iter(DATA_B))]
 batch = next(iter(DATA_B))[0][:10].to(DEVICE)
 
 print("ground truth:", flush=True)
