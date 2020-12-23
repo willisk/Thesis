@@ -7,6 +7,7 @@ import argparse
 from collections import defaultdict
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 # from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
@@ -69,17 +70,17 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.batch_size = -1
 
     args = parser.parse_args('-dataset MNIST'.split())
-    args.inv_steps = 1
+    args.inv_steps = 3
     args.batch_size = 64
     args.n_random_projections = 1024
-    args.inv_lr = 0.001
-    args.perturb_strength = 0.03
+    args.inv_lr = 0.05
+    args.perturb_strength = 0.5
 
     # args = parser.parse_args('-dataset CIFAR10'.split())
     # args.inv_steps = 1
     # args.batch_size = 64
 
-    args.use_var = True
+    # args.use_var = True
 # else:
     # args = parser.parse_args()
     # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -152,23 +153,65 @@ DATA_A = data_loader(A)
 DATA_B = data_loader(B)
 DATA_B_val = data_loader(B_val)
 
+input_shape = dataset.input_shape
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
 
 # ======= Perturbation =======
-perturb_strength = args.perturb_strength
-perturb_matrix = (torch.eye(n_dims) + perturb_strength *
-                  torch.randn((n_dims, n_dims))).to(DEVICE)
-perturb_shift = (perturb_strength * torch.randn(n_dims)).to(DEVICE)
 
 
-def perturb(X):
-    X_shape = X.shape
-    X = X.reshape(-1, n_dims)
-    out = X @ perturb_matrix + perturb_shift
-    return out.reshape(X_shape)
+class perturb_model(nn.Module):
+    def __init__(self):
+        super().__init__()
+        kernel_size = 3
+        nch = input_shape[0]
+        self.conv1 = nn.Conv2d(nch, nch, kernel_size, padding=1)
+        self.conv2 = nn.Conv2d(nch, nch, kernel_size, padding=1)
+        self.noise = torch.randn(input_shape).unsqueeze(
+            0) * args.perturb_strength
+
+    def forward(self, inputs):
+        outputs = inputs
+        with torch.no_grad():
+            outputs = outputs + self.noise
+            outputs = self.conv1(outputs)
+            outputs = self.conv2(outputs)
+        return outputs
 
 
+perturb = perturb_model()
+perturb.to(DEVICE)
+
+
+# ======= Preprocessing Model =======
+class preprocessing_model(nn.Module):
+    def __init__(self):
+        super().__init__()
+        nch = input_shape[0]
+        kernel_size = 3
+        self.conv1 = nn.Conv2d(nch, nch, kernel_size, padding=1)
+        self.conv2 = nn.Conv2d(nch, nch, kernel_size, padding=1)
+        self.shift = torch.zeros(input_shape).unsqueeze(0)
+
+    def forward(self, inputs):
+        outputs = inputs
+        outputs = self.conv1(outputs)
+        outputs = self.conv2(outputs)
+        outputs = outputs + self.shift
+        return outputs
+
+
+# def perturb(X):
+#     X_shape = X.shape
+#     X = X.reshape(-1, n_dims)
+#     out = X @ perturb_matrix + perturb_shift
+#     return out.reshape(X_shape)
+# M = torch.eye(n_dims, requires_grad=True, device=DEVICE)
+# b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
+# def preprocessing_fn(X):
+#     X_shape = X.shape
+#     X = X.reshape(-1, n_dims)
+#     return (X @ M + b).reshape(X_shape)
 # ======= Neural Network =======
 model_path, net = dataset.net()
 # print(utility.get_child_modules(net))
@@ -298,22 +341,9 @@ def combine(project1, project2):
         return out1 + out2
     return _combined_fn
 
-# ======= Preprocessing Model =======
-
-
-def preprocessing_model():
-    M = torch.eye(n_dims, requires_grad=True, device=DEVICE)
-    b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
-
-    def preprocessing_fn(X):
-        X_shape = X.shape
-        X = X.reshape(-1, n_dims)
-        return (X @ M + b).reshape(X_shape)
-
-    return preprocessing_fn, (M, b)
-
-
 # ======= Loss Function =======
+
+
 def loss_stats(m_a, s_a, m_b, s_b):
     if isinstance(m_a, list):
         assert len(m_a) == len(m_b) and len(s_a) == len(s_b), \
@@ -358,7 +388,7 @@ def loss_fn_wrapper(name, project, class_conditional, use_criterion=False):
         loss = loss_stats(m_a, s_a, m, s)
 
         if use_criterion:
-            if not last_net_outputs:
+            if last_net_outputs is None:
                 last_net_outputs = net(inputs)
             loss += criterion(last_net_outputs, labels)
 
@@ -377,16 +407,17 @@ methods = [
     #     project=project_NN,
     #     class_conditional=True,
     # ),
-    loss_fn_wrapper(
-        name="NN ALL",
-        project=project_NN_all,
-        class_conditional=False,
-    ),
     # loss_fn_wrapper(
-    #     name="NN ALL CC",
+    #     name="NN ALL",
     #     project=project_NN_all,
-    #     class_conditional=True,
+    #     class_conditional=False,
     # ),
+    loss_fn_wrapper(
+        name="NN ALL CC",
+        project=project_NN_all,
+        class_conditional=True,
+        use_criterion=True,
+    ),
     # loss_fn_wrapper(
     #     name="RP",
     #     project=project_RP,
@@ -419,7 +450,7 @@ def im_show(batch):
     with torch.no_grad():
         img_grid = torchvision.utils.make_grid(
             batch.cpu(), nrow=5, normalize=True, scale_each=True)
-        plt.figure(figsize=(16, 32))
+        plt.figure(figsize=(16, 4))
         plt.imshow(img_grid.permute(1, 2, 0))
         plt.show()
 
@@ -443,17 +474,18 @@ def grad_norm_fn(x):
 for method, loss_fn in methods:
     print("\n## Method:", method)
 
-    preprocess, params = preprocessing_model()
+    # preprocess, params = preprocessing_model()
+    preprocess = preprocessing_model()
+    preprocess.to(DEVICE)
 
     def data_pre_fn(data):
         inputs, labels = data
         inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
-        with torch.no_grad():
-            inputs = perturb(inputs)
-        inputs = preprocess(inputs)
-        return (inputs, labels)
+        outputs = perturb(inputs)
+        outputs = preprocess(outputs)
+        return (outputs, labels)
 
-    optimizer = torch.optim.Adam(params, lr=inv_lr)
+    optimizer = torch.optim.Adam(preprocess.parameters(), lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
     info = inversion.invert(DATA_B,
@@ -467,12 +499,16 @@ for method, loss_fn in methods:
                             #    track_history_every=10,
                             plot=True,
                             use_amp=args.use_amp,
-                            grad_norm_fn=grad_norm_fn,
+                            # grad_norm_fn=grad_norm_fn,
                             )
 
     # ======= Result =======
+
+    def invert_fn(inputs):
+        return preprocess(perturb(inputs))
+
     print("Inverted:")
-    im_show(preprocess(perturb(batch)))
+    im_show(invert_fn(batch))
 
     # print("Results:")
 
@@ -481,25 +517,27 @@ for method, loss_fn in methods:
     # loss = info['loss'][-1]
     # print(f"\tloss: {loss:.3f}")
 
-    # # L2 Reconstruction Error
-    # Id = torch.eye(n_dims, device=DEVICE)
-    # l2_err = (preprocess(perturb(Id)) - Id).norm().item() / Id.norm().item()
-    # print(f"\trel. l2 reconstruction error: {l2_err:.3f}")
+    # L2 Reconstruction Error
+    Id = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
+    l2_err_perturb = (perturb(Id) - Id).norm().item() / Id.norm().item()
+    l2_err = (invert_fn(Id) - Id).norm().item() / Id.norm().item()
+    print(
+        f"\trel. l2 reconstruction error: {l2_err:.3f} / {l2_err_perturb:.3f}")
 
+    # NN Accuracy
+    accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=invert_fn)
+    accuracy_val = utility.net_accuracy(
+        net, DATA_B_val, inputs_pre_fn=invert_fn)
+    print(f"\tnn accuracy: {accuracy * 100:.1f} %")
 
-#     # NN Accuracy
-#     accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=inputs_pre_fn)
-#     accuracy_val = utility.net_accuracy(
-#         net, DATA_B_val, inputs_pre_fn=inputs_pre_fn)
-#     print(f"\tnn accuracy: {accuracy * 100:.1f} %")
-#     print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
+    print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
 
 #     metrics[method]['acc'] = accuracy
 #     metrics[method]['acc(val)'] = accuracy_val
 
 #     if verifier_net:
 #         accuracy_ver = utility.net_accuracy(
-#             verifier_net, DATA_B, inputs_pre_fn=inputs_pre_fn)
+#             verifier_net, DATA_B, inputs_pre_fn=invert_fn)
 #         print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
 #         metrics[method]['acc(ver)'] = accuracy_ver
 #     metrics[method]['l2-err'] = l2_err
