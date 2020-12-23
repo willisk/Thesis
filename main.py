@@ -182,7 +182,6 @@ class perturb_model(nn.Module):
 
 perturb = perturb_model()
 perturb.to(DEVICE)
-print(perturb)
 
 
 # ======= Preprocessing Model =======
@@ -457,6 +456,7 @@ def im_show(batch):
         plt.show()
 
 
+DATA_B = next(iter(DATA_B))
 batch = next(iter(DATA_B))[0][:10].to(DEVICE)
 
 print("ground truth:", flush=True)
