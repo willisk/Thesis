@@ -213,7 +213,7 @@ class preprocessing_model(nn.Module):
     def __init__(self):
         super().__init__()
         nch = input_shape[0]
-        block_depth = 2
+        block_depth = 5
         self.block_layer = nn.Sequential(*[
             nets.ResidualBlock(nch, nch, 1) for _ in range(block_depth)])
         # kernel_size = 3
