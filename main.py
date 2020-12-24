@@ -57,12 +57,12 @@ parser.add_argument("-perturb_strength", type=float, default=0.03)
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-batch_size", type=int, default=64)
-parser.add_argument("-size_A", type=int, default=-1)
-parser.add_argument("-size_B", type=int, default=64)
 parser.add_argument("-n_random_projections", type=int, default=256)
-parser.add_argument("-preprocessing_depth", type=int, default=2)
 parser.add_argument("-inv_lr", type=float, default=0.01)
 parser.add_argument("-inv_steps", type=int, default=100)
+parser.add_argument("-size_A", type=int, default=-1)
+parser.add_argument("-size_B", type=int, default=64)
+parser.add_argument("-preprocessing_depth", type=int, default=2)
 
 # GMM
 parser.add_argument("-g_modes", type=int, default=3)
@@ -93,8 +93,6 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.use_var = True
 else:
     args = parser.parse_args()
-    # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    # args = parser.parse_args('-dataset MNIST'.split())
 
 USE_DRIVE = True
 
@@ -295,9 +293,8 @@ for l, layer in enumerate(net_layers):
 def project_NN(data):
     global last_net_outputs
     inputs, labels = data
-    outputs = net(inputs)
-    last_net_outputs = outputs
-    return outputs
+    last_net_outputs = net(inputs)
+    return last_net_outputs
 
 
 def project_NN_all(data):
@@ -319,8 +316,8 @@ debug.expand_ignore = "DataLoader"
 
 
 STD = not args.use_var
-
 stats_path = os.path.join(MODELDIR, "stats_{}.pt")
+
 mean_A, std_A = utility.collect_stats(
     DATA_A, get_input, n_classes, class_conditional=False,
     std=STD, path=stats_path.format('inputs'), device=DEVICE, use_drive=USE_DRIVE)
@@ -395,9 +392,6 @@ def loss_stats(stats_a, stats_b):
                for (ma, sa), (mb, sb) in zip(stats_a, stats_b))  # / len(stats_a)
 
 
-# importlib.reload(utility)
-
-
 debug.silent = False
 
 
@@ -421,10 +415,10 @@ def loss_fn_wrapper(name, project, class_conditional, use_criterion=False):
         if use_criterion:
             if last_net_outputs is None:
                 last_net_outputs = net(inputs)
-            criterion_loss = 30 * criterion(last_net_outputs, labels)
+            criterion_loss = criterion(last_net_outputs, labels)
             loss = loss_obj + criterion_loss
-            info = {'loss_stats': loss_obj.item(
-            ), 'loss_B': criterion_loss.item()}
+            info = {'loss_stats': loss_obj.item(),
+                    'loss_B': criterion_loss.item()}
             return loss, info
 
         return loss_obj
@@ -512,28 +506,29 @@ def grad_norm_fn(x):
 for method, loss_fn in methods:
     print("\n## Method:", method)
 
-    # preprocess, params = preprocessing_model()
     preprocess = preprocessing_model()
     preprocess.train()
     preprocess.to(DEVICE)
 
-    def data_pre_fn(data):
+    def data_loss_fn(data):
         inputs, labels = data
         inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
-        outputs = perturb(inputs)
+        with torch.no_grad():
+            outputs = perturb(inputs)
         outputs = preprocess(outputs)
-        return (outputs, labels)
+        data = (outputs, labels)
+        return loss_fn(data)
 
     optimizer = torch.optim.Adam(preprocess.parameters(), lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
     info = inversion.invert(DATA_B,
-                            loss_fn,
+                            data_loss_fn,
                             optimizer,
                             #    scheduler=scheduler,
                             steps=inv_steps,
                             # steps=2,
-                            data_pre_fn=data_pre_fn,
+                            # data_pre_fn=data_pre_fn,
                             #    track_history=True,
                             #    track_history_every=10,
                             plot=True,

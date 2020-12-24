@@ -83,16 +83,15 @@ def invert(data_loader, loss_fn, optimizer,
 
                 # if step == 1 and track_history_every:
                 #     history = [(inputs.detach().cpu().clone(), 0)]
+                optimizer.zero_grad()
 
                 if isinstance(data, torch.Tensor):
                     batch_size = len(data)
                 else:
                     batch_size = len(data[0])
 
-                if data_pre_fn is not None:
-                    data = data_pre_fn(data)
-
-                optimizer.zero_grad()
+                # if data_pre_fn is not None:
+                #     data = data_pre_fn(data)
 
                 if USE_AMP:
                     with autocast():

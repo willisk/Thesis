@@ -23,8 +23,7 @@ sys.path.append(PWD)
 import utility
 import inversion
 import datasets
-
-from debug import debug
+import debug
 
 try:
     get_ipython()   # pylint: disable=undefined-variable
@@ -38,13 +37,16 @@ if interactive_notebook:
     importlib.reload(utility)
     importlib.reload(inversion)
     importlib.reload(datasets)
+    importlib.reload(debug)
+
+from debug import debug
 
 
 # ======= Arg Parse =======
 parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
 parser.add_argument(
     "-dataset", choices=['CIFAR10', 'MNIST'], required=True)
-parser.add_argument("-seed", type=int, default=0)
+parser.add_argument("-seed", type=int, default=-1)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
@@ -72,7 +74,6 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args.batch_size = 256
 
     args.n_random_projections = 1024
-    args.use_drive = True
 else:
     args = parser.parse_args()
 
@@ -87,10 +88,22 @@ print("Hyperparameters:")
 print(utility.dict_to_str(vars(args), '\n'), '\n')
 
 # ======= Set Seeds =======
-random.seed(args.seed)
-np.random.seed(args.seed)
-torch.manual_seed(args.seed)
 
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.enabled = False
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+    os.environ['PYTHONHASHSEED'] = str(seed)
+
+
+if args.seed != -1:
+    set_seed(args.seed)
 
 # Neural Network
 nn_lr = args.nn_lr
@@ -162,15 +175,17 @@ for l, layer in enumerate(net_layers):
 
 
 def project_NN(data):
+    global last_net_outputs
     inputs, labels = data
-    outputs = net(inputs)
-    return outputs
+    last_net_outputs = net(inputs)
+    return last_net_outputs
 
 
 def project_NN_all(data):
+    global last_net_outputs
     inputs, labels = data
-    outputs = net(inputs)
-    return [inputs] + layer_activations + [outputs]
+    last_net_outputs = net(inputs)
+    return [inputs] + layer_activations
 
 
 # ======= Loss Function =======
@@ -190,69 +205,91 @@ def regularization(x):
 # @debug
 
 STD = not args.use_var
+stats_path = os.path.join(MODELDIR, "stats_{}.pt")
+
+# ======= Loss Function =======
 
 
-def loss_stats(m_a, s_a, m_b, s_b):
-    if isinstance(m_a, list):
-        assert len(m_a) == len(m_b) and len(s_a) == len(s_b), \
-            "lists need to be of same length"
-        loss_mean = sum((ma - mb).norm(2)
-                        for ma, mb in zip(m_a, m_b))  # / len(m_a)
-        loss_std = sum((sa - sb).norm(2)
-                       for sa, sb in zip(s_a, s_b))  # / len(m_a)
-        # loss_mean = sum(((ma - mb)**2).sum()
-        #                 for ma, mb in zip(m_a, m_b))  # / len(m_a)
-        # loss_std = sum(((sa - sb)**2).sum()
-        #                for sa, sb in zip(s_a, s_b))  # / len(m_a)
-        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    else:
-        loss_mean = ((m_a - m_b)**2).mean()
-        loss_std = ((s_a - s_b)**2).mean()
-    return loss_mean + loss_std
+def loss_stats(stats_a, stats_b):
+    if not isinstance(stats_a, list):
+        stats_a, stats_b = [stats_a], [stats_b]
+    assert len(stats_a) == len(stats_b), "lists need to be of same length"
+    return sum((ma - mb).norm() + (sa - sb).norm()
+               for (ma, sa), (mb, sb) in zip(stats_a, stats_b))  # / len(stats_a)
 
 
-# m_a = [m.running_mean for m in net_layers]
-# s_a = [m.running_var for m in net_layers]
-m_a, s_a = utility.collect_stats(
-    project_NN_all, DATA_A, n_classes, class_conditional=True,
-    std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=args.use_drive)
+# def loss_stats(m_a, s_a, m_b, s_b):
+#     if isinstance(m_a, list):
+#         assert len(m_a) == len(m_b) and len(s_a) == len(s_b), \
+#             "lists need to be of same length"
+#         loss_mean = sum((ma - mb).norm(2)
+#                         for ma, mb in zip(m_a, m_b))  # / len(m_a)
+#         loss_std = sum((sa - sb).norm(2)
+#                        for sa, sb in zip(s_a, s_b))  # / len(m_a)
+#         # loss_mean = sum(((ma - mb)**2).sum()
+#         #                 for ma, mb in zip(m_a, m_b))  # / len(m_a)
+#         # loss_std = sum(((sa - sb)**2).sum()
+#         #                for sa, sb in zip(s_a, s_b))  # / len(m_a)
+#         # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+#     else:
+#         loss_mean = ((m_a - m_b)**2).mean()
+#         loss_std = ((s_a - s_b)**2).mean()
+#     return loss_mean + loss_std
+
+stats_A = [(m.running_mean, m.running_var.sqrt() if STD else m.running_var)
+           for m in net_layers]
+# m_a, s_a = utility.collect_stats(
+#     project_NN_all, DATA_A, n_classes, class_conditional=True,
+#     std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=args.use_drive)
 
 
 def loss_fn(data):
+    global last_net_outputs
+    last_net_outputs = None
+
     inputs, labels = data
     outputs = project_NN_all(data)
-    last_layer = outputs[-1]
 
-    m, s = utility.get_stats(
+    stats = utility.get_stats(
         outputs, labels, n_classes, class_conditional=True, std=STD)
 
-    loss = loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
-    loss += regularization(inputs)
-    loss += criterion(last_layer, labels)
+    loss_obj = loss_stats(stats, stats_A)
+
+    loss = loss_obj + regularization(inputs)
+
+    if use_criterion:
+        if last_net_outputs is None:
+            last_net_outputs = net(inputs)
+        criterion_loss = criterion(last_net_outputs, labels)
+        loss += criterion_loss
+        info = {'loss_stats': loss_obj.item(),
+                'loss_B': criterion_loss.item()}
+        return loss, info
+
     return loss
 
 
-def loss_fn_wrapper(name, project, class_conditional):
-    stats_path = os.path.join(MODELDIR, f"stats_{name.replace(' ', '-')}.pt")
-    m_a, s_a = utility.collect_stats(
-        project, DATA_A, n_classes, class_conditional,
-        std=STD, path=stats_path, device=DEVICE, use_drive=args.use_drive)
+# def loss_fn_wrapper(name, project, class_conditional):
+#     stats_path = os.path.join(MODELDIR, f"stats_{name.replace(' ', '-')}.pt")
+#     m_a, s_a = utility.collect_stats(
+#         project, DATA_A, n_classes, class_conditional,
+#         std=STD, path=stats_path, device=DEVICE, use_drive=args.use_drive)
 
-    # @debug
-    def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
-        inputs, labels = data
-        outputs = project(data)
-        last_layer = outputs[-1]
-        m, s = utility.get_stats(
-            outputs, labels, n_classes, class_conditional, std=STD)
-        # loss = loss_stats(m_a, s_a, m, s)
-        loss = (loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
-                + 0.001 * regularization(inputs)
-                # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-                + criterion(last_layer, labels)
-                )
-        return loss
-    return name, _loss_fn
+#     # @debug
+#     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
+#         inputs, labels = data
+#         outputs = project(data)
+#         last_layer = outputs[-1]
+#         m, s = utility.get_stats(
+#             outputs, labels, n_classes, class_conditional, std=STD)
+#         # loss = loss_stats(m_a, s_a, m, s)
+#         loss = (loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
+#                 + 0.001 * regularization(inputs)
+#                 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+#                 + criterion(last_layer, labels)
+#                 )
+#         return loss
+#     return name, _loss_fn
 
 
 methods = [
@@ -326,7 +363,6 @@ def jitter(x):
 
 def grad_norm_fn(x):
     return min(x, 10)  # torch.sqrt(x) if x > 1 else x
-    # return np.sqrt(x) if x > 1 else x
 
 
 for method, loss_fn in methods:
@@ -334,29 +370,29 @@ for method, loss_fn in methods:
 
     batch = torch.randn((args.batch_size, *dataset.input_shape),
                         device=DEVICE, requires_grad=True)
-    labels = torch.LongTensor(range(args.batch_size)).to(DEVICE) % n_classes
-    DATA = [(batch, labels)]
+    targets = torch.LongTensor(range(args.batch_size)).to(DEVICE) % n_classes
+    DATA = [(batch, targets)]
 
     # print("Before:")
     # im_show(batch)
 
-    # def inputs_pre_fn(inputs):
-    #     with torch.no_grad():
-    #         inputs = perturb(inputs)
-    #     outputs = preprocess(inputs)
-    #     return outputs
+    def data_loss_fn(data):
+        inputs, labels = data
+        inputs = jitter(inputs)
+        data = (inputs, labels)
+        return loss_fn(data)
 
     optimizer = torch.optim.Adam([batch], lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
     info = inversion.invert(DATA,
-                            loss_fn,
+                            data_loss_fn,
                             optimizer,
                             #    scheduler=scheduler,
                             steps=inv_steps,
                             # steps=2,
                             # data_pre_fn=data_pre_fn,
-                            inputs_pre_fn=jitter,
+                            # inputs_pre_fn=jitter,
                             #    track_history=True,
                             #    track_history_every=10,
                             plot=True,
