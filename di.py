@@ -255,12 +255,12 @@ def loss_fn(data):
 
     inputs, labels = data
     outputs = project_NN_all(data)
-    debug(outputs)
+    # debug(outputs)
 
     stats = utility.get_stats(
         outputs, labels, n_classes, class_conditional=True, std=STD)
 
-    loss_obj = f_stats * loss_stats(stats, stats_A)
+    loss_obj = f_stats * loss_stats(stats[1:], stats_A)
 
     loss = loss_obj
 
