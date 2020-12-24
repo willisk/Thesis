@@ -312,7 +312,6 @@ def collect_stats(data_loader, projection, n_classes, class_conditional, std=Fal
     return stats[0].float(), stats[1].sqrt().float() if std else stats[1].float()
 
 
-
 def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
     # check for infinites/nans where they shouldn't be
     if cc_n is not None:
@@ -534,7 +533,7 @@ def plot_metrics(metrics, step_start=1):
     y_min, y_max = min(vals), max(vals)
     y_min, y_max = max(y_min, sgm_m - sgm_s), min(y_max, sgm_m + sgm_s)
     buffer = 0.1 * (y_max - y_min)
-    # plt.gca().set_ylim([y_min - buffer, y_max + buffer])
+    plt.gca().set_ylim([y_min - buffer, y_max + buffer])
 
     if accuracy:
         acc_scaled = [y_min + a * (y_max - y_min) for a in accuracy]

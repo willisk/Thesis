@@ -442,17 +442,18 @@ methods = [
     #     project=project_NN,
     #     class_conditional=True,
     # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL",
-    #     project=project_NN_all,
-    #     class_conditional=False,
-    # ),
     loss_fn_wrapper(
-        name="NN ALL CC",
+        name="NN ALL",
         project=project_NN_all,
-        class_conditional=True,
+        class_conditional=False,
         use_criterion=True,
     ),
+    # loss_fn_wrapper(
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
+    #     class_conditional=True,
+    #     use_criterion=True,
+    # ),
     # loss_fn_wrapper(
     #     name="RP",
     #     project=project_RP,
@@ -513,8 +514,8 @@ for method, loss_fn in methods:
 
     # preprocess, params = preprocessing_model()
     preprocess = preprocessing_model()
-    preprocess.to(DEVICE)
     preprocess.train()
+    preprocess.to(DEVICE)
 
     def data_pre_fn(data):
         inputs, labels = data
