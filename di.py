@@ -150,7 +150,6 @@ n_classes = dataset.n_classes
 # ======= Neural Network =======
 model_path, net = dataset.net()
 net.to(DEVICE)
-net.eval()
 
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
@@ -162,6 +161,7 @@ utility.train(net, DATA_A, criterion, optimizer,
               plot=True,
               use_drive=USE_DRIVE,
               )
+net.eval()
 
 
 # ======= NN Project =======
@@ -190,6 +190,7 @@ def project_NN_all(data):
     global net_last_outputs
     inputs, labels = data
     net_last_outputs = net(inputs)
+    # return [inputs] + layer_activations
     return [inputs] + layer_activations
 
 
@@ -260,7 +261,7 @@ def loss_fn(data):
     # debug(outputs)
 
     stats = utility.get_stats(
-        outputs, labels, n_classes, class_conditional=True, std=STD)
+        outputs, labels, n_classes, class_conditional=False, std=STD)
 
     loss_obj = f_stats * loss_stats(stats[1:], stats_A)
 

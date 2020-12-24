@@ -249,6 +249,7 @@ model_path, net = dataset.net()
 # print(utility.get_child_modules(net))
 # print(len(utility.get_child_modules(net)))
 net.to(DEVICE)
+
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
 utility.train(net, DATA_A, criterion, optimizer,
@@ -259,6 +260,7 @@ utility.train(net, DATA_A, criterion, optimizer,
               plot=True,
               use_drive=USE_DRIVE,
               )
+net.eval()
 
 
 verifier_path, verifier_net = dataset.verifier_net()
