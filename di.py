@@ -150,6 +150,8 @@ n_classes = dataset.n_classes
 # ======= Neural Network =======
 model_path, net = dataset.net()
 net.to(DEVICE)
+net.eval()
+
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
 utility.train(net, DATA_A, criterion, optimizer,
