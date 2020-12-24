@@ -261,7 +261,7 @@ def loss_fn(data):
     outputs = project_NN_all(data)
     # debug(outputs)
 
-    stats = [(p.mean([0, 2, 3]), p.var([0, 2, 3])) for p in outputs]
+    # stats = [(p.mean([0, 2, 3]), p.var([0, 2, 3])) for p in outputs]
     stats = utility.get_stats(
         outputs, labels, n_classes, class_conditional=False, std=STD)
 
