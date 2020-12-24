@@ -246,7 +246,7 @@ def loss_stats(stats_a, stats_b):
 #            for m in net_layers]
 stats_A = utility.collect_stats(
     project_NN_all, DATA_A, n_classes, class_conditional=True,
-    std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=args.use_drive)
+    std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=USE_DRIVE)
 
 f_crit = args.f_crit
 f_reg = args.f_reg
