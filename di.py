@@ -242,11 +242,11 @@ def loss_stats(stats_a, stats_b):
 #         loss_std = ((s_a - s_b)**2).mean()
 #     return loss_mean + loss_std
 
-stats_A = [(m.running_mean, m.running_var.sqrt() if STD else m.running_var)
-           for m in net_layers]
-# m_a, s_a = utility.collect_stats(
-#     project_NN_all, DATA_A, n_classes, class_conditional=True,
-#     std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=args.use_drive)
+# stats_A = [(m.running_mean, m.running_var.sqrt() if STD else m.running_var)
+#            for m in net_layers]
+stats_A = utility.collect_stats(
+    project_NN_all, DATA_A, n_classes, class_conditional=True,
+    std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=args.use_drive)
 
 f_crit = args.f_crit
 f_reg = args.f_reg
