@@ -421,7 +421,7 @@ def loss_fn_wrapper(name, project, class_conditional, use_criterion=False):
         if use_criterion:
             if last_net_outputs is None:
                 last_net_outputs = net(inputs)
-            criterion_loss = criterion(last_net_outputs, labels)
+            criterion_loss = 10 * criterion(last_net_outputs, labels)
             loss = loss_obj + criterion_loss
             info = {'loss_stats': loss_obj.item(
             ), 'loss_B': criterion_loss.item()}
