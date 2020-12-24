@@ -197,9 +197,8 @@ def regularization(x):
     diff2 = x[:, :, :-1, :] - x[:, :, 1:, :]
     diff3 = x[:, :, 1:, :-1] - x[:, :, :-1, 1:]
     diff4 = x[:, :, :-1, :-1] - x[:, :, 1:, 1:]
-    loss_var = torch.norm(diff1) + torch.norm(diff2) + \
-        torch.norm(diff3) + torch.norm(diff4)
-    return loss_var * 0.001
+    return (torch.norm(diff1) + torch.norm(diff2) +
+            torch.norm(diff3) + torch.norm(diff4))
 
 
 # debug.expand = False
