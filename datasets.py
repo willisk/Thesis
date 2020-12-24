@@ -47,8 +47,6 @@ class Dataset():
         self.transform = transform
 
     def get_datasets(self, size_A=-1, size_B=-1, size_B_val=-1):
-        # XXXXXXXXXXXXXXXXXXXXXXXXXXX
-        return self.A, self.B, self.B_val
         size_A = min(size_A, len(self.A)) if size_A != -1 else len(self.A)
         size_B = min(size_B, len(self.B)) if size_B != -1 else len(self.B)
         size_B_val = min(size_B_val, len(self.B_val)

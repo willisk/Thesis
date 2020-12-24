@@ -76,7 +76,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.batch_size = -1
 
     args = parser.parse_args('-dataset MNIST'.split())
-    args.inv_steps = 100
+    args.inv_steps = 2
     args.batch_size = 64
     # args.size_B = 10
     args.n_random_projections = 1024
@@ -88,7 +88,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.batch_size = 64
     args.seed = 10
 
-    # args.size_B = 64
+    args.size_B = 64
     # args.use_var = True
 else:
     args = parser.parse_args()
@@ -422,7 +422,8 @@ def loss_fn_wrapper(name, project, class_conditional, use_criterion=False):
                 last_net_outputs = net(inputs)
             criterion_loss = criterion(last_net_outputs, labels)
             loss = loss_obj + criterion_loss
-            info = {'loss_stats': loss_obj, 'loss_B': criterion_loss}
+            info = {'loss_stats': loss_obj.item(
+            ), 'loss_B': criterion_loss.item()}
             return loss, info
 
         return loss_obj
