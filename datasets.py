@@ -96,6 +96,7 @@ class CIFAR10(Dataset):
                          transform=transform)
 
     def net(self):
+        # https://github.com/huyvnphan/PyTorch_CIFAR10
         resnet = ResNet34()
         model_path = os.path.join(self.data_dir, "net_resnet34.pt")
         return model_path, resnet

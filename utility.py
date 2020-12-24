@@ -23,8 +23,6 @@ from tqdm import tqdm
 
 from debug import debug
 
-DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-
 
 def tqdm_fmt_dict(epochs, batch_size):
     total = epochs * batch_size
@@ -192,11 +190,6 @@ def batch_feature_stats(X, keep_dims=[1], std=False):
     mean = X.mean(dim=dims_collapse, keepdims=True)
     valid_mean = len(X) > 0
     valid_var = len(X) > 1
-    # if std:
-    #     var = X.std(dim=dims_collapse, unbiased=False, keepdims=True)
-    # else:
-    #     var = X.var(dim=dims_collapse, unbiased=False, keepdims=True)
-    # return mean, var
     if not valid_mean:
         mean = torch.zeros_like(mean)
     if not valid_var:
@@ -318,68 +311,6 @@ def collect_stats(data_loader, projection, n_classes, class_conditional, std=Fal
         return [(m.float(), v.sqrt().float() if std else v.float()) for m, v, _ in stats]
     return stats[0].float(), stats[1].sqrt().float() if std else stats[1].float()
 
-
-def collect_stats_old(projection, data_loader, n_classes, class_conditional, std=False,
-                      device='cpu', path=None, use_drive=True):
-
-    def convert_to(_mean, _var, t_type, sqrt=False):
-        if isinstance(_mean, tuple) or isinstance(_mean, list):
-            return_mean = [m.to(t_type) for m in _mean]
-            if sqrt:
-                return_var = [v.sqrt().to(t_type) for v in _var]
-            else:
-                return_var = [v.to(t_type) for v in _var]
-        else:
-            return_mean = _mean.to(t_type)
-            if sqrt:
-                return_var = _var.sqrt().to(t_type)
-            else:
-                return_var = _var.to(t_type)
-        return return_mean, return_var
-
-    save_path, load_path = save_load_path(path, use_drive=use_drive)
-    if load_path and os.path.exists(load_path):
-        print(f"Loading stats from {load_path}.")
-        chkpt = torch.load(load_path, map_location=torch.device(device))
-        return convert_to(chkpt['mean'], chkpt['var'], torch.float, sqrt=std)
-
-    mean = var = n = None
-    print("Beginning tracking stats.", flush=True)
-
-    def update_mean_var(inputs, labels, old_mean=None, old_var=None, old_n=None):
-        new_mean, new_var, new_n = _get_stats(inputs.double(), labels, n_classes, class_conditional,
-                                              std=False, return_count=True)
-        if old_mean is None:
-            return new_mean, new_var, new_n
-
-        return combine_mean_var(old_mean, old_var, old_n,
-                                new_mean, new_var, new_n)
-
-    with torch.no_grad(), tqdm(data_loader, unit="batch") as pbar:
-        for i, data in enumerate(pbar):
-            inputs, labels = data
-            inputs, labels = inputs.to(device), labels.to(device)
-            outputs = projection((inputs, labels))
-            if isinstance(outputs, list):
-                if mean is None:
-                    mean = var = [None] * len(outputs)
-                m_v_n = [update_mean_var(x, labels, m, v, n)
-                         for x, m, v in zip(outputs, mean, var)]
-                mean, var, n = tuple(zip(*m_v_n))
-                n = n[0]
-            else:
-                mean, var, n = update_mean_var(outputs, labels, mean, var, n)
-
-    if save_path:
-        save_mean, save_var = convert_to(mean, var, 'cpu')
-        torch.save({
-            'mean': save_mean,
-            'var': save_var,
-        }, save_path)
-        print(f"Saving stats in {save_path}.", flush=True)
-    print(flush=True)
-
-    return convert_to(mean, var, torch.float, sqrt=std)
 
 
 def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
