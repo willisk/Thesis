@@ -415,14 +415,17 @@ def loss_fn_wrapper(name, project, class_conditional, use_criterion=False):
         stats = utility.get_stats(
             outputs, labels, n_classes, class_conditional, std=STD)
 
-        loss = loss_stats(stats, stats_A)
+        loss_obj = loss_stats(stats, stats_A)
 
         if use_criterion:
             if last_net_outputs is None:
                 last_net_outputs = net(inputs)
-            loss += criterion(last_net_outputs, labels)
+            criterion_loss = criterion(last_net_outputs, labels)
+            loss = loss_obj + criterion_loss
+            info = {'loss_stats': loss_obj, 'loss_B': criterion_loss}
+            return loss, info
 
-        return loss
+        return loss_obj
     return name, _loss_fn
 
 
