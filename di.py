@@ -255,6 +255,7 @@ def loss_fn(data):
 
     inputs, labels = data
     outputs = project_NN_all(data)
+    debug(outputs)
 
     stats = utility.get_stats(
         outputs, labels, n_classes, class_conditional=True, std=STD)
