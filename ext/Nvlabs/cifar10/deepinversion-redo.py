@@ -52,7 +52,7 @@ def jitter(x):
 
 def loss_fn(data):
     inputs, labels = data
-    outputs = net(inputs)
+    outputs = net(jitter(inputs))
     loss = 10 * sum(layer_losses)
     loss += 0.001 * regularization(inputs)
     loss += criterion(outputs, labels)
@@ -124,20 +124,20 @@ if __name__ == "__main__":
     for l, module in enumerate(net_layers):
         module.register_forward_hook(layer_hook_wrapper(l))
 
-    info = inversion.inversion([(inputs, targets)],
-                               loss_fn,
-                               optimizer,
-                               #    scheduler=scheduler,
-                               steps=iters,
-                               # steps=2,
-                               # data_pre_fn=data_pre_fn,
-                               inputs_pre_fn=jitter,
-                               #    track_history=True,
-                               #    track_history_every=10,
-                               plot=True,
-                               #    use_amp=args.use_amp,
-                               #    grad_norm_fn=grad_norm_fn,
-                               )
+    info = inversion.invert([(inputs, targets)],
+                            loss_fn,
+                            optimizer,
+                            #    scheduler=scheduler,
+                            steps=iters,
+                            # steps=2,
+                            # data_pre_fn=data_pre_fn,
+                            # inputs_pre_fn=jitter,
+                            #    track_history=True,
+                            #    track_history_every=10,
+                            plot=True,
+                            #    use_amp=args.use_amp,
+                            #    grad_norm_fn=grad_norm_fn,
+                            )
 
     import matplotlib.pyplot as plt
 
