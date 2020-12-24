@@ -75,6 +75,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args = parser.parse_args('-dataset CIFAR10'.split())
     args.inv_steps = 600
     args.batch_size = 256
+    args.use_var = True
 
     args.n_random_projections = 1024
 else:
@@ -261,8 +262,8 @@ def loss_fn(data):
     # debug(outputs)
 
     stats = [(p.mean([0, 2, 3]), p.var([0, 2, 3])) for p in outputs]
-    # stats = utility.get_stats(
-    #     outputs, labels, n_classes, class_conditional=False, std=STD)
+    stats = utility.get_stats(
+        outputs, labels, n_classes, class_conditional=False, std=STD)
 
     loss_obj = f_stats * loss_stats(stats, stats_A)
 
