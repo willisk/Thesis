@@ -113,10 +113,13 @@ if __name__ == "__main__":
         def hook(module, inputs, outputs):
             nch = inputs[0].shape[1]
             mean = inputs[0].mean([0, 2, 3])
-            var = inputs[0].permute(1, 0, 2, 3).contiguous().view(
-                [nch, -1]).var(1, unbiased=False)
-            r_feature = torch.norm(module.running_var.data.type(var.type()) - var, 2) + torch.norm(
-                module.running_mean.data.type(var.type()) - mean, 2)
+            var = inputs[0].var([0, 2, 3])
+            r_feature = ((mean - module.running_mean).norm() +
+                         (var - module.running_var).norm())
+            # var = inputs[0].permute(1, 0, 2, 3).contiguous().view(
+            #     [nch, -1]).var(1, unbiased=False)
+            # r_feature = torch.norm(module.running_var.data.type(var.type()) - var, 2) + torch.norm(
+            #     module.running_mean.data.type(var.type()) - mean, 2)
             layer_losses[idx] = r_feature
         return hook
 

@@ -191,7 +191,7 @@ def project_NN_all(data):
     inputs, labels = data
     net_last_outputs = net(inputs)
     # return [inputs] + layer_activations
-    return [inputs] + layer_activations
+    return layer_activations
 
 
 # ======= Loss Function =======
@@ -263,7 +263,7 @@ def loss_fn(data):
     stats = utility.get_stats(
         outputs, labels, n_classes, class_conditional=False, std=STD)
 
-    loss_obj = f_stats * loss_stats(stats[1:], stats_A)
+    loss_obj = f_stats * loss_stats(stats, stats_A)
 
     loss = loss_obj
 
