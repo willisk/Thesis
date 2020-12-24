@@ -421,7 +421,7 @@ def loss_fn_wrapper(name, project, class_conditional, use_criterion=False):
         if use_criterion:
             if last_net_outputs is None:
                 last_net_outputs = net(inputs)
-            criterion_loss = 10 * criterion(last_net_outputs, labels)
+            criterion_loss = 30 * criterion(last_net_outputs, labels)
             loss = loss_obj + criterion_loss
             info = {'loss_stats': loss_obj.item(
             ), 'loss_B': criterion_loss.item()}
@@ -442,18 +442,18 @@ methods = [
     #     project=project_NN,
     #     class_conditional=True,
     # ),
-    loss_fn_wrapper(
-        name="NN ALL",
-        project=project_NN_all,
-        class_conditional=False,
-        use_criterion=True,
-    ),
     # loss_fn_wrapper(
-    #     name="NN ALL CC",
+    #     name="NN ALL",
     #     project=project_NN_all,
-    #     class_conditional=True,
+    #     class_conditional=False,
     #     use_criterion=True,
     # ),
+    loss_fn_wrapper(
+        name="NN ALL CC",
+        project=project_NN_all,
+        class_conditional=True,
+        use_criterion=True,
+    ),
     # loss_fn_wrapper(
     #     name="RP",
     #     project=project_RP,
