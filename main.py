@@ -277,7 +277,7 @@ if verifier_net:
 # ======= NN Project =======
 net_layers = utility.get_child_modules(net)
 layer_activations = [None] * len(net_layers)
-last_net_outputs = None
+net_last_outputs = None
 
 
 def layer_hook_wrapper(idx):
@@ -291,16 +291,16 @@ for l, layer in enumerate(net_layers):
 
 
 def project_NN(data):
-    global last_net_outputs
+    global net_last_outputs
     inputs, labels = data
-    last_net_outputs = net(inputs)
-    return last_net_outputs
+    net_last_outputs = net(inputs)
+    return net_last_outputs
 
 
 def project_NN_all(data):
-    global last_net_outputs
+    global net_last_outputs
     inputs, labels = data
-    last_net_outputs = net(inputs)
+    net_last_outputs = net(inputs)
     return [inputs] + layer_activations
 
 
@@ -402,8 +402,8 @@ def loss_fn_wrapper(name, project, class_conditional, use_criterion=False):
         std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE)
 
     def _loss_fn(data, project=project, class_conditional=class_conditional, use_criterion=use_criterion):
-        global last_net_outputs
-        last_net_outputs = None
+        global net_last_outputs
+        net_last_outputs = None
 
         inputs, labels = data
         outputs = project(data)
@@ -413,9 +413,9 @@ def loss_fn_wrapper(name, project, class_conditional, use_criterion=False):
         loss_obj = loss_stats(stats, stats_A)
 
         if use_criterion:
-            if last_net_outputs is None:
-                last_net_outputs = net(inputs)
-            criterion_loss = criterion(last_net_outputs, labels)
+            if net_last_outputs is None:
+                net_last_outputs = net(inputs)
+            criterion_loss = criterion(net_last_outputs, labels)
             loss = loss_obj + criterion_loss
             info = {'loss_stats': loss_obj.item(),
                     'loss_B': criterion_loss.item()}

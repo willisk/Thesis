@@ -57,6 +57,9 @@ parser.add_argument("-batch_size", type=int, default=64)
 parser.add_argument("-n_random_projections", type=int, default=256)
 parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
+parser.add_argument("-f_reg", type=float, default=0.001)
+parser.add_argument("-f_crit", type=float, default=1)
+parser.add_argument("-f_stats", type=float, default=1)
 
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset GMM'.split())
@@ -175,16 +178,16 @@ for l, layer in enumerate(net_layers):
 
 
 def project_NN(data):
-    global last_net_outputs
+    global net_last_outputs
     inputs, labels = data
-    last_net_outputs = net(inputs)
-    return last_net_outputs
+    net_last_outputs = net(inputs)
+    return net_last_outputs
 
 
 def project_NN_all(data):
-    global last_net_outputs
+    global net_last_outputs
     inputs, labels = data
-    last_net_outputs = net(inputs)
+    net_last_outputs = net(inputs)
     return [inputs] + layer_activations
 
 
@@ -242,10 +245,14 @@ stats_A = [(m.running_mean, m.running_var.sqrt() if STD else m.running_var)
 #     project_NN_all, DATA_A, n_classes, class_conditional=True,
 #     std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=args.use_drive)
 
+f_crit = args.f_crit
+f_reg = args.f_reg
+f_stats = args.f_stats
+
 
 def loss_fn(data):
-    global last_net_outputs
-    last_net_outputs = None
+    global net_last_outputs
+    net_last_outputs = None
 
     inputs, labels = data
     outputs = project_NN_all(data)
@@ -253,19 +260,21 @@ def loss_fn(data):
     stats = utility.get_stats(
         outputs, labels, n_classes, class_conditional=True, std=STD)
 
-    loss_obj = loss_stats(stats, stats_A)
+    loss_obj = f_stats * loss_stats(stats, stats_A)
 
-    loss = loss_obj + regularization(inputs)
+    loss = loss_obj
 
-    if use_criterion:
-        if last_net_outputs is None:
-            last_net_outputs = net(inputs)
-        criterion_loss = criterion(last_net_outputs, labels)
-        loss += criterion_loss
+    if f_reg:
+        loss += f_reg * regularization(inputs)
+
+    if f_crit:
+        if net_last_outputs is None:
+            net_last_outputs = net(inputs)
+        loss_crit = f_crit * criterion(net_last_outputs, labels)
+        loss += loss_crit
         info = {'loss_stats': loss_obj.item(),
-                'loss_B': criterion_loss.item()}
+                'loss_crit': loss_crit.item()}
         return loss, info
-
     return loss
 
 
