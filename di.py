@@ -244,12 +244,12 @@ def loss_stats(stats_a, stats_b):
 
 # stats_A = [(m.running_mean, m.running_var.sqrt() if STD else m.running_var)
 #            for m in net_layers]
-# stats_A = utility.collect_stats(
-#     DATA_A, project_NN_all, n_classes, class_conditional=False,
-#     std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=USE_DRIVE)
 stats_A = utility.collect_stats(
-    DATA_A, project_NN_all, n_classes, class_conditional=True,
-    std=STD, path="models/stats_test-CC.pt", device=DEVICE, use_drive=USE_DRIVE)
+    DATA_A, project_NN_all, n_classes, class_conditional=False,
+    std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=USE_DRIVE)
+# stats_A = utility.collect_stats(
+#     DATA_A, project_NN_all, n_classes, class_conditional=True,
+#     std=STD, path="models/stats_test-CC.pt", device=DEVICE, use_drive=USE_DRIVE)
 
 f_crit = args.f_crit
 f_reg = args.f_reg
@@ -266,7 +266,7 @@ def loss_fn(data):
 
     # stats = [(p.mean([0, 2, 3]), p.var([0, 2, 3])) for p in outputs]
     stats = utility.get_stats(
-        outputs, labels, n_classes, class_conditional=True, std=STD)
+        outputs, labels, n_classes, class_conditional=False, std=STD)
 
     loss_obj = f_stats * loss_stats(stats, stats_A)
 
