@@ -60,6 +60,7 @@ parser.add_argument("-batch_size", type=int, default=64)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
 parser.add_argument("-n_random_projections", type=int, default=256)
+parser.add_argument("-preprocessing_depth", type=int, default=2)
 parser.add_argument("-inv_lr", type=float, default=0.01)
 parser.add_argument("-inv_steps", type=int, default=100)
 
@@ -213,7 +214,7 @@ class preprocessing_model(nn.Module):
     def __init__(self):
         super().__init__()
         nch = input_shape[0]
-        block_depth = 5
+        block_depth = args.preprocessing_depth
         self.block_layer = nn.Sequential(*[
             nets.ResidualBlock(nch, nch, 1) for _ in range(block_depth)])
         # kernel_size = 3
@@ -513,6 +514,7 @@ for method, loss_fn in methods:
     # preprocess, params = preprocessing_model()
     preprocess = preprocessing_model()
     preprocess.to(DEVICE)
+    preprocess.train()
 
     def data_pre_fn(data):
         inputs, labels = data
@@ -539,6 +541,7 @@ for method, loss_fn in methods:
                             )
 
     # ======= Result =======
+    preprocess.eval()
 
     def invert_fn(inputs):
         return preprocess(perturb(inputs))
