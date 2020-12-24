@@ -245,7 +245,7 @@ def loss_stats(stats_a, stats_b):
 # stats_A = [(m.running_mean, m.running_var.sqrt() if STD else m.running_var)
 #            for m in net_layers]
 stats_A = utility.collect_stats(
-    project_NN_all, DATA_A, n_classes, class_conditional=True,
+    DATA_A, project_NN_all, n_classes, class_conditional=True,
     std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=USE_DRIVE)
 
 f_crit = args.f_crit
