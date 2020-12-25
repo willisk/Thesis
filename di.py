@@ -195,7 +195,7 @@ def project_NN_all(data):
     global net_last_outputs
     inputs, labels = data
     net_last_outputs = net(inputs)
-    return layer_activations
+    return [inputs] + layer_activations
 
 
 # ======= Random Projections =======
