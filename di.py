@@ -356,7 +356,7 @@ def loss_fn_wrapper(name, project, class_conditional):
         outputs = project(data)
 
         stats = utility.get_stats(
-            outputs, labels, n_classes, class_conditional=True, std=STD)
+            outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
 
         loss_obj = f_stats * loss_stats(stats, stats_A)
 
@@ -365,8 +365,8 @@ def loss_fn_wrapper(name, project, class_conditional):
         loss += f_reg * regularization(inputs) if f_reg else 0
 
         if f_input:
-            stats = get_stats(inputs, labels, n_classes,
-                              class_conditional, std=STD)
+            stats_input = utility.get_stats(inputs, labels, n_classes,
+                                            class_conditional, std=STD)
             loss += f_input * loss_stats(stats_input, stats_input_A)
 
         if f_crit:
