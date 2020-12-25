@@ -168,15 +168,15 @@ net.eval()
 
 # ======= NN Project =======
 # NOTE: when using bn_layers, use inputs from hook
-# net_layers = utility.get_bn_layers(net)
-net_layers = utility.get_child_modules(net)[:-1]
+net_layers = utility.get_bn_layers(net)
+# net_layers = utility.get_child_modules(net)[:-1]
 layer_activations = [None] * len(net_layers)
 
 
 def layer_hook_wrapper(idx):
     def hook(_module, inputs, outputs):
-        # layer_activations[idx] = inputs[0]
-        layer_activations[idx] = outputs
+        layer_activations[idx] = inputs[0]
+        # layer_activations[idx] = outputs
     return hook
 
 
