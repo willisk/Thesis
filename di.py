@@ -169,7 +169,7 @@ net.eval()
 # ======= NN Project =======
 # NOTE: when using bn_layers, use inputs from hook
 # net_layers = utility.get_bn_layers(net)
-net_layers = utility.get_child_modules(net)
+net_layers = utility.get_child_modules(net)[1:]
 layer_activations = [None] * len(net_layers)
 
 
@@ -393,16 +393,16 @@ methods = [
     #     project=project_NN,
     #     class_conditional=True,
     # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL",
-    #     project=project_NN_all,
-    #     class_conditional=False,
-    # ),
     loss_fn_wrapper(
-        name="NN ALL CC",
+        name="NN ALL",
         project=project_NN_all,
-        class_conditional=True,
+        class_conditional=False,
     ),
+    # loss_fn_wrapper(
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
+    #     class_conditional=True,
+    # ),
     # loss_fn_wrapper(
     #     name="RP",
     #     project=project_RP,
