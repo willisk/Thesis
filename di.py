@@ -60,7 +60,7 @@ parser.add_argument("-inv_steps", type=int, default=100)
 parser.add_argument("-f_reg", type=float, default=0.001)
 parser.add_argument("-f_crit", type=float, default=1)
 parser.add_argument("-f_stats", type=float, default=1)
-parser.add_argument("-f_input", type=float, default=1)
+# parser.add_argument("-f_input", type=float, default=1)
 
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset GMM'.split())
@@ -167,7 +167,9 @@ net.eval()
 
 
 # ======= NN Project =======
-net_layers = utility.get_bn_layers(net)
+# NOTE: when using bn_layers, use inputs from hook
+# net_layers = utility.get_bn_layers(net)
+net_layers = utility.get_child_modules(net)
 layer_activations = [None] * len(net_layers)
 
 
@@ -193,8 +195,8 @@ def project_NN_all(data):
     global net_last_outputs
     inputs, labels = data
     net_last_outputs = net(inputs)
-    # return [inputs] + layer_activations
-    return layer_activations
+    return [inputs] + layer_activations
+    # return layer_activations
 
 
 # ======= Random Projections =======
@@ -310,7 +312,7 @@ def loss_stats(stats_a, stats_b):
 f_crit = args.f_crit
 f_reg = args.f_reg
 f_stats = args.f_stats
-f_input = args.f_input
+# f_input = args.f_input
 
 
 # def loss_fn(data):
@@ -364,10 +366,10 @@ def loss_fn_wrapper(name, project, class_conditional):
 
         loss += f_reg * regularization(inputs) if f_reg else 0
 
-        if f_input:
-            stats_input = utility.get_stats(inputs, labels, n_classes,
-                                            class_conditional, std=STD)
-            loss += f_input * loss_stats(stats_input, stats_input_A)
+        # if f_input:
+        #     stats_input = utility.get_stats(inputs, labels, n_classes,
+        #                                     class_conditional, std=STD)
+        #     loss += f_input * loss_stats(stats_input, stats_input_A)
 
         if f_crit:
             if net_last_outputs is None:
