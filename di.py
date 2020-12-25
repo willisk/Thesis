@@ -195,7 +195,6 @@ def project_NN_all(data):
     global net_last_outputs
     inputs, labels = data
     net_last_outputs = net(inputs)
-    # return [inputs] + layer_activations
     return layer_activations
 
 
@@ -394,16 +393,16 @@ methods = [
     #     project=project_NN,
     #     class_conditional=True,
     # ),
-    loss_fn_wrapper(
-        name="NN ALL",
-        project=project_NN_all,
-        class_conditional=False,
-    ),
     # loss_fn_wrapper(
-    #     name="NN ALL CC",
+    #     name="NN ALL",
     #     project=project_NN_all,
-    #     class_conditional=True,
+    #     class_conditional=False,
     # ),
+    loss_fn_wrapper(
+        name="NN ALL CC",
+        project=project_NN_all,
+        class_conditional=True,
+    ),
     # loss_fn_wrapper(
     #     name="RP",
     #     project=project_RP,
