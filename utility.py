@@ -225,11 +225,6 @@ def c_stats(inputs, labels, n_classes, return_count=False, std=False):
 def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, dtype=torch.float):
     if isinstance(inputs, list):
         return [_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count) for x in inputs]
-        # return tuple(zip(*[_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count)
-        #                    for x in inputs]))
-        # if return_count:
-        #     return out[0], out[1], out[2][0]
-        # return out
     return _get_stats(inputs.to(dtype), labels, n_classes, class_conditional, std, return_count)
 
 

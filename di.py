@@ -60,6 +60,7 @@ parser.add_argument("-inv_steps", type=int, default=100)
 parser.add_argument("-f_reg", type=float, default=0.001)
 parser.add_argument("-f_crit", type=float, default=1)
 parser.add_argument("-f_stats", type=float, default=1)
+parser.add_argument("-f_input", type=float, default=1)
 
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset GMM'.split())
@@ -172,7 +173,8 @@ layer_activations = [None] * len(net_layers)
 
 def layer_hook_wrapper(idx):
     def hook(_module, inputs, outputs):
-        layer_activations[idx] = inputs[0]
+        # layer_activations[idx] = inputs[0]
+        layer_activations[idx] = outputs
     return hook
 
 
@@ -195,7 +197,87 @@ def project_NN_all(data):
     return layer_activations
 
 
+# ======= Random Projections =======
+RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
+RP = RP / RP.norm(2, dim=0)
+
+
+def get_input(data): return data[0]
+
+
+debug.expand_ignore = "DataLoader"
+
+
+STD = not args.use_var
+stats_path = os.path.join(MODELDIR, "stats_{}.pt")
+
+stats_input_A = utility.collect_stats(
+    DATA_A, get_input, n_classes, class_conditional=False,
+    std=STD, path=stats_path.format('inputs'), device=DEVICE, use_drive=USE_DRIVE)
+stats_input_A_C = utility.collect_stats(
+    DATA_A, get_input, n_classes, class_conditional=True,
+    std=STD, path=stats_path.format('inputs-CC'), device=DEVICE, use_drive=USE_DRIVE)
+
+mean_A, std_A = stats_input_A
+mean_A_C, std_A_C = stats_input_A_C
+
+# # min_A, max_A = utility.collect_min_max(
+# #     DATA_A, path=stats_path.format('min-max'), device=DEVICE, use_drive=USE_DRIVE)
+
+
+# def project_RP(data):
+#     X, Y = data
+#     return (X - mean_A).reshape(-1, n_dims) @ RP
+
+
+# def project_RP_CC(data):
+#     X, Y = data
+#     X_proj_C = None
+#     for c in range(n_classes):
+#         X_proj_c = (X[Y == c] - mean_A_C[c]).reshape(-1, n_dims) @ RP
+#         if X_proj_C is None:
+#             X_proj_C = torch.empty((X.shape[0], n_random_projections),
+#                                    dtype=X_proj_c.dtype, device=X.device)
+#         X_proj_C[Y == c] = X_proj_c
+#     return X_proj_C
+
+
+# # Random ReLU Projections
+# relu_bias = (torch.randn((1, n_random_projections),
+#                          device=DEVICE) * std_A.max())
+# relu_bias_C = (torch.randn((n_classes, n_random_projections), device=DEVICE)
+#                * std_A_C.max(dim=1, keepdims=True)[0].reshape(n_classes, 1))
+
+
+# def project_RP_relu(data):
+#     return F.relu(project_RP(data) + relu_bias)
+
+
+# def project_RP_relu_CC(data):
+#     X, Y = data
+#     return F.relu(project_RP_CC(data) + relu_bias_C[Y])
+
+# # ======= Combined =======
+
+
+# def combine(project1, project2):
+#     def _combined_fn(data):
+#         out1 = project1(data)
+#         out2 = project2(data)
+#         if not isinstance(out1, list):
+#             out1 = [out1]
+#         if not isinstance(out2, list):
+#             out2 = [out2]
+#         return out1 + out2
+#     return _combined_fn
+
+
 # ======= Loss Function =======
+
+STD = not args.use_var
+stats_path = os.path.join(MODELDIR, "stats_{}.pt")
+
+
 def regularization(x):
     diff1 = x[:, :, :, :-1] - x[:, :, :, 1:]
     diff2 = x[:, :, :-1, :] - x[:, :, 1:, :]
@@ -205,113 +287,102 @@ def regularization(x):
             torch.norm(diff3) + torch.norm(diff4))
 
 
-# debug.expand = False
-
-
-# @debug
-
-STD = not args.use_var
-stats_path = os.path.join(MODELDIR, "stats_{}.pt")
-
-# ======= Loss Function =======
-
-
 def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
     assert len(stats_a) == len(stats_b), "lists need to be of same length"
     return sum(
         (ma - mb).norm() + (sa - sb).norm() if ma.ndim == 1 else
-        (ma - mb).norm(dim=1).mean() + (sa - sb).norm(dim=1).mean()
+        (ma - mb).norm(dim=1).mean() +
+        (sa - sb).norm(dim=1).mean()  # class_conditional
         for (ma, sa), (mb, sb) in zip(stats_a, stats_b))  # / len(stats_a)
 
-
-# def loss_stats(m_a, s_a, m_b, s_b):
-#     if isinstance(m_a, list):
-#         assert len(m_a) == len(m_b) and len(s_a) == len(s_b), \
-#             "lists need to be of same length"
-#         loss_mean = sum((ma - mb).norm(2)
-#                         for ma, mb in zip(m_a, m_b))  # / len(m_a)
-#         loss_std = sum((sa - sb).norm(2)
-#                        for sa, sb in zip(s_a, s_b))  # / len(m_a)
-#         # loss_mean = sum(((ma - mb)**2).sum()
-#         #                 for ma, mb in zip(m_a, m_b))  # / len(m_a)
-#         # loss_std = sum(((sa - sb)**2).sum()
-#         #                for sa, sb in zip(s_a, s_b))  # / len(m_a)
-#         # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#     else:
-#         loss_mean = ((m_a - m_b)**2).mean()
-#         loss_std = ((s_a - s_b)**2).mean()
-#     return loss_mean + loss_std
 
 # stats_A = [(m.running_mean, m.running_var.sqrt() if STD else m.running_var)
 #            for m in net_layers]
 # stats_A = utility.collect_stats(
 #     DATA_A, project_NN_all, n_classes, class_conditional=False,
 #     std=STD, path="models/stats_test.pt", device=DEVICE, use_drive=USE_DRIVE)
-stats_A = utility.collect_stats(
-    DATA_A, project_NN_all, n_classes, class_conditional=True,
-    std=STD, path="models/stats_test-CC.pt", device=DEVICE, use_drive=USE_DRIVE)
+# stats_A = utility.collect_stats(
+#     DATA_A, project_NN_all, n_classes, class_conditional=True,
+#     std=STD, path="models/stats_test-CC.pt", device=DEVICE, use_drive=USE_DRIVE)
 
 f_crit = args.f_crit
 f_reg = args.f_reg
 f_stats = args.f_stats
+f_input = args.f_input
 
 
-def loss_fn(data):
-    global net_last_outputs
-    net_last_outputs = None
+# def loss_fn(data):
+#     global net_last_outputs
+#     net_last_outputs = None
 
-    inputs, labels = data
-    outputs = project_NN_all(data)
-    # debug(outputs)
+#     inputs, labels = data
+#     outputs = project_NN_all(data)
 
-    # stats = [(p.mean([0, 2, 3]), p.var([0, 2, 3])) for p in outputs]
-    stats = utility.get_stats(
-        outputs, labels, n_classes, class_conditional=True, std=STD)
+#     stats = utility.get_stats(
+#         outputs, labels, n_classes, class_conditional=True, std=STD)
 
-    loss_obj = f_stats * loss_stats(stats, stats_A)
+#     loss_obj = f_stats * loss_stats(stats, stats_A)
 
-    loss = loss_obj
+#     loss = loss_obj
 
-    if f_reg:
-        loss += f_reg * regularization(inputs)
+#     if f_reg:
+#         loss += f_reg * regularization(inputs)
 
-    if f_crit:
-        if net_last_outputs is None:
-            net_last_outputs = net(inputs)
-        loss_crit = f_crit * criterion(net_last_outputs, labels)
-        loss += loss_crit
-        info = {'loss_stats': loss_obj.item(),
-                'loss_crit': loss_crit.item()}
-        return loss, info
-    return loss
+#     if f_crit:
+#         if net_last_outputs is None:
+#             net_last_outputs = net(inputs)
+#         loss_crit = f_crit * criterion(net_last_outputs, labels)
+#         loss += loss_crit
+#         info = {'loss_stats': loss_obj.item(),
+#                 'loss_crit': loss_crit.item()}
+#         return loss, info
+#     return loss
 
 
-# def loss_fn_wrapper(name, project, class_conditional):
-#     stats_path = os.path.join(MODELDIR, f"stats_{name.replace(' ', '-')}.pt")
-#     m_a, s_a = utility.collect_stats(
-#         project, DATA_A, n_classes, class_conditional,
-#         std=STD, path=stats_path, device=DEVICE, use_drive=args.use_drive)
+def loss_fn_wrapper(name, project, class_conditional):
+    _name = name.replace(' ', '-')
+    stats_A = utility.collect_stats(
+        DATA_A, project, n_classes, class_conditional,
+        std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=args.use_drive)
 
-#     # @debug
-#     def _loss_fn(data, m_a=m_a, s_a=s_a, project=project, class_conditional=class_conditional):
-#         inputs, labels = data
-#         outputs = project(data)
-#         last_layer = outputs[-1]
-#         m, s = utility.get_stats(
-#             outputs, labels, n_classes, class_conditional, std=STD)
-#         # loss = loss_stats(m_a, s_a, m, s)
-#         loss = (loss_stats(m_a[1:-1], s_a[1:-1], m[1:-1], s[1:-1])
-#                 + 0.001 * regularization(inputs)
-#                 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#                 + criterion(last_layer, labels)
-#                 )
-#         return loss
-#     return name, _loss_fn
+    # @debug
+    def _loss_fn(data, project=project, class_conditional=class_conditional):
+        global net_last_outputs
+        net_last_outputs = None
+
+        inputs, labels = data
+        outputs = project(data)
+
+        stats = utility.get_stats(
+            outputs, labels, n_classes, class_conditional=True, std=STD)
+
+        loss_obj = f_stats * loss_stats(stats, stats_A)
+
+        loss = loss_obj
+
+        loss += f_reg * regularization(inputs) if f_reg else 0
+
+        if f_input:
+            stats_input = utility.collect_stats(
+                outputs, get_input, n_classes,
+                class_conditional=class_conditional, std=STD, device=DEVICE, use_drive=USE_DRIVE)
+            loss += f_input * loss_stats(stats_input, stats_input_A)
+
+        if f_crit:
+            if net_last_outputs is None:
+                net_last_outputs = net(inputs)
+            loss += f_crit * criterion(net_last_outputs, labels)
+            # info = {'loss_stats': loss_obj.item(),
+            #         'loss_crit': loss_crit.item()}
+            # return loss, info
+        return loss
+    return name, _loss_fn
 
 
 methods = [
+    # ("DI TEST", loss_fn)
     # loss_fn_wrapper(
     #     name="NN",
     #     project=project_NN,
@@ -322,12 +393,11 @@ methods = [
     #     project=project_NN,
     #     class_conditional=True,
     # ),
-    ("DI TEST", loss_fn)
-    # loss_fn_wrapper(
-    #     name="NN ALL",
-    #     project=project_NN_all,
-    #     class_conditional=False,
-    # ),
+    loss_fn_wrapper(
+        name="NN ALL",
+        project=project_NN_all,
+        class_conditional=False,
+    ),
     # loss_fn_wrapper(
     #     name="NN ALL CC",
     #     project=project_NN_all,
