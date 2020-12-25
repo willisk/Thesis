@@ -366,7 +366,7 @@ def loss_fn_wrapper(name, project, class_conditional):
 
         if f_input:
             stats_input = utility.collect_stats(
-                outputs, get_input, n_classes,
+                data, get_input, n_classes,
                 class_conditional=class_conditional, std=STD, device=DEVICE, use_drive=USE_DRIVE)
             loss += f_input * loss_stats(stats_input, stats_input_A)
 
