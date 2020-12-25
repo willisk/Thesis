@@ -220,8 +220,10 @@ def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
     assert len(stats_a) == len(stats_b), "lists need to be of same length"
-    return sum((ma - mb).norm() + (sa - sb).norm()
-               for (ma, sa), (mb, sb) in zip(stats_a, stats_b))  # / len(stats_a)
+    return sum(
+        (ma - mb).norm() + (sa - sb).norm() if ma.ndim == 1 else
+        (ma - mb).norm(dim=1).mean() + (sa - sb).norm(dim=1).mean()
+        for (ma, sa), (mb, sb) in zip(stats_a, stats_b))  # / len(stats_a)
 
 
 # def loss_stats(m_a, s_a, m_b, s_b):
