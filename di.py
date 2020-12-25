@@ -169,7 +169,7 @@ net.eval()
 # ======= NN Project =======
 # NOTE: when using bn_layers, use inputs from hook
 # net_layers = utility.get_bn_layers(net)
-net_layers = utility.get_child_modules(net)
+net_layers = utility.get_child_modules(net)[:-1]
 layer_activations = [None] * len(net_layers)
 
 
@@ -195,8 +195,8 @@ def project_NN_all(data):
     global net_last_outputs
     inputs, labels = data
     net_last_outputs = net(inputs)
-    return [inputs] + layer_activations
-    # return layer_activations
+    # return [inputs] + layer_activations
+    return layer_activations
 
 
 # ======= Random Projections =======

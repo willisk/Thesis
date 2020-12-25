@@ -277,7 +277,7 @@ def collect_data(data_loader, data_fn, accumulate_fn,
 
     if save_path:
         torch.save(output, save_path)
-        print(f"Saving data to {save_path}.", flush=True)
+        print(f"\nSaving data to {save_path}.", flush=True)
     print(flush=True)
     return output
 
