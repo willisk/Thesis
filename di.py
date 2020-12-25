@@ -175,8 +175,8 @@ layer_activations = [None] * len(net_layers)
 
 def layer_hook_wrapper(idx):
     def hook(_module, inputs, outputs):
-        # layer_activations[idx] = inputs[0]
-        layer_activations[idx] = outputs
+        layer_activations[idx] = inputs[0]
+        # layer_activations[idx] = outputs
     return hook
 
 
