@@ -345,7 +345,7 @@ def loss_fn_wrapper(name, project, class_conditional):
     _name = name.replace(' ', '-')
     stats_A = utility.collect_stats(
         DATA_A, project, n_classes, class_conditional,
-        std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=args.use_drive)
+        std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE)
 
     # @debug
     def _loss_fn(data, project=project, class_conditional=class_conditional):
