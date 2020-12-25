@@ -167,7 +167,7 @@ net.eval()
 
 
 # ======= NN Project =======
-net_layers = utility.get_bn_layers(net)[:-1]
+net_layers = utility.get_bn_layers(net)
 layer_activations = [None] * len(net_layers)
 
 
