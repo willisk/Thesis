@@ -357,16 +357,6 @@ methods = [
     #     class_conditional=True,
     # ),
     loss_fn_wrapper(
-        name="NN ALL",
-        project=project_NN_all,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="NN ALL CC",
-        project=project_NN_all,
-        class_conditional=True,
-    ),
-    loss_fn_wrapper(
         name="RP",
         project=project_RP,
         class_conditional=False,
@@ -386,6 +376,16 @@ methods = [
         project=project_RP_relu_CC,
         class_conditional=True,
     ),
+    # loss_fn_wrapper(
+    #     name="NN ALL",
+    #     project=project_NN_all,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
+    #     class_conditional=True,
+    # ),
     # loss_fn_wrapper(
     #     name="combined",
     #     project=combine(project_NN_all, project_RP_CC),
