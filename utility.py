@@ -182,12 +182,11 @@ def nan_to(x, num):
 
 
 # @debug
-def batch_feature_stats(X, keep_dims=[1], std=False):
+def batch_feature_stats(X, std=False, keepdim=False):
     dims_collapse = list(range(X.ndim))
-    for dim in keep_dims:
-        dims_collapse.remove(dim)
+    dims_collapse.remove(1)
     assert dims_collapse != [], "dims to collapse are empty"
-    mean = X.mean(dim=dims_collapse)
+    mean = X.mean(dim=dims_collapse, keepdim=keepdim)
     valid_mean = len(X) > 0
     valid_var = len(X) > 1
     if not valid_mean:
@@ -196,24 +195,27 @@ def batch_feature_stats(X, keep_dims=[1], std=False):
         var = torch.zeros_like(mean)
     else:
         if std:
-            var = X.std(dim=dims_collapse, unbiased=False)
+            var = X.std(dim=dims_collapse, unbiased=False, keepdim=keepdim)
         else:
-            var = X.var(dim=dims_collapse, unbiased=False)
+            var = X.var(dim=dims_collapse, unbiased=False, keepdim=keepdim)
     return mean, var
 
 
 # @debug
-def c_stats(inputs, labels, n_classes, return_count=False, std=False):
-    shape = (n_classes, inputs.shape[1])
-    mean = torch.zeros(shape,
-                       dtype=inputs.dtype, device=inputs.device)
-    var = torch.ones(shape,
-                     dtype=inputs.dtype, device=inputs.device)
+def c_stats(inputs, labels, n_classes, return_count=False, std=False, keepdim=False):
+    mean = var = None
     n = torch.zeros(n_classes, dtype=torch.long, device=inputs.device)
 
     for c in labels.unique().long():
         c_mask = labels == c
-        mean[c], var[c] = batch_feature_stats(inputs[c_mask], std=std)
+        mean_c, var_c = batch_feature_stats(
+            inputs[c_mask], std=std, keepdim=keepdim)
+        if mean is None:
+            shape = (n_classes,) + mean_c.shape
+            mean = torch.zeros(shape, dtype=inputs.dtype, device=inputs.device)
+            var = torch.ones(shape, dtype=inputs.dtype, device=inputs.device)
+        mean[c], var[c] = mean_c, var_c
+
         n[c] = c_mask.sum().item()
 
     if return_count:
@@ -222,21 +224,22 @@ def c_stats(inputs, labels, n_classes, return_count=False, std=False):
 
 
 # @debug
-def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, dtype=torch.float):
+def get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, keepdim=False, dtype=torch.float):
     if isinstance(inputs, list):
-        return [_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count) for x in inputs]
-    return _get_stats(inputs.to(dtype), labels, n_classes, class_conditional, std, return_count)
+        return [_get_stats(x.to(dtype), labels, n_classes, class_conditional, std, return_count, keepdim) for x in inputs]
+    return _get_stats(inputs.to(dtype), labels, n_classes, class_conditional, std, return_count, keepdim)
 
 
 # @debug
-def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False):
+def _get_stats(inputs, labels=None, n_classes=None, class_conditional=False, std=False, return_count=False, keepdim=False):
     if class_conditional:
         assert labels is not None and n_classes is not None
-        return c_stats(inputs, labels, n_classes, std=std, return_count=return_count)
+        return c_stats(inputs, labels, n_classes,
+                       std=std, return_count=return_count, keepdim=keepdim)
     if return_count:
         m = torch.LongTensor([len(inputs)]).to(inputs.device)
-        return (*batch_feature_stats(inputs, std=std), m)
-    return batch_feature_stats(inputs, std=std)
+        return (*batch_feature_stats(inputs, std=std, keepdim=keepdim), m)
+    return batch_feature_stats(inputs, std=std, keepdim=keepdim)
 
 
 def collect_min_max(data_loader, device='cpu', path=None, use_drive=True):
@@ -253,6 +256,33 @@ def collect_min_max(data_loader, device='cpu', path=None, use_drive=True):
 
 
 # @debug
+def collect_stats(data_loader, projection, n_classes, class_conditional,
+                  std=False, keepdim=False,
+                  device='cpu', path=None, use_drive=True):
+
+    def data_fn(data):
+        inputs, labels = data
+        inputs, labels = inputs.to(device), labels.to(device)
+        outputs = projection((inputs, labels))
+        stats = get_stats(outputs, labels, n_classes, class_conditional,
+                          std=False, return_count=True, keepdim=keepdim, dtype=torch.double)
+        return stats
+
+    def update_fn(old, new):
+        if isinstance(old, list):
+            return [combine_mean_var(*o, *n) for o, n in zip(old, new)]
+        return combine_mean_var(*old, *new)
+
+    stats = collect_data(data_loader, data_fn, update_fn,
+                         map_location=device, path=path, use_drive=use_drive)
+
+    if isinstance(stats, list):
+        return [(m.float(), v.sqrt().float() if std else v.float()) for m, v, _ in stats]
+    return stats[0].float(), stats[1].sqrt().float() if std else stats[1].float()
+
+# @debug
+
+
 def collect_data(data_loader, data_fn, accumulate_fn,
                  final_fn=None, map_location='cpu', path=None, use_drive=True):
 
@@ -280,31 +310,6 @@ def collect_data(data_loader, data_fn, accumulate_fn,
         print(f"\nSaving data to {save_path}.", flush=True)
     print(flush=True)
     return output
-
-
-# @debug
-def collect_stats(data_loader, projection, n_classes, class_conditional, std=False,
-                  device='cpu', path=None, use_drive=True):
-
-    def data_fn(data):
-        inputs, labels = data
-        inputs, labels = inputs.to(device), labels.to(device)
-        outputs = projection((inputs, labels))
-        stats = get_stats(outputs, labels, n_classes, class_conditional,
-                          std=False, return_count=True, dtype=torch.double)
-        return stats
-
-    def update_fn(old, new):
-        if isinstance(old, list):
-            return [combine_mean_var(*o, *n) for o, n in zip(old, new)]
-        return combine_mean_var(*old, *new)
-
-    stats = collect_data(data_loader, data_fn, update_fn,
-                         map_location=device, path=path, use_drive=use_drive)
-
-    if isinstance(stats, list):
-        return [(m.float(), v.sqrt().float() if std else v.float()) for m, v, _ in stats]
-    return stats[0].float(), stats[1].sqrt().float() if std else stats[1].float()
 
 
 def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
