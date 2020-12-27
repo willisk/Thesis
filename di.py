@@ -60,7 +60,6 @@ parser.add_argument("-inv_steps", type=int, default=100)
 parser.add_argument("-f_reg", type=float, default=0.001)
 parser.add_argument("-f_crit", type=float, default=1)
 parser.add_argument("-f_stats", type=float, default=1)
-# parser.add_argument("-f_input", type=float, default=1)
 
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset GMM'.split())
@@ -130,7 +129,7 @@ print(f"Running on '{DEVICE}'\n")
 # ======= Create Dataset =======
 
 if args.dataset == 'CIFAR10':
-    dataset = datasets.CIFAR10(load_data=True)
+    dataset = datasets.CIFAR10()
 elif args.dataset == 'MNIST':
     dataset = datasets.MNIST()
 
@@ -171,6 +170,7 @@ net.eval()
 # net_layers = utility.get_bn_layers(net)
 net_layers = utility.get_child_modules(net)[:-1]
 layer_activations = [None] * len(net_layers)
+net_last_outputs = None
 
 
 def layer_hook_wrapper(idx):
@@ -203,10 +203,8 @@ RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
 RP = RP / RP.norm(2, dim=0)
 
 
-def get_input(data): return data[0]
-
-
-debug.expand_ignore = "DataLoader"
+def get_input(data):
+    return data[0]
 
 
 STD = not args.use_var
@@ -232,12 +230,12 @@ def project_RP_CC(data):
     X, Y = data
     X_proj_C = None
     for c in range(n_classes):
-        c_mask = Y == c
-        X_proj_c = (X[c_mask] - mean_A_C[c]).reshape(-1, n_dims) @ RP
+        mask = Y == c
+        X_proj_c = (X[mask] - mean_A_C[c]).reshape(-1, n_dims) @ RP
         if X_proj_C is None:
             X_proj_C = torch.empty((X.shape[0], n_random_projections),
                                    dtype=X_proj_c.dtype, device=X.device)
-        X_proj_C[c_mask] = X_proj_c
+        X_proj_C[mask] = X_proj_c
     return X_proj_C
 
 
@@ -246,7 +244,7 @@ mean_RP_A, std_RP_A = utility.collect_stats(
     DATA_A, project_RP, n_classes, class_conditional=False, std=True, keepdim=True,
     path=stats_path.format('RP'), device=DEVICE, use_drive=USE_DRIVE)
 mean_RP_A_C, std_RP_A_C = utility.collect_stats(
-    DATA_A, get_input, n_classes, class_conditional=True, std=True, keepdim=True,
+    DATA_A, project_RP_CC, n_classes, class_conditional=True, std=True, keepdim=True,
     path=stats_path.format('RP-CC'), device=DEVICE, use_drive=USE_DRIVE)
 
 # Random ReLU Projections
@@ -280,9 +278,6 @@ def combine(project1, project2):
 
 # ======= Loss Function =======
 
-STD = not args.use_var
-stats_path = os.path.join(MODELDIR, "stats_{}.pt")
-
 
 def regularization(x):
     diff1 = x[:, :, :, :-1] - x[:, :, :, 1:]
@@ -297,7 +292,6 @@ def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
     assert len(stats_a) == len(stats_b), "lists need to be of same length"
-    out = None
     return sum(
         (ma.squeeze() - mb.squeeze()).norm() +
         (sa.squeeze() - sb.squeeze()).norm() if ma.ndim == 1 else
@@ -317,7 +311,6 @@ def loss_fn_wrapper(name, project, class_conditional):
         DATA_A, project, n_classes, class_conditional,
         std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE)
 
-    # @debug
     def _loss_fn(data, project=project, class_conditional=class_conditional):
         global net_last_outputs
         net_last_outputs = None
@@ -328,19 +321,13 @@ def loss_fn_wrapper(name, project, class_conditional):
         stats = utility.get_stats(
             outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
 
-        loss_obj = f_stats * loss_stats(stats, stats_A)
-
-        loss = loss_obj
-
+        loss = f_stats * loss_stats(stats, stats_A)
         loss += f_reg * regularization(inputs) if f_reg else 0
 
         if f_crit:
             if net_last_outputs is None:
                 net_last_outputs = net(inputs)
             loss += f_crit * criterion(net_last_outputs, labels)
-            # info = {'loss_stats': loss_obj.item(),
-            #         'loss_crit': loss_crit.item()}
-            # return loss, info
         return loss
     return name, _loss_fn
 
@@ -354,6 +341,16 @@ methods = [
     # loss_fn_wrapper(
     #     name="NN CC",
     #     project=project_NN,
+    #     class_conditional=True,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN ALL",
+    #     project=project_NN_all,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
     #     class_conditional=True,
     # ),
     loss_fn_wrapper(
@@ -376,16 +373,6 @@ methods = [
         project=project_RP_relu_CC,
         class_conditional=True,
     ),
-    # loss_fn_wrapper(
-    #     name="NN ALL",
-    #     project=project_NN_all,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL CC",
-    #     project=project_NN_all,
-    #     class_conditional=True,
-    # ),
     # loss_fn_wrapper(
     #     name="combined",
     #     project=combine(project_NN_all, project_RP_CC),

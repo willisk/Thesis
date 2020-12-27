@@ -54,15 +54,18 @@ parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("--use_var", action="store_true")
-parser.add_argument("-perturb_strength", type=float, default=0.03)
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-batch_size", type=int, default=64)
 parser.add_argument("-n_random_projections", type=int, default=256)
-parser.add_argument("-inv_lr", type=float, default=0.01)
+parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
+parser.add_argument("-f_reg", type=float, default=0.001)
+parser.add_argument("-f_crit", type=float, default=1)
+parser.add_argument("-f_stats", type=float, default=1)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
+parser.add_argument("-perturb_strength", type=float, default=0.03)
 parser.add_argument("-preprocessing_depth", type=int, default=2)
 
 # GMM
@@ -78,7 +81,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.batch_size = -1
 
     args = parser.parse_args('-dataset MNIST'.split())
-    args.inv_steps = 2
+    args.inv_steps = 200
     args.batch_size = 64
     # args.size_B = 10
     args.n_random_projections = 1024
@@ -247,8 +250,6 @@ class preprocessing_model(nn.Module):
 #     return (X @ M + b).reshape(X_shape)
 # ======= Neural Network =======
 model_path, net = dataset.net()
-# print(utility.get_child_modules(net))
-# print(len(utility.get_child_modules(net)))
 net.to(DEVICE)
 
 criterion = torch.nn.CrossEntropyLoss()
@@ -278,7 +279,7 @@ if verifier_net:
 
 
 # ======= NN Project =======
-net_layers = utility.get_child_modules(net)
+net_layers = utility.get_child_modules(net)[:-1]
 layer_activations = [None] * len(net_layers)
 net_last_outputs = None
 
@@ -312,30 +313,22 @@ RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
 RP = RP / RP.norm(2, dim=0)
 
 
-def get_input(data): return data[0]
-
-
-debug.expand_ignore = "DataLoader"
+def get_input(data):
+    return data[0]
 
 
 STD = not args.use_var
 stats_path = os.path.join(MODELDIR, "stats_{}.pt")
 
 mean_A, std_A = utility.collect_stats(
-    DATA_A, get_input, n_classes, class_conditional=False,
-    std=STD, path=stats_path.format('inputs'), device=DEVICE, use_drive=USE_DRIVE)
+    DATA_A, get_input, n_classes, class_conditional=False, std=True, keepdim=True,
+    path=stats_path.format('inputs'), device=DEVICE, use_drive=USE_DRIVE)
 mean_A_C, std_A_C = utility.collect_stats(
-    DATA_A, get_input, n_classes, class_conditional=True,
-    std=STD, path=stats_path.format('inputs-CC'), device=DEVICE, use_drive=USE_DRIVE)
+    DATA_A, get_input, n_classes, class_conditional=True, std=True, keepdim=True,
+    path=stats_path.format('inputs-CC'), device=DEVICE, use_drive=USE_DRIVE)
 
-min_A, max_A = utility.collect_min_max(
-    DATA_A, path=stats_path.format('min-max'), device=DEVICE, use_drive=USE_DRIVE)
-
-# debug(DATA_A)
-# print(f"{min_A=}")
-# print(f"{max_A=}")
-
-# mean_A = mean_A.reshape(-1, 1, 1)
+# min_A, max_A = utility.collect_min_max(
+#     DATA_A, path=stats_path.format('min-max'), device=DEVICE, use_drive=USE_DRIVE)
 
 
 def project_RP(data):
@@ -347,19 +340,34 @@ def project_RP_CC(data):
     X, Y = data
     X_proj_C = None
     for c in range(n_classes):
-        X_proj_c = (X[Y == c] - mean_A_C[c]).reshape(-1, n_dims) @ RP
+        mask = Y == c
+        X_proj_c = (X[mask] - mean_A_C[c]).reshape(-1, n_dims) @ RP
         if X_proj_C is None:
             X_proj_C = torch.empty((X.shape[0], n_random_projections),
                                    dtype=X_proj_c.dtype, device=X.device)
-        X_proj_C[Y == c] = X_proj_c
+        X_proj_C[mask] = X_proj_c
     return X_proj_C
 
 
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXX Random projections need not always be the same? verify seed
+mean_RP_A, std_RP_A = utility.collect_stats(
+    DATA_A, project_RP, n_classes, class_conditional=False, std=True, keepdim=True,
+    path=stats_path.format('RP'), device=DEVICE, use_drive=USE_DRIVE)
+mean_RP_A_C, std_RP_A_C = utility.collect_stats(
+    DATA_A, project_RP_CC, n_classes, class_conditional=True, std=True, keepdim=True,
+    path=stats_path.format('RP-CC'), device=DEVICE, use_drive=USE_DRIVE)
+
+debug(mean_RP_A)
+debug(std_RP_A)
+
+debug(mean_RP_A_C)
+debug(std_RP_A_C)
+
 # Random ReLU Projections
-relu_bias = (torch.randn((1, n_random_projections),
-                         device=DEVICE) * std_A.max())
-relu_bias_C = (torch.randn((n_classes, n_random_projections), device=DEVICE)
-               * std_A_C.max(dim=1, keepdims=True)[0].reshape(n_classes, 1))
+f_rp_relu = 1 / 2
+relu_bias = mean_RP_A + f_rp_relu * std_RP_A * torch.randn_like(mean_RP_A)
+relu_bias_C = (mean_RP_A_C +
+               f_rp_relu * std_RP_A_C * torch.randn_like(mean_RP_A_C))
 
 
 def project_RP_relu(data):
@@ -370,9 +378,8 @@ def project_RP_relu_CC(data):
     X, Y = data
     return F.relu(project_RP_CC(data) + relu_bias_C[Y])
 
+
 # ======= Combined =======
-
-
 def combine(project1, project2):
     def _combined_fn(data):
         out1 = project1(data)
@@ -384,6 +391,7 @@ def combine(project1, project2):
         return out1 + out2
     return _combined_fn
 
+
 # ======= Loss Function =======
 
 
@@ -391,92 +399,107 @@ def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
     assert len(stats_a) == len(stats_b), "lists need to be of same length"
-    return sum((ma - mb).norm() + (sa - sb).norm()
-               for (ma, sa), (mb, sb) in zip(stats_a, stats_b))  # / len(stats_a)
+    # loss = torch.tensor(0).float()
+    # for (ma, sa), (mb, sb) in zip(stats_a, stats_b):
+    #     debug(ma)
+    #     debug(mb)
+    #     debug(sa)
+    #     debug(sb)
+    #     if ma.ndim == 1:
+    #         loss += (ma.squeeze() - mb.squeeze()).norm()
+    #         loss += (sa.squeeze() - sb.squeeze()).norm()
+    #     else:
+    #         loss += (ma.squeeze() - mb.squeeze()).norm(dim=1).mean()
+    #         loss += (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
+    # return loss
+    return sum(
+        (ma.squeeze() - mb.squeeze()).norm() +
+        (sa.squeeze() - sb.squeeze()).norm() if ma.ndim == 1 else
+        (ma.squeeze() - mb.squeeze()).norm(dim=1).mean() +  # class_conditional
+        (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
+        for (ma, sa), (mb, sb) in zip(stats_a, stats_b))  # / len(stats_a)
 
 
 debug.silent = False
 
+f_crit = args.f_crit
+f_reg = args.f_reg
+f_stats = args.f_stats
 
-def loss_fn_wrapper(name, project, class_conditional, use_criterion=False):
+
+def loss_fn_wrapper(name, project, class_conditional):
     _name = name.replace(' ', '-')
     stats_A = utility.collect_stats(
         DATA_A, project, n_classes, class_conditional,
         std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE)
 
-    def _loss_fn(data, project=project, class_conditional=class_conditional, use_criterion=use_criterion):
+    def _loss_fn(data, project=project, class_conditional=class_conditional):
         global net_last_outputs
         net_last_outputs = None
 
         inputs, labels = data
         outputs = project(data)
+
         stats = utility.get_stats(
-            outputs, labels, n_classes, class_conditional, std=STD)
+            outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
 
-        loss_obj = loss_stats(stats, stats_A)
+        loss = f_stats * loss_stats(stats, stats_A)
+        # loss += f_reg * regularization(inputs) if f_reg else 0
 
-        if use_criterion:
+        if f_crit:
             if net_last_outputs is None:
                 net_last_outputs = net(inputs)
-            criterion_loss = criterion(net_last_outputs, labels)
-            loss = loss_obj + criterion_loss
-            info = {'loss_stats': loss_obj.item(),
-                    'loss_B': criterion_loss.item()}
-            return loss, info
-
-        return loss_obj
+            loss += f_crit * criterion(net_last_outputs, labels)
+        return loss
     return name, _loss_fn
 
 
 methods = [
-    # loss_fn_wrapper(
-    #     name="NN",
-    #     project=project_NN,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN CC",
-    #     project=project_NN,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL",
-    #     project=project_NN_all,
-    #     class_conditional=False,
-    #     use_criterion=True,
-    # ),
+    loss_fn_wrapper(
+        name="NN",
+        project=project_NN,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="NN CC",
+        project=project_NN,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="NN ALL",
+        project=project_NN_all,
+        class_conditional=False,
+    ),
     loss_fn_wrapper(
         name="NN ALL CC",
         project=project_NN_all,
         class_conditional=True,
-        use_criterion=True,
     ),
-    # loss_fn_wrapper(
-    #     name="RP",
-    #     project=project_RP,
-    #     class_conditional=False,
-    # ),
+    loss_fn_wrapper(
+        name="RP",
+        project=project_RP,
+        class_conditional=False,
+    ),
     loss_fn_wrapper(
         name="RP CC",
         project=project_RP_CC,
         class_conditional=True,
-        use_criterion=True,
     ),
-    # loss_fn_wrapper(
-    #     name="RP ReLU",
-    #     project=project_RP_relu,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="RP ReLU CC",
-    #     project=project_RP_relu_CC,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="combined",
-    #     project=combine(project_NN_all, project_RP_CC),
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="RP ReLU",
+        project=project_RP_relu,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="RP ReLU CC",
+        project=project_RP_relu_CC,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="combined",
+        project=combine(project_NN_all, project_RP_CC),
+        class_conditional=True,
+    ),
 ]
 
 
