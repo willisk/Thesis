@@ -406,10 +406,10 @@ def loss_stats(stats_a, stats_b):
     assert len(stats_a) == len(stats_b), "lists need to be of same length"
     loss = torch.tensor(0).float()
     for (ma, sa), (mb, sb) in zip(stats_a, stats_b):
-        # debug(ma)
-        # debug(mb)
-        # debug(sa)
-        # debug(sb)
+        debug(ma)
+        debug(mb)
+        debug(sa)
+        debug(sb)
         if ma.ndim == 1:
             loss += (ma.squeeze() - mb.squeeze()).norm()
             loss += (sa.squeeze() - sb.squeeze()).norm()
