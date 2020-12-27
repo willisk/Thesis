@@ -415,7 +415,7 @@ def loss_stats(stats_a, stats_b):
             loss += (sa.squeeze() - sb.squeeze()).norm()
         else:
             if np.prod(ma.shape) == ma.shape[0]:
-                loss += (ma.squeeze() - mb.squeeze()).abs().mean()
+                loss += debug((ma.squeeze() - mb.squeeze()).abs()).mean()
                 loss += (sa.squeeze() - sb.squeeze()).abs().mean()
             else:
                 loss += (ma.squeeze() - mb.squeeze()).norm(dim=1).mean()

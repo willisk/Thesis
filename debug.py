@@ -165,7 +165,7 @@ def debug(arg, assert_true=False):
         else:
             _debug_log(f"{{{argname}}}  =  ",
                        arg, ' ' * 4 * debug._indent, assert_true)
-        return
+        return arg
 
     func = arg
     sig_parameters = inspect.signature(func).parameters
