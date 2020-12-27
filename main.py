@@ -404,25 +404,29 @@ def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
     assert len(stats_a) == len(stats_b), "lists need to be of same length"
-    # loss = torch.tensor(0).float()
-    # for (ma, sa), (mb, sb) in zip(stats_a, stats_b):
-    #     debug(ma)
-    #     debug(mb)
-    #     debug(sa)
-    #     debug(sb)
-    #     if ma.ndim == 1:
-    #         loss += (ma.squeeze() - mb.squeeze()).norm()
-    #         loss += (sa.squeeze() - sb.squeeze()).norm()
-    #     else:
-    #         loss += (ma.squeeze() - mb.squeeze()).norm(dim=1).mean()
-    #         loss += (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
-    # return loss
-    return sum(
-        (ma.squeeze() - mb.squeeze()).norm() +
-        (sa.squeeze() - sb.squeeze()).norm() if ma.ndim == 1 else
-        (ma.squeeze() - mb.squeeze()).norm(dim=1).mean() +  # class_conditional
-        (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
-        for (ma, sa), (mb, sb) in zip(stats_a, stats_b))  # / len(stats_a)
+    loss = torch.tensor(0).float()
+    for (ma, sa), (mb, sb) in zip(stats_a, stats_b):
+        # debug(ma)
+        # debug(mb)
+        # debug(sa)
+        # debug(sb)
+        if ma.ndim == 1:
+            loss += (ma.squeeze() - mb.squeeze()).norm()
+            loss += (sa.squeeze() - sb.squeeze()).norm()
+        else:
+            if np.prod(ma.shape) == ma.shape[0]:
+                loss += (ma.squeeze() - mb.squeeze()).abs().mean()
+                loss += (sa.squeeze() - sb.squeeze()).abs().mean()
+            else:
+                loss += (ma.squeeze() - mb.squeeze()).norm(dim=1).mean()
+                loss += (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
+    return loss
+    # return sum(
+    #     (ma.squeeze() - mb.squeeze()).norm() +
+    #     (sa.squeeze() - sb.squeeze()).norm() if ma.ndim == 1 else
+    #     (ma.squeeze() - mb.squeeze()).norm(dim=1).mean() +  # class_conditional
+    #     (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
+    #     for (ma, sa), (mb, sb) in zip(stats_a, stats_b))  # / len(stats_a)
 
 
 debug.silent = False
@@ -460,21 +464,21 @@ def loss_fn_wrapper(name, project, class_conditional):
 
 
 methods = [
-    loss_fn_wrapper(
-        name="NN",
-        project=project_NN,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="NN CC",
-        project=project_NN,
-        class_conditional=True,
-    ),
-    loss_fn_wrapper(
-        name="NN ALL",
-        project=project_NN_all,
-        class_conditional=False,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN",
+    #     project=project_NN,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN CC",
+    #     project=project_NN,
+    #     class_conditional=True,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN ALL",
+    #     project=project_NN_all,
+    #     class_conditional=False,
+    # ),
     loss_fn_wrapper(
         name="NN ALL CC",
         project=project_NN_all,
