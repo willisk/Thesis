@@ -224,8 +224,8 @@ class preprocessing_model(nn.Module):
         #     nets.ResidualBlock(nch, nch, 1) for _ in range(block_depth)])
         n_chan_inner = 8
         self.block_layer = nn.Sequential(
-            nets.ResidualBlock(nch, n_chan_inner, 1),
-            nets.ResidualBlock(n_chan_inner, nch, 1),
+            nets.ResidualBlock(nch, n_chan_inner, 1, bias=True),
+            nets.ResidualBlock(n_chan_inner, nch, 1, bias=True),
         )
         # kernel_size = 3
         # self.conv1 = nn.Conv2d(nch, nch, kernel_size, padding=1)
