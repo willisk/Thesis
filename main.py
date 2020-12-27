@@ -411,11 +411,11 @@ def loss_stats(stats_a, stats_b):
             loss += (sa.squeeze() - sb.squeeze()).norm()
         else:
             if np.prod(ma.shape) == ma.shape[0]:
-                loss += (ma.squeeze() - mb.squeeze()).abs()).mean()
+                loss += (ma.squeeze() - mb.squeeze()).abs().mean()
                 loss += (sa.squeeze() - sb.squeeze()).abs().mean()
             else:
-                loss += (ma.squeeze() - mb.squeeze()).norm(dim = 1).mean()
-                loss += (sa.squeeze() - sb.squeeze()).norm(dim = 1).mean()
+                loss += (ma.squeeze() - mb.squeeze()).norm(dim=1).mean()
+                loss += (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
     return loss
     # return sum(
     #     (ma.squeeze() - mb.squeeze()).norm() +
@@ -425,41 +425,41 @@ def loss_stats(stats_a, stats_b):
     #     for (ma, sa), (mb, sb) in zip(stats_a, stats_b))  # / len(stats_a)
 
 
-debug.silent=False
+debug.silent = False
 
-f_crit=args.f_crit
-f_reg=args.f_reg
-f_stats=args.f_stats
+f_crit = args.f_crit
+f_reg = args.f_reg
+f_stats = args.f_stats
 
 
 def loss_fn_wrapper(name, project, class_conditional):
-    _name=name.replace(' ', '-')
-    stats_A=utility.collect_stats(
+    _name = name.replace(' ', '-')
+    stats_A = utility.collect_stats(
         DATA_A, project, n_classes, class_conditional,
-        std = STD, path = stats_path.format(_name), device = DEVICE, use_drive = USE_DRIVE)
+        std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE)
 
-    def _loss_fn(data, project = project, class_conditional = class_conditional):
+    def _loss_fn(data, project=project, class_conditional=class_conditional):
         global net_last_outputs
-        net_last_outputs=None
+        net_last_outputs = None
 
-        inputs, labels=data
-        outputs=project(data)
+        inputs, labels = data
+        outputs = project(data)
 
-        stats=utility.get_stats(
-            outputs, labels, n_classes, class_conditional = class_conditional, std = STD)
+        stats = utility.get_stats(
+            outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
 
-        loss=f_stats * loss_stats(stats, stats_A)
+        loss = f_stats * loss_stats(stats, stats_A)
         # loss += f_reg * regularization(inputs) if f_reg else 0
 
         if f_crit:
             if net_last_outputs is None:
-                net_last_outputs=net(inputs)
+                net_last_outputs = net(inputs)
             loss += f_crit * criterion(net_last_outputs, labels)
         return loss
     return name, _loss_fn
 
 
-methods=[
+methods = [
     # loss_fn_wrapper(
     #     name="NN",
     #     project=project_NN,
@@ -513,23 +513,23 @@ methods=[
 def im_show(batch):
     with torch.no_grad():
         img_grid = torchvision.utils.make_grid(
-            batch.cpu(), nrow = 5, normalize = True, scale_each = True)
-        plt.figure(figsize = (16, 4))
+            batch.cpu(), nrow=5, normalize=True, scale_each=True)
+        plt.figure(figsize=(16, 4))
         plt.imshow(img_grid.permute(1, 2, 0))
         plt.show()
 
 
 # DATA_B = [next(iter(DATA_B))]
-show_batch=next(iter(DATA_B))[0][:10].to(DEVICE)
+show_batch = next(iter(DATA_B))[0][:10].to(DEVICE)
 
-print("ground truth:", flush = True)
+print("ground truth:", flush=True)
 im_show(show_batch)
 
 print("perturbed:")
 im_show(perturb(show_batch))
 
 # ======= Optimize =======
-metrics=defaultdict(dict)
+metrics = defaultdict(dict)
 
 
 def grad_norm_fn(x):
@@ -539,33 +539,33 @@ def grad_norm_fn(x):
 for method, loss_fn in methods:
     print("\n## Method:", method)
 
-    preprocess=preprocessing_model()
+    preprocess = preprocessing_model()
     preprocess.train()
     preprocess.to(DEVICE)
 
     def data_loss_fn(data):
-        inputs, labels=data
-        inputs, labels=inputs.to(DEVICE), labels.to(DEVICE)
+        inputs, labels = data
+        inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
         with torch.no_grad():
-            outputs=perturb(inputs)
-        outputs=preprocess(outputs)
-        data=(outputs, labels)
+            outputs = perturb(inputs)
+        outputs = preprocess(outputs)
+        data = (outputs, labels)
         return loss_fn(data)
 
-    optimizer=torch.optim.Adam(preprocess.parameters(), lr = inv_lr)
+    optimizer = torch.optim.Adam(preprocess.parameters(), lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    info=inversion.invert(DATA_B,
+    info = inversion.invert(DATA_B,
                             data_loss_fn,
                             optimizer,
                             #    scheduler=scheduler,
-                            steps = inv_steps,
+                            steps=inv_steps,
                             # steps=2,
                             # data_pre_fn=data_pre_fn,
                             #    track_history=True,
                             #    track_history_every=10,
-                            plot = True,
-                            use_amp = args.use_amp,
+                            plot=True,
+                            use_amp=args.use_amp,
                             # grad_norm_fn=grad_norm_fn,
                             )
 
@@ -582,13 +582,13 @@ for method, loss_fn in methods:
 
     # Loss
     # loss = accumulate_fn(DATA_B, loss_fn)
-    loss=info['loss'][-1]
+    loss = info['loss'][-1]
     print(f"\tloss: {loss:.3f}")
 
     # L2 Reconstruction Error
-    Id=torch.eye(n_dims, device = DEVICE).reshape(-1, *input_shape)
-    l2_err_perturb=(perturb(Id) - Id).norm().item() / Id.norm().item()
-    l2_err=(invert_fn(Id) - Id).norm().item() / Id.norm().item()
+    Id = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
+    l2_err_perturb = (perturb(Id) - Id).norm().item() / Id.norm().item()
+    l2_err = (invert_fn(Id) - Id).norm().item() / Id.norm().item()
     print(
         f"\trel. l2 reconstruction error: {l2_err:.3f} / {l2_err_perturb:.3f}")
 
