@@ -216,9 +216,14 @@ class preprocessing_model(nn.Module):
     def __init__(self):
         super().__init__()
         nch = input_shape[0]
-        block_depth = args.preprocessing_depth
-        self.block_layer = nn.Sequential(*[
-            nets.ResidualBlock(nch, nch, 1) for _ in range(block_depth)])
+        # block_depth = args.preprocessing_depth
+        # self.block_layer = nn.Sequential(*[
+        #     nets.ResidualBlock(nch, nch, 1) for _ in range(block_depth)])
+        n_chan_inner = 8
+        self.block_layer = nn.Sequential(
+            nets.ResidualBlock(nch, n_chan_inner, 1),
+            nets.ResidualBlock(n_chan_inner, nch, 1),
+        )
         # kernel_size = 3
         # self.conv1 = nn.Conv2d(nch, nch, kernel_size, padding=1)
         # self.conv2 = nn.Conv2d(nch, nch, kernel_size, padding=1)
