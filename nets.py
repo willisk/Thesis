@@ -74,8 +74,8 @@ class ResidualBlock(nn.Module):
 
         self.conv1 = nn.Conv2d(in_channels, out_channels,
                                kernel_size=3,
-                               padding=1,
                                stride=stride,
+                               padding=1,
                                bias=bias)
         self.bn1 = nn.BatchNorm2d(out_channels)
 
@@ -84,12 +84,14 @@ class ResidualBlock(nn.Module):
                                padding=1,
                                bias=bias)
         self.bn2 = nn.BatchNorm2d(out_channels)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.ReLU()
 
-        if stride != 1:
+        if stride != 1 or in_channels != out_channels:
             self.skip_connection = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels,
-                          kernel_size=1, stride=stride),
+                          kernel_size=1,
+                          stride=stride,
+                          bias=False),
                 nn.BatchNorm2d(out_channels)
             )
         else:

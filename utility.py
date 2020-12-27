@@ -393,7 +393,7 @@ def train(net, data_loader, criterion, optimizer,
     if load_path is not None and not reset and os.path.exists(load_path):
         checkpoint = torch.load(load_path, map_location=device)
         if 'net_state_dict' in checkpoint:
-            net.load_state_dict(checkpoint['net_state_dict'])
+            net.load_state_dict(checkpoint['net_state_dict'], strict=False)
             init_epoch = checkpoint['epoch'] + 1
         else:
             net.load_state_dict(checkpoint)

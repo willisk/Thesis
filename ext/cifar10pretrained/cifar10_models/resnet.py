@@ -60,12 +60,10 @@ class BasicBlock(nn.Module):
         identity = x
 
         out = self.conv1(x)
-        # print("bn1 input: \n\t", out[0, 0, 0, 0].item())
         out = self.bn1(out)
         out = self.relu(out)
 
         out = self.conv2(out)
-        # print("bn2 input: \n\t", out[0, 0, 0, 0].item())
         out = self.bn2(out)
 
         if self.downsample is not None:

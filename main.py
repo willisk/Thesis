@@ -81,6 +81,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.batch_size = -1
 
     args = parser.parse_args('-dataset MNIST'.split())
+    args.nn_steps = 5
     args.inv_steps = 200
     args.batch_size = 64
     # args.size_B = 10
@@ -94,6 +95,8 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args.seed = 10
 
     args.size_B = 64
+    # args.nn_resume_train = True
+    # args.nn_reset_train = True
     # args.use_var = True
 else:
     args = parser.parse_args()
@@ -232,7 +235,10 @@ class preprocessing_model(nn.Module):
         # self.shift = nn.Parameter(torch.zeros(input_shape).unsqueeze(0))
 
     def forward(self, inputs):
-        return self.block_layer(inputs)
+        outputs = self.block_layer(inputs)
+        debug(outputs)
+        return outputs
+        # return self.block_layer(inputs)
         # outputs = inputs
         # outputs = outputs + self.shift
         # outputs = self.conv1(outputs)
@@ -361,12 +367,6 @@ mean_RP_A, std_RP_A = utility.collect_stats(
 mean_RP_A_C, std_RP_A_C = utility.collect_stats(
     DATA_A, project_RP_CC, n_classes, class_conditional=True, std=True, keepdim=True,
     path=stats_path.format('RP-CC'), device=DEVICE, use_drive=USE_DRIVE)
-
-debug(mean_RP_A)
-debug(std_RP_A)
-
-debug(mean_RP_A_C)
-debug(std_RP_A_C)
 
 # Random ReLU Projections
 f_rp_relu = 1 / 2
