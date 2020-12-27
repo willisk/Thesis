@@ -235,10 +235,10 @@ class preprocessing_model(nn.Module):
         # self.shift = nn.Parameter(torch.zeros(input_shape).unsqueeze(0))
 
     def forward(self, inputs):
-        outputs = self.block_layer(inputs)
-        debug(outputs)
-        return outputs
-        # return self.block_layer(inputs)
+        # outputs = self.block_layer(inputs)
+        # debug(outputs)
+        # return outputs
+        return self.block_layer(inputs)
         # outputs = inputs
         # outputs = outputs + self.shift
         # outputs = self.conv1(outputs)
