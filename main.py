@@ -66,7 +66,7 @@ parser.add_argument("-f_stats", type=float, default=1)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
 parser.add_argument("-perturb_strength", type=float, default=0.03)
-parser.add_argument("-preprocessing_depth", type=int, default=2)
+# parser.add_argument("-preprocessing_depth", type=int, default=2)
 
 # GMM
 parser.add_argument("-g_modes", type=int, default=3)
@@ -470,26 +470,26 @@ def loss_fn_wrapper(name, project, class_conditional):
 
 
 methods = [
-    # loss_fn_wrapper(
-    #     name="NN",
-    #     project=project_NN,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN CC",
-    #     project=project_NN,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL",
-    #     project=project_NN_all,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL CC",
-    #     project=project_NN_all,
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="NN",
+        project=project_NN,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="NN CC",
+        project=project_NN,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="NN ALL",
+        project=project_NN_all,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="NN ALL CC",
+        project=project_NN_all,
+        class_conditional=True,
+    ),
     loss_fn_wrapper(
         name="RP",
         project=project_RP,
@@ -510,11 +510,11 @@ methods = [
         project=project_RP_relu_CC,
         class_conditional=True,
     ),
-    # loss_fn_wrapper(
-    #     name="combined",
-    #     project=combine(project_NN_all, project_RP_CC),
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="combined",
+        project=combine(project_NN_all, project_RP_CC),
+        class_conditional=True,
+    ),
 
 
 ]
