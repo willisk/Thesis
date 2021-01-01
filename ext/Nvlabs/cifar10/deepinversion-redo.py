@@ -71,7 +71,7 @@ def regularization(x):
 if __name__ == "__main__":
 
     bs = 256
-    iters = 400
+    iters = 700
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -90,21 +90,10 @@ if __name__ == "__main__":
 
     inputs = torch.randn((256, 3, 32, 32),
                          requires_grad=True, device=device)
+    targets = torch.LongTensor(range(bs)).to(device) % 10
 
     optimizer = optim.Adam([inputs], lr=0.1)
-
-    batch_idx = 0
-    prefix = "runs/data_generation/" + "try1" + "/"
-
-    for create_folder in [prefix, prefix + "/best_images/"]:
-        if not os.path.exists(create_folder):
-            os.makedirs(create_folder)
-
-    print("Starting model inversion")
-
     criterion = nn.CrossEntropyLoss()
-
-    targets = torch.LongTensor(range(bs)).to(device) % 10
 
     net_layers = utility.get_bn_layers(net)
     layer_losses = [None] * len(net_layers)
@@ -116,10 +105,6 @@ if __name__ == "__main__":
             var = inputs[0].var([0, 2, 3])
             r_feature = ((mean - module.running_mean).norm() +
                          (var - module.running_var).norm())
-            # var = inputs[0].permute(1, 0, 2, 3).contiguous().view(
-            #     [nch, -1]).var(1, unbiased=False)
-            # r_feature = torch.norm(module.running_var.data.type(var.type()) - var, 2) + torch.norm(
-            #     module.running_mean.data.type(var.type()) - mean, 2)
             layer_losses[idx] = r_feature
         return hook
 
@@ -129,16 +114,8 @@ if __name__ == "__main__":
     info = inversion.invert([(inputs, targets)],
                             loss_fn,
                             optimizer,
-                            #    scheduler=scheduler,
                             steps=iters,
-                            # steps=2,
-                            # data_pre_fn=data_pre_fn,
-                            # inputs_pre_fn=jitter,
-                            #    track_history=True,
-                            #    track_history_every=10,
                             plot=True,
-                            #    use_amp=args.use_amp,
-                            #    grad_norm_fn=grad_norm_fn,
                             )
 
     import matplotlib.pyplot as plt

@@ -323,7 +323,7 @@ def project_NN_all(data):
 
 
 # ======= Random Projections =======
-RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
+RP = torch.randn((n_dims, n_random_projections)).to(DEVICE)
 RP = RP / RP.norm(2, dim=0)
 
 print(f"RP hash: {hash(RP)}")
