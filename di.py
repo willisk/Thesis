@@ -68,7 +68,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.batch_size = -1
 
     args = parser.parse_args('-dataset MNIST'.split())
-    args.inv_steps = 100
+    args.inv_steps = 1
     args.batch_size = 128
     # args.inv_lr = 0.01
 
@@ -289,7 +289,7 @@ def regularization(x):
             torch.norm(diff3) + torch.norm(diff4))
 
 
-# @debug
+@debug
 def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
@@ -300,7 +300,8 @@ def loss_stats(stats_a, stats_b):
             loss += (ma.squeeze() - mb.squeeze()).norm()
             loss += (sa.squeeze() - sb.squeeze()).norm()
         else:
-            if np.prod(ma.shape) == ma.shape[0]:    # one feature
+            # one feature
+            if np.prod(ma.shape) == ma.shape[0] or np.prod(mb.shape) == mb.shape[0]:
                 loss += (ma.squeeze() - mb.squeeze()).abs().mean()
                 loss += (sa.squeeze() - sb.squeeze()).abs().mean()
             else:
@@ -344,21 +345,21 @@ def loss_fn_wrapper(name, project, class_conditional):
 
 
 methods = [
-    # loss_fn_wrapper(
-    #     name="NN",
-    #     project=project_NN,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN CC",
-    #     project=project_NN,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL",
-    #     project=project_NN_all,
-    #     class_conditional=False,
-    # ),
+    loss_fn_wrapper(
+        name="NN",
+        project=project_NN,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="NN CC",
+        project=project_NN,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="NN ALL",
+        project=project_NN_all,
+        class_conditional=False,
+    ),
     loss_fn_wrapper(
         name="NN ALL CC",
         project=project_NN_all,
