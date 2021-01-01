@@ -408,7 +408,7 @@ for method, loss_fn in methods:
     print("\n## Method:", method)
 
     batch = torch.randn((args.batch_size, *dataset.input_shape),
-                        requires_grad=True).to(device=DEVICE)
+                        requires_grad=True).to(DEVICE)
     targets = torch.LongTensor(range(args.batch_size)).to(DEVICE) % n_classes
     DATA = [(batch, targets)]
 
