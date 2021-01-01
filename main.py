@@ -322,57 +322,57 @@ def project_NN_all(data):
     return [inputs] + layer_activations
 
 
-# # ======= Random Projections =======
-# RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
-# RP = RP / RP.norm(2, dim=0)
+# ======= Random Projections =======
+RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
+RP = RP / RP.norm(2, dim=0)
 
 
-# def get_input(data):
-#     return data[0]
+def get_input(data):
+    return data[0]
 
 
-# mean_A, std_A = utility.collect_stats(
-#     DATA_A, get_input, n_classes, class_conditional=False, std=True, keepdim=True,
-#     path=stats_path.format('inputs'), device=DEVICE, use_drive=USE_DRIVE)
-# mean_A_C, std_A_C = utility.collect_stats(
-#     DATA_A, get_input, n_classes, class_conditional=True, std=True, keepdim=True,
-#     path=stats_path.format('inputs-CC'), device=DEVICE, use_drive=USE_DRIVE)
+mean_A, std_A = utility.collect_stats(
+    DATA_A, get_input, n_classes, class_conditional=False, std=True, keepdim=True,
+    path=stats_path.format('inputs'), device=DEVICE, use_drive=USE_DRIVE)
+mean_A_C, std_A_C = utility.collect_stats(
+    DATA_A, get_input, n_classes, class_conditional=True, std=True, keepdim=True,
+    path=stats_path.format('inputs-CC'), device=DEVICE, use_drive=USE_DRIVE)
 
-# # min_A, max_A = utility.collect_min_max(
-# #     DATA_A, path=stats_path.format('min-max'), device=DEVICE, use_drive=USE_DRIVE)
-
-
-# def project_RP(data):
-#     X, Y = data
-#     return (X - mean_A).reshape(-1, n_dims) @ RP
+# min_A, max_A = utility.collect_min_max(
+#     DATA_A, path=stats_path.format('min-max'), device=DEVICE, use_drive=USE_DRIVE)
 
 
-# def project_RP_CC(data):
-#     X, Y = data
-#     X_proj_C = None
-#     for c in range(n_classes):
-#         mask = Y == c
-#         X_proj_c = (X[mask] - mean_A_C[c]).reshape(-1, n_dims) @ RP
-#         if X_proj_C is None:
-#             X_proj_C = torch.empty((X.shape[0], n_random_projections),
-#                                    dtype=X_proj_c.dtype, device=X.device)
-#         X_proj_C[mask] = X_proj_c
-#     return X_proj_C
+def project_RP(data):
+    X, Y = data
+    return (X - mean_A).reshape(-1, n_dims) @ RP
 
 
-# # XXXXXXXXXXXXXXXXXXXXXXXXXXXXX Random projections need not always be the same? verify seed
-# mean_RP_A, std_RP_A = utility.collect_stats(
-#     DATA_A, project_RP, n_classes, class_conditional=False, std=True, keepdim=True,
-#     path=stats_path.format('RP'), device=DEVICE, use_drive=USE_DRIVE)
-# mean_RP_A_C, std_RP_A_C = utility.collect_stats(
-#     DATA_A, project_RP_CC, n_classes, class_conditional=True, std=True, keepdim=True,
-#     path=stats_path.format('RP-CC'), device=DEVICE, use_drive=USE_DRIVE)
+def project_RP_CC(data):
+    X, Y = data
+    X_proj_C = None
+    for c in range(n_classes):
+        mask = Y == c
+        X_proj_c = (X[mask] - mean_A_C[c]).reshape(-1, n_dims) @ RP
+        if X_proj_C is None:
+            X_proj_C = torch.empty((X.shape[0], n_random_projections),
+                                   dtype=X_proj_c.dtype, device=X.device)
+        X_proj_C[mask] = X_proj_c
+    return X_proj_C
 
-# # Random ReLU Projections
-# f_rp_relu = 1 / 2
-# relu_bias = mean_RP_A + f_rp_relu * std_RP_A * torch.randn_like(mean_RP_A)
-# relu_bias_C = (mean_RP_A_C +
-#                f_rp_relu * std_RP_A_C * torch.randn_like(mean_RP_A_C))
+
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXX Random projections need not always be the same? verify seed
+mean_RP_A, std_RP_A = utility.collect_stats(
+    DATA_A, project_RP, n_classes, class_conditional=False, std=True, keepdim=True,
+    path=stats_path.format('RP'), device=DEVICE, use_drive=USE_DRIVE)
+mean_RP_A_C, std_RP_A_C = utility.collect_stats(
+    DATA_A, project_RP_CC, n_classes, class_conditional=True, std=True, keepdim=True,
+    path=stats_path.format('RP-CC'), device=DEVICE, use_drive=USE_DRIVE)
+
+# Random ReLU Projections
+f_rp_relu = 1 / 2
+relu_bias = mean_RP_A + f_rp_relu * std_RP_A * torch.randn_like(mean_RP_A)
+relu_bias_C = (mean_RP_A_C +
+               f_rp_relu * std_RP_A_C * torch.randn_like(mean_RP_A_C))
 
 
 def project_RP_relu(data):

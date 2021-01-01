@@ -34,8 +34,9 @@ def tensor_repr(t, assert_all=False):
     exception_encountered = False
     info = []
     shape = tuple(t.shape)
-    if shape == () or shape == (1,):
-        info.append(f"[{t.item():.4f}]")
+    single_entry = shape == () or shape == (1,)
+    if single_entry:
+        info.append(f"{t.item():.4f}")
     else:
         info.append(f"({', '.join(map(repr, shape))})")
     invalid_sum = (~t.isfinite()).sum().item()
@@ -52,12 +53,15 @@ def tensor_repr(t, assert_all=False):
                 f"GRAD {grad_invalid_sum} INVALID ENTR{'Y' if grad_invalid_sum == 1 else 'IES'}")
             exception_encountered = True
     if debug.verbose > 1:
-        if not invalid_sum:
+        if not invalid_sum and not single_entry:
             info.append(f"|x|={t.float().norm():.1f}")
             if t.numel():
                 info.append(f"x in [{t.min():.1f}, {t.max():.1f}]")
         if t.is_leaf and t.grad is not None and not grad_invalid_sum:
-            info.append(f"|grad|={t.grad.float().norm()}")
+            if single_entry:
+                info.append(f"grad={t.grad.float():.4f}")
+            else:
+                info.append(f"|grad|={t.grad.float().norm()}")
     if debug.verbose and t.dtype != torch.float:
         info.append(f"dtype={str(t.dtype).split('.')[-1]}")
     if debug.verbose and t.device.type != 'cpu':
@@ -157,6 +161,7 @@ def debug(arg, assert_true=False):
         if debug._indent == 0:
             debug._stack = ""
         line = ''.join(inspect.stack()[1][4])
+        return_arg = line.split('debug')[0].strip() != ''
         argname = ')'.join('('.join(line.split('(')[1:]).split(')')[:-1])
         if assert_true:
             argname = ','.join(argname.split(',')[:-1])
@@ -165,7 +170,9 @@ def debug(arg, assert_true=False):
         else:
             _debug_log(f"{{{argname}}}  =  ",
                        arg, ' ' * 4 * debug._indent, assert_true)
-        return arg
+        if return_arg:
+            return arg
+        return
 
     func = arg
     sig_parameters = inspect.signature(func).parameters

@@ -140,7 +140,7 @@ def exp_av_mean_var(m_a, v_a, m_b, v_b, gamma):
     return mean, var
 
 
-def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, class_conditional=True, cap_gamma=1):
+def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, cap_gamma=1):
     # if class_conditional:
     #     n_a = expand_as_r(n_a, m_a)
     #     n_b = expand_as_r(n_b, m_a)
@@ -154,10 +154,12 @@ def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, class_conditional=True, cap_g
     return mean, var, n
 
 
-def reduce_mean_var(means, vars, n):
-    mean, var, n = reduce(lambda x, y: combine_mean_var(
-        *x, *y), zip(means.T, vars.T, n))
-    return mean, var, n
+def reduce_stats(stats, n):
+    if isinstance(stats, list):
+        return [reduce(lambda x, y: combine_mean_var(*x, *y),
+                    zip(mean, var, n))[:2] for mean, var in stats]
+    return reduce(lambda x, y: combine_mean_var(*x, *y),
+                  zip(mean, var, n))[:2]
 
 
 def nan_to_one_(x):
@@ -288,6 +290,7 @@ def collect_data(data_loader, data_fn, accumulate_fn,
 
     save_path, load_path = save_load_path(path, use_drive=use_drive)
 
+    print(load_path)
     if load_path and os.path.exists(load_path):
         print(f"Loading data from {load_path}.", flush=True)
         return torch.load(load_path, map_location=map_location)
