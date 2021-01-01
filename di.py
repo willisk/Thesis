@@ -69,7 +69,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
 
     args = parser.parse_args('-dataset MNIST'.split())
     args.inv_steps = 100
-    args.batch_size = 64
+    args.batch_size = 128
     # args.inv_lr = 0.01
 
     # args = parser.parse_args('-dataset CIFAR10'.split())
@@ -252,7 +252,7 @@ mean_RP_A_C, std_RP_A_C = utility.collect_stats(
 f_rp_relu = 1 / 2
 relu_bias = mean_RP_A + f_rp_relu * std_RP_A * torch.randn_like(mean_RP_A)
 relu_bias_C = (mean_RP_A_C +
-               f_rp_relu * std_RP_A_C * torch.randn_like(mean_RP_A_C))
+               f_rp_relu * std_RP_A_C * torch.randn_like(mean_RP_A_C)).squeeze()
 
 
 def project_RP_relu(data):
@@ -289,7 +289,6 @@ def regularization(x):
             torch.norm(diff3) + torch.norm(diff4))
 
 
-@debug
 def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
@@ -325,7 +324,7 @@ def loss_fn_wrapper(name, project, class_conditional):
         stats = utility.get_stats(
             outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
 
-        loss = f_stats * loss_stats(stats, stats_A)
+        loss = f_stats * loss_stats(stats_A, stats)
         loss += f_reg * regularization(inputs) if f_reg else 0
 
         if f_crit:

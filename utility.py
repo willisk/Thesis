@@ -253,7 +253,7 @@ def collect_stats(data_loader, projection, n_classes, class_conditional,
     def data_fn(data):
         inputs, labels = data
         inputs, labels = inputs.to(device), labels.to(device)
-        outputs = projection((inputs, labels))
+        outputs = debug(projection((inputs, labels)))
         stats = get_stats(outputs, labels, n_classes, class_conditional,
                           std=False, return_count=True, keepdim=keepdim, dtype=torch.double)
         return stats
@@ -270,7 +270,6 @@ def collect_stats(data_loader, projection, n_classes, class_conditional,
         return [(m.float(), v.sqrt().float() if std else v.float()) for m, v, _ in stats]
     return stats[0].float(), stats[1].sqrt().float() if std else stats[1].float()
 
-# @debug
 
 
 def collect_data(data_loader, data_fn, accumulate_fn,
