@@ -304,9 +304,13 @@ f_crit = args.f_crit
 f_reg = args.f_reg
 f_stats = args.f_stats
 
+rp_hash = f"{n_random_projections}-{args.seed}"
+
 
 def loss_fn_wrapper(name, project, class_conditional):
     _name = name.replace(' ', '-')
+    if "RP" in _name:
+        _name = f"{name}-{rp_hash}"
     stats_A = utility.collect_stats(
         DATA_A, project, n_classes, class_conditional,
         std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE)
@@ -359,7 +363,7 @@ methods = [
         class_conditional=False,
     ),
     loss_fn_wrapper(
-        name="RP CC",
+        name="RP CC ",
         project=project_RP_CC,
         class_conditional=True,
     ),
