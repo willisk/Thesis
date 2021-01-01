@@ -82,10 +82,10 @@ if 'ipykernel_launcher' in sys.argv[0]:
 
     args = parser.parse_args('-dataset MNIST'.split())
     args.nn_steps = 5
-    args.inv_steps = 200
+    args.inv_steps = 100
     args.batch_size = 64
     # args.size_B = 10
-    args.n_random_projections = 1024
+    # args.n_random_projections = 1024
     args.inv_lr = 0.05
     args.perturb_strength = 0.5
 
@@ -399,8 +399,16 @@ def combine(project1, project2):
 
 # ======= Loss Function =======
 
+def regularization(x):
+    diff1 = x[:, :, :, :-1] - x[:, :, :, 1:]
+    diff2 = x[:, :, :-1, :] - x[:, :, 1:, :]
+    diff3 = x[:, :, 1:, :-1] - x[:, :, :-1, 1:]
+    diff4 = x[:, :, :-1, :-1] - x[:, :, 1:, 1:]
+    return (torch.norm(diff1) + torch.norm(diff2) +
+            torch.norm(diff3) + torch.norm(diff4))
 
-@debug
+
+# @debug
 def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
@@ -524,10 +532,10 @@ def im_show(batch):
 # DATA_B = [next(iter(DATA_B))]
 show_batch = next(iter(DATA_B))[0][:10].to(DEVICE)
 
-print("ground truth:", flush=True)
+print("\nground truth:", flush=True)
 im_show(show_batch)
 
-print("perturbed:")
+print("\nperturbed:")
 im_show(perturb(show_batch))
 
 # ======= Optimize =======
@@ -548,8 +556,7 @@ for method, loss_fn in methods:
     def data_loss_fn(data):
         inputs, labels = data
         inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
-        with torch.no_grad():
-            outputs = perturb(inputs)
+        outputs = perturb(inputs)
         outputs = preprocess(outputs)
         data = (outputs, labels)
         return loss_fn(data)
@@ -594,6 +601,11 @@ for method, loss_fn in methods:
     print(
         f"\trel. l2 reconstruction error: {l2_err:.3f} / {l2_err_perturb:.3f}")
 
+    # PSNR
+    psnr = average_psnr(show_batch, invert_fn(show_batch))
+    print(
+        f"\tPSNR: {psnr_B:.3f}")
+
     # NN Accuracy
     accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=invert_fn)
     accuracy_val = utility.net_accuracy(
@@ -612,6 +624,7 @@ for method, loss_fn in methods:
         metrics[method]['acc(ver)'] = accuracy_ver
     metrics[method]['l2-err'] = l2_err
     metrics[method]['loss'] = loss
+    metrics[method]['psnr'] = psnr
 
 baseline = defaultdict(dict)
 

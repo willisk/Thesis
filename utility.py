@@ -141,13 +141,6 @@ def exp_av_mean_var(m_a, v_a, m_b, v_b, gamma):
 
 
 def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, cap_gamma=1):
-    # if class_conditional:
-    #     n_a = expand_as_r(n_a, m_a)
-    #     n_b = expand_as_r(n_b, m_a)
-    #     m_a = nan_to(m_a, 0)
-    #     m_b = nan_to(m_b, 0)
-    #     v_a = nan_to(v_a, 0)
-    #     v_b = nan_to(v_b, 0)
     n = n_a + n_b
     gamma = expand_as_r(torch.clamp(n_a / n, max=cap_gamma), m_a)
     mean, var = exp_av_mean_var(m_a, v_a, m_b, v_b, gamma)
@@ -157,9 +150,9 @@ def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, cap_gamma=1):
 def reduce_stats(stats, n):
     if isinstance(stats, list):
         return [reduce(lambda x, y: combine_mean_var(*x, *y),
-                    zip(mean, var, n))[:2] for mean, var in stats]
+                       zip(mean, var, n))[:2] for mean, var in stats]
     return reduce(lambda x, y: combine_mean_var(*x, *y),
-                  zip(mean, var, n))[:2]
+                  zip(*stats, n))[:2]
 
 
 def nan_to_one_(x):
@@ -176,11 +169,6 @@ def nan_to(x, num):
         x = x.clone()
         x[nans] = num
     return x
-
-
-# def class_count_(n, labels):
-#     for c in torch.unique(labels):
-#         n[c] += (labels == c).to(n.dtype).sum()
 
 
 # @debug
@@ -750,6 +738,12 @@ def logsumexp(a, dim=None, b=None):
     else:
         out = (a - a_max).exp().sum(dim=0).log()
     return out + a_max
+
+
+def average_psnr(x_gt, x_approx, x_max=None):
+    if x_max is None:
+        x_max = x_gt.max()
+    return (20 * x_max.log10() - 10 * (((x_gt - x_approx)**2).mean((1, 2, 3))).log10()).mean().item()
 
 
 # stupid matplotlib....
