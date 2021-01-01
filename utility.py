@@ -278,7 +278,6 @@ def collect_data(data_loader, data_fn, accumulate_fn,
 
     save_path, load_path = save_load_path(path, use_drive=use_drive)
 
-    print(load_path)
     if load_path and os.path.exists(load_path):
         print(f"Loading data from {load_path}.", flush=True)
         return torch.load(load_path, map_location=map_location)

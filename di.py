@@ -46,7 +46,7 @@ from debug import debug
 parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
 parser.add_argument(
     "-dataset", choices=['CIFAR10', 'MNIST'], required=True)
-parser.add_argument("-seed", type=int, default=-1)
+parser.add_argument("-seed", type=int, default=0)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
@@ -67,17 +67,17 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.inv_steps = 500
     # args.batch_size = -1
 
-    # args = parser.parse_args('-dataset MNIST'.split())
-    # args.inv_steps = 100
-    # args.batch_size = 64
+    args = parser.parse_args('-dataset MNIST'.split())
+    args.inv_steps = 100
+    args.batch_size = 64
     # args.inv_lr = 0.01
 
-    args = parser.parse_args('-dataset CIFAR10'.split())
-    args.inv_steps = 600
-    args.batch_size = 256
-    args.use_var = True
+    # args = parser.parse_args('-dataset CIFAR10'.split())
+    # args.inv_steps = 600
+    # args.batch_size = 256
 
-    args.n_random_projections = 1024
+    # args.n_random_projections = 1024
+    args.use_var = True
 else:
     args = parser.parse_args()
 
@@ -289,6 +289,7 @@ def regularization(x):
             torch.norm(diff3) + torch.norm(diff4))
 
 
+@debug
 def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
@@ -356,28 +357,28 @@ methods = [
     #     project=project_NN_all,
     #     class_conditional=True,
     # ),
-    loss_fn_wrapper(
-        name="RP",
-        project=project_RP,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="RP CC",
-        project=project_RP_CC,
-        class_conditional=True,
-    ),
-    loss_fn_wrapper(
-        name="RP ReLU",
-        project=project_RP_relu,
-        class_conditional=False,
-    ),
+    # loss_fn_wrapper(
+    #     name="RP",
+    #     project=project_RP,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP CC",
+    #     project=project_RP_CC,
+    #     class_conditional=True,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP ReLU",
+    #     project=project_RP_relu,
+    #     class_conditional=False,
+    # ),
     loss_fn_wrapper(
         name="RP ReLU CC",
         project=project_RP_relu_CC,
         class_conditional=True,
     ),
     # loss_fn_wrapper(
-    #     name="combined",
+    #     name="NN ALL + RP CC",
     #     project=combine(project_NN_all, project_RP_CC),
     #     class_conditional=True,
     # ),
