@@ -400,6 +400,7 @@ def combine(project1, project2):
 # ======= Loss Function =======
 
 
+@debug
 def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
@@ -448,8 +449,9 @@ def loss_fn_wrapper(name, project, class_conditional):
         stats = utility.get_stats(
             outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
 
-        loss = f_stats * loss_stats(stats, stats_A)
-        # loss += f_reg * regularization(inputs) if f_reg else 0
+        loss = torch.tensor(0).float().to(DEVICE)
+        loss += f_stats * loss_stats(stats, stats_A) if f_stats else 0
+        loss += f_reg * regularization(inputs) if f_reg else 0
 
         if f_crit:
             if net_last_outputs is None:
@@ -470,16 +472,16 @@ methods = [
     #     project=project_NN,
     #     class_conditional=True,
     # ),
-    loss_fn_wrapper(
-        name="NN ALL",
-        project=project_NN_all,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="NN ALL CC",
-        project=project_NN_all,
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN ALL",
+    #     project=project_NN_all,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
+    #     class_conditional=True,
+    # ),
     loss_fn_wrapper(
         name="RP",
         project=project_RP,
