@@ -239,13 +239,14 @@ def project_RP_CC(data):
     return X_proj_C
 
 
-# XXXXXXXXXXXXXXXXXXXXXXXXXXXXX Random projections need not always be the same? verify seed
+rp_hash = f"{n_random_projections}-{args.seed}"
+
 mean_RP_A, std_RP_A = utility.collect_stats(
     DATA_A, project_RP, n_classes, class_conditional=False, std=True, keepdim=True,
-    path=stats_path.format('RP'), device=DEVICE, use_drive=USE_DRIVE)
+    path=stats_path.format(f"RP-{rp_hash}"), device=DEVICE, use_drive=USE_DRIVE)
 mean_RP_A_C, std_RP_A_C = utility.collect_stats(
     DATA_A, project_RP_CC, n_classes, class_conditional=True, std=True, keepdim=True,
-    path=stats_path.format('RP-CC'), device=DEVICE, use_drive=USE_DRIVE)
+    path=stats_path.format(f"RP-CC-{rp_hash}"), device=DEVICE, use_drive=USE_DRIVE)
 
 # Random ReLU Projections
 f_rp_relu = 1 / 2
@@ -278,7 +279,7 @@ def combine(project1, project2):
 
 # ======= Loss Function =======
 
-
+#
 def regularization(x):
     diff1 = x[:, :, :, :-1] - x[:, :, :, 1:]
     diff2 = x[:, :, :-1, :] - x[:, :, 1:, :]
@@ -303,8 +304,6 @@ def loss_stats(stats_a, stats_b):
 f_crit = args.f_crit
 f_reg = args.f_reg
 f_stats = args.f_stats
-
-rp_hash = f"{n_random_projections}-{args.seed}"
 
 
 def loss_fn_wrapper(name, project, class_conditional):
