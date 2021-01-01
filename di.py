@@ -59,7 +59,7 @@ parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
 parser.add_argument("-f_reg", type=float, default=0.001)
 parser.add_argument("-f_crit", type=float, default=1)
-parser.add_argument("-f_stats", type=float, default=1)
+parser.add_argument("-f_stats", type=float, default=10)
 
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset GMM'.split())
