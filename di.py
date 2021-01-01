@@ -412,8 +412,6 @@ for method, loss_fn in methods:
     targets = torch.LongTensor(range(args.batch_size)).to(DEVICE) % n_classes
     DATA = [(batch, targets)]
 
-    debug(batch)
-
     # print("Before:")
     # im_show(batch)
 
