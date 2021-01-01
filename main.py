@@ -92,7 +92,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset CIFAR10'.split())
     # args.inv_steps = 1
     # args.batch_size = 64
-    args.seed = 10
+    args.seed = 0
 
     args.size_B = 64
     # args.nn_resume_train = True
@@ -325,6 +325,8 @@ def project_NN_all(data):
 # ======= Random Projections =======
 RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
 RP = RP / RP.norm(2, dim=0)
+
+print(f"RP hash: {hash(RP)}")
 
 
 def get_input(data):

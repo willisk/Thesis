@@ -199,7 +199,7 @@ def project_NN_all(data):
 
 
 # ======= Random Projections =======
-RP = torch.randn((n_dims, n_random_projections), device=DEVICE)
+RP = torch.randn((n_dims, n_random_projections)).to(DEVICE)
 RP = RP / RP.norm(2, dim=0)
 
 
@@ -408,7 +408,7 @@ for method, loss_fn in methods:
     print("\n## Method:", method)
 
     batch = torch.randn((args.batch_size, *dataset.input_shape),
-                        device=DEVICE, requires_grad=True)
+                        requires_grad=True).to(device=DEVICE)
     targets = torch.LongTensor(range(args.batch_size)).to(DEVICE) % n_classes
     DATA = [(batch, targets)]
 
