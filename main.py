@@ -596,14 +596,15 @@ for method, loss_fn in methods:
 
     # L2 Reconstruction Error
     Id = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
-    l2_err_perturb = (perturb(Id) - Id).norm().item() / Id.norm().item()
     l2_err = (invert_fn(Id) - Id).norm().item() / Id.norm().item()
+    l2_err_perturb = (perturb(Id) - Id).norm().item() / Id.norm().item()
     print(
-        f"\trel. l2 reconstruction error: {l2_err:.3f} / {l2_err_perturb:.3f}")
+        f"\trel. l2 reconstruction error: {l2_err:.3f} | {l2_err_perturb:.3f}")
 
     # PSNR
     psnr = utility.average_psnr(show_batch, invert_fn(show_batch))
-    print(f"\taverage PSNR: {psnr:.3f}")
+    psnr_perturb = utility.average_psnr(show_batch, perturb(show_batch))
+    print(f"\taverage PSNR: {psnr:.3f} | {psnr_perturb:.3f}")
 
     # NN Accuracy
     accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=invert_fn)
