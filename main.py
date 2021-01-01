@@ -602,9 +602,8 @@ for method, loss_fn in methods:
         f"\trel. l2 reconstruction error: {l2_err:.3f} / {l2_err_perturb:.3f}")
 
     # PSNR
-    psnr = average_psnr(show_batch, invert_fn(show_batch))
-    print(
-        f"\tPSNR: {psnr_B:.3f}")
+    psnr = utility.average_psnr(show_batch, invert_fn(show_batch))
+    print(f"\taverage PSNR: {psnr:.3f}")
 
     # NN Accuracy
     accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=invert_fn)
