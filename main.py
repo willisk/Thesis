@@ -187,6 +187,9 @@ input_shape = dataset.input_shape
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
 
+
+STD = not args.use_var
+stats_path = os.path.join(MODELDIR, "stats_{}.pt")
 # ======= Perturbation =======
 
 
@@ -327,9 +330,6 @@ def project_NN_all(data):
 # def get_input(data):
 #     return data[0]
 
-
-# STD = not args.use_var
-# stats_path = os.path.join(MODELDIR, "stats_{}.pt")
 
 # mean_A, std_A = utility.collect_stats(
 #     DATA_A, get_input, n_classes, class_conditional=False, std=True, keepdim=True,
