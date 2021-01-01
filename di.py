@@ -362,7 +362,7 @@ methods = [
         class_conditional=False,
     ),
     loss_fn_wrapper(
-        name="RP CC ",
+        name="RP CC",
         project=project_RP_CC,
         class_conditional=True,
     ),
