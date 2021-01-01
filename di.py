@@ -289,7 +289,7 @@ def regularization(x):
             torch.norm(diff3) + torch.norm(diff4))
 
 
-@debug
+# @debug
 def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
