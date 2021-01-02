@@ -75,8 +75,6 @@ if __name__ == "__main__":
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    print("loading resnet34")
-
     net = ResNet34()
     model_path = os.path.join(PWD, 'models/CIFAR10/net_resnet34.pt')
     save_path, load_path = utility.save_load_path(model_path, True)
@@ -88,7 +86,7 @@ if __name__ == "__main__":
 
     criterion = nn.CrossEntropyLoss()
 
-    inputs = torch.randn((256, 3, 32, 32),
+    inputs = torch.randn((bs, 3, 32, 32),
                          requires_grad=True, device=device)
     targets = torch.LongTensor(range(bs)).to(device) % 10
 

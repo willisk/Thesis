@@ -148,6 +148,10 @@ DATA_A = data_loader(A)
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
 
+
+STD = not args.use_var
+stats_path = os.path.join(MODELDIR, "stats_{}.pt")
+
 # ======= Neural Network =======
 model_path, net = dataset.net()
 net.to(DEVICE)
@@ -206,9 +210,6 @@ RP = RP / RP.norm(2, dim=0)
 def get_input(data):
     return data[0]
 
-
-STD = not args.use_var
-stats_path = os.path.join(MODELDIR, "stats_{}.pt")
 
 mean_A, std_A = utility.collect_stats(
     DATA_A, get_input, n_classes, class_conditional=False, std=True, keepdim=True,
@@ -279,7 +280,6 @@ def combine(project1, project2):
 
 # ======= Loss Function =======
 
-#
 def regularization(x):
     diff1 = x[:, :, :, :-1] - x[:, :, :, 1:]
     diff2 = x[:, :, :-1, :] - x[:, :, 1:, :]
@@ -333,7 +333,8 @@ def loss_fn_wrapper(name, project, class_conditional):
         stats = utility.get_stats(
             outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
 
-        loss = f_stats * loss_stats(stats_A, stats)
+        loss = torch.tensor(0).float().to(DEVICE)
+        loss += f_stats * loss_stats(stats, stats_A) if f_stats else 0
         loss += f_reg * regularization(inputs) if f_reg else 0
 
         if f_crit:

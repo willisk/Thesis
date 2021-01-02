@@ -97,7 +97,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args.size_B = 64
     # args.nn_resume_train = True
     # args.nn_reset_train = True
-    # args.use_var = True
+    args.use_var = True
 else:
     args = parser.parse_args()
 
@@ -196,13 +196,25 @@ stats_path = os.path.join(MODELDIR, "stats_{}.pt")
 class perturb_model(nn.Module):
     def __init__(self):
         super().__init__()
+
         kernel_size = 3
         nch = input_shape[0]
+        lambd = args.perturb_strength
+
         self.conv1 = nn.Conv2d(nch, nch, kernel_size, padding=1)
         self.conv2 = nn.Conv2d(nch, nch, kernel_size, padding=1)
         self.noise = nn.Parameter(
-            torch.randn(input_shape).unsqueeze(
-                0) * args.perturb_strength)
+            torch.randn(input_shape).unsqueeze(0))
+
+        self.conv1.weight.data *= lambd
+        self.conv2.weight.data *= lambd
+        self.conv1.weight.data[0][0][1][1] += 1
+        self.conv2.weight.data[0][0][1][1] += 1
+
+        self.conv1.bias.data *= lambd
+        self.conv2.bias.data *= lambd
+
+        self.noise.data *= lambd
 
     def forward(self, inputs):
         outputs = inputs
@@ -326,8 +338,6 @@ def project_NN_all(data):
 RP = torch.randn((n_dims, n_random_projections)).to(DEVICE)
 RP = RP / RP.norm(2, dim=0)
 
-print(f"RP hash: {hash(RP)}")
-
 
 def get_input(data):
     return data[0]
@@ -362,19 +372,20 @@ def project_RP_CC(data):
     return X_proj_C
 
 
-# XXXXXXXXXXXXXXXXXXXXXXXXXXXXX Random projections need not always be the same? verify seed
+rp_hash = f"{n_random_projections}-{args.seed}"
+
 mean_RP_A, std_RP_A = utility.collect_stats(
     DATA_A, project_RP, n_classes, class_conditional=False, std=True, keepdim=True,
-    path=stats_path.format('RP'), device=DEVICE, use_drive=USE_DRIVE)
+    path=stats_path.format(f"RP-{rp_hash}"), device=DEVICE, use_drive=USE_DRIVE)
 mean_RP_A_C, std_RP_A_C = utility.collect_stats(
     DATA_A, project_RP_CC, n_classes, class_conditional=True, std=True, keepdim=True,
-    path=stats_path.format('RP-CC'), device=DEVICE, use_drive=USE_DRIVE)
+    path=stats_path.format(f"RP-CC-{rp_hash}"), device=DEVICE, use_drive=USE_DRIVE)
 
 # Random ReLU Projections
 f_rp_relu = 1 / 2
 relu_bias = mean_RP_A + f_rp_relu * std_RP_A * torch.randn_like(mean_RP_A)
 relu_bias_C = (mean_RP_A_C +
-               f_rp_relu * std_RP_A_C * torch.randn_like(mean_RP_A_C))
+               f_rp_relu * std_RP_A_C * torch.randn_like(mean_RP_A_C)).squeeze()
 
 
 def project_RP_relu(data):
@@ -421,22 +432,15 @@ def loss_stats(stats_a, stats_b):
             loss += (ma.squeeze() - mb.squeeze()).norm()
             loss += (sa.squeeze() - sb.squeeze()).norm()
         else:
-            if np.prod(ma.shape) == ma.shape[0]:    # one feature
+            # one feature
+            if np.prod(ma.shape) == ma.shape[0] or np.prod(mb.shape) == mb.shape[0]:
                 loss += (ma.squeeze() - mb.squeeze()).abs().mean()
                 loss += (sa.squeeze() - sb.squeeze()).abs().mean()
             else:
                 loss += (ma.squeeze() - mb.squeeze()).norm(dim=1).mean()
                 loss += (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
     return loss
-    # return sum(
-    #     (ma.squeeze() - mb.squeeze()).norm() +
-    #     (sa.squeeze() - sb.squeeze()).norm() if ma.ndim == 1 else
-    #     (ma.squeeze() - mb.squeeze()).norm(dim=1).mean() +  # class_conditional
-    #     (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
-    #     for (ma, sa), (mb, sb) in zip(stats_a, stats_b))  # / len(stats_a)
 
-
-debug.silent = False
 
 f_crit = args.f_crit
 f_reg = args.f_reg
@@ -445,6 +449,8 @@ f_stats = args.f_stats
 
 def loss_fn_wrapper(name, project, class_conditional):
     _name = name.replace(' ', '-')
+    if "RP" in _name:
+        _name = f"{_name}-{rp_hash}"
     stats_A = utility.collect_stats(
         DATA_A, project, n_classes, class_conditional,
         std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE)
@@ -513,7 +519,7 @@ methods = [
         class_conditional=True,
     ),
     loss_fn_wrapper(
-        name="combined",
+        name="NN ALL + RP CC",
         project=combine(project_NN_all, project_RP_CC),
         class_conditional=True,
     ),
