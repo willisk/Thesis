@@ -575,14 +575,17 @@ for method, loss_fn in methods:
         data = (outputs, labels)
         return loss_fn(data)
 
-    optimizer = torch.optim.Adam(preprocess.parameters(), lr=inv_lr)
-    # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
+    def invert_fn(inputs):
+        return preprocess(perturb(inputs))
 
     def callback_fn(epoch):
-        if epoch % 100:
+        if epoch % 100 == 0:
             print(f"\nepoch {epoch}", flush=True)
             im_show(invert_fn(show_batch))
             print(flush=True)
+
+    optimizer = torch.optim.Adam(preprocess.parameters(), lr=inv_lr)
+    # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
     info = inversion.invert(DATA_B,
                             data_loss_fn,
@@ -601,9 +604,6 @@ for method, loss_fn in methods:
 
     # ======= Result =======
     preprocess.eval()
-
-    def invert_fn(inputs):
-        return preprocess(perturb(inputs))
 
     print("Inverted:")
     im_show(invert_fn(show_batch))
