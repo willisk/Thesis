@@ -133,7 +133,11 @@ def _debug_log(output, var=_NONE, indent='', assert_true=False):
                     for ignore in debug.expand_ignore:
                         if type_str == ignore.lower():
                             expand = False
-            length = len(var) if hasattr(var, '__len__') else len(list(var))
+            if hasattr(var, '__len__'):
+                length = len(var)
+            else:
+                var = list(var)
+                length = len(var)
             if expand:
                 _debug_log(f"{type_str}[{length}] {{")
                 if isinstance(var, dict):

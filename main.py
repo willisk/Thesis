@@ -80,14 +80,14 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.inv_steps = 500
     # args.batch_size = -1
 
-    args = parser.parse_args('-dataset MNIST'.split())
-    args.nn_steps = 5
-    args.inv_steps = 100
-    args.batch_size = 64
-    # args.size_B = 10
-    # args.n_random_projections = 1024
-    args.inv_lr = 0.05
-    args.perturb_strength = 0.5
+    # args = parser.parse_args('-dataset MNIST'.split())
+    # args.nn_steps = 5
+    # args.inv_steps = 100
+    # args.batch_size = 64
+    # # args.size_B = 10
+    # # args.n_random_projections = 1024
+    # args.inv_lr = 0.05
+    # args.perturb_strength = 0.5
 
     # args = parser.parse_args('-dataset CIFAR10'.split())
     # args.inv_steps = 1
@@ -206,11 +206,16 @@ class perturb_model(nn.Module):
         self.noise = nn.Parameter(
             torch.randn(input_shape).unsqueeze(0))
 
+        self.conv1.weight.data.normal_()
+        self.conv2.weight.data.normal_()
         self.conv1.weight.data *= lambd
         self.conv2.weight.data *= lambd
-        self.conv1.weight.data[0][0][1][1] += 1
-        self.conv2.weight.data[0][0][1][1] += 1
+        for f in range(nch):
+            self.conv1.weight.data[f][f][1][1] += 1
+            self.conv2.weight.data[f][f][1][1] += 1
 
+        self.conv1.bias.data.normal_()
+        self.conv2.bias.data.normal_()
         self.conv1.bias.data *= lambd
         self.conv2.bias.data *= lambd
 
@@ -228,8 +233,9 @@ class perturb_model(nn.Module):
 perturb = perturb_model()
 perturb.to(DEVICE)
 
-
 # ======= Preprocessing Model =======
+
+
 class preprocessing_model(nn.Module):
     def __init__(self):
         super().__init__()
