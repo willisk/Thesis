@@ -42,6 +42,7 @@ def invert(data_loader, loss_fn, optimizer,
            plot=False,
            use_amp=False,
            grad_norm_fn=None,
+           callback_fn=None,
            ):
 
     assert utility.valid_data_loader(
@@ -117,7 +118,7 @@ def invert(data_loader, loss_fn, optimizer,
                     for param in params:
                         param.grad.detach().mul_(rescale_coef)
 
-                info['grad'] = total_norm
+                info['|g|'] = total_norm
 
                 if USE_AMP:
                     scaler.step(optimizer)
@@ -135,6 +136,8 @@ def invert(data_loader, loss_fn, optimizer,
                 for k, v in info.items():
                     TRACKING[k].append(v)
 
+            if callback_fn:
+                callback_fn(epoch)
             # if track_history_every and (
             #         step % track_history_every == 0 or step == steps):
             #     history.append((inputs.detach().cpu().clone(), step))

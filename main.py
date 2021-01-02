@@ -578,6 +578,12 @@ for method, loss_fn in methods:
     optimizer = torch.optim.Adam(preprocess.parameters(), lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
+    def callback_fn(epoch):
+        if epoch % 100:
+            print(f"\nepoch {epoch}", flush=True)
+            im_show(invert_fn(show_batch))
+            print(flush=True)
+
     info = inversion.invert(DATA_B,
                             data_loss_fn,
                             optimizer,
@@ -590,6 +596,7 @@ for method, loss_fn in methods:
                             plot=True,
                             use_amp=args.use_amp,
                             # grad_norm_fn=grad_norm_fn,
+                            # callback_fn=callback_fn,
                             )
 
     # ======= Result =======
