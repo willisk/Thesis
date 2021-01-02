@@ -596,7 +596,7 @@ for method, loss_fn in methods:
                             plot=True,
                             use_amp=args.use_amp,
                             # grad_norm_fn=grad_norm_fn,
-                            # callback_fn=callback_fn,
+                            callback_fn=callback_fn,
                             )
 
     # ======= Result =======
