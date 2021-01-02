@@ -579,10 +579,10 @@ for method, loss_fn in methods:
         return preprocess(perturb(inputs))
 
     def callback_fn(epoch):
-        # if epoch % 100 == 0:
-        print(f"\nepoch {epoch}", flush=True)
-        im_show(invert_fn(show_batch))
-        print(flush=True)
+        if epoch % 100 == 0 and epoch > 0:
+            print(f"\nepoch {epoch}", flush=True)
+            im_show(invert_fn(show_batch))
+            print(flush=True)
 
     optimizer = torch.optim.Adam(preprocess.parameters(), lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
