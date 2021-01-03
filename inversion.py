@@ -144,7 +144,7 @@ def invert(data_loader, loss_fn, optimizer,
     print(flush=True, end='')
 
     if plot and TRACKING:
-        utility.plot_metrics(TRACKING, smoothing=0.3)
+        utility.plot_metrics(TRACKING, smoothing=0.9)
         plt.show()
 
     # return history
