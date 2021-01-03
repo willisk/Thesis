@@ -135,7 +135,7 @@ def invert(data_loader, loss_fn, optimizer,
                     if batch_i == 0:
                         TRACKING[k].append(v)
                     else:
-                        TRACKING[k][batch_i] += v
+                        TRACKING[k][-1] += v
 
             TRACKING['step'].append(step)
 
