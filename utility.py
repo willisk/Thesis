@@ -20,16 +20,27 @@ from collections import defaultdict
 from collections.abc import Iterable
 import time
 
+from functools import partial
+from debug import debug
+
 from tqdm import tqdm
 
-from debug import debug
+class tqdmEpoch(tqdm):
+    def __init__(self, epochs, batch_size, **kwargs):
+        super().__init__(
+            total=epochs * batch_size,
+            bar_format=f"{{l_bar}}{{bar}}|{{n:.1f}}/{epochs} [{{elapsed}}<{{remaining}}, {{rate_fmt}}{{postfix}}]",
+            unit_scale=1 / batch_size,
+            unit='epoch',
+            **kwargs
+        )
 
 
 class DataL(DataLoader):
-    def __init__(self, *args, batch_size=1, device='cpu', **kwargs):
+    def __init__(self, dataset, *args, batch_size=1, device='cpu', **kwargs):
         if batch_size == -1:
-            batch_size = len(D)
-        super().__init__(*args, batch_size=batch_size, **kwargs)
+            batch_size = len(dataset)
+        super().__init__(dataset, *args, batch_size=batch_size, **kwargs)
         self.device = device
 
     def __iter__(self):
@@ -437,7 +448,7 @@ def train(net, data_loader, criterion, optimizer,
 
     print("Beginning training.", flush=True)
 
-    with tqdm(**tqdm_fmt_dict(epochs, len(data_loader))) as pbar:
+    with tqdmEpoch(epochs, len(data_loader)) as pbar:
         saved_epoch = 0
         for epoch in range(init_epoch, init_epoch + epochs):
             total_count = 0.0
@@ -521,7 +532,7 @@ def train(net, data_loader, criterion, optimizer,
 
 
 def sgm(x, sh=0, **kwargs):
-    return np.exp(np.log(x + sh).mean(**kwargs)) - sh
+    return np.exp(np.log(x + sh + 1e-50).mean(**kwargs)) - sh
 
 
 def smoothen(values, weight):
@@ -551,7 +562,7 @@ def plot_metrics(metrics, step_start=1, smoothing=0):
             values = smoothen(values, smoothing)
         plt.plot(steps, values, label=key)
 
-    vals = np.ma.masked_invalid(np.vstack(metrics.values()))
+    vals = np.ma.masked_invalid(np.vstack(list(metrics.values())))
     vals_m = sgm(vals, axis=1, keepdims=True)
     vals_s = np.sqrt(((vals - vals_m)**2).mean(axis=1))
     y_max = min(vals.max(), max(vals_m.squeeze() + vals_s))

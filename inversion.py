@@ -6,9 +6,7 @@ import torch
 from torch.cuda.amp import autocast, GradScaler
 # from scipy.stats import betabinom
 
-# from tqdm.auto import tqdm
-# from tqdm import tqdm
-from tqdm.autonotebook import tqdm
+from utility import tqdmEpoch
 
 import matplotlib.pyplot as plt
 
@@ -37,17 +35,15 @@ from debug import debug
 def invert(data_loader, loss_fn, optimizer,
            steps=10,
            scheduler=None,
-           #    track_history_every=None,
-           plot=False,
            use_amp=False,
            grad_norm_fn=None,
            callback_fn=None,
+           plot=False,
+           plot_batch=False,
            ):
 
     assert utility.valid_data_loader(
         data_loader), f"invalid data_loader: {data_loader}"
-
-    # writer = shared.get_summary_writer()
 
     params = sum((p_group['params']
                   for p_group in optimizer.param_groups), [])
@@ -56,9 +52,7 @@ def invert(data_loader, loss_fn, optimizer,
     if USE_AMP:
         scaler = GradScaler()
 
-    # history = []
-
-    TRACKING = defaultdict(list)
+    metrics = defaultdict(list)
     num_batches = len(data_loader)
 
     def process_result(res):
@@ -71,13 +65,9 @@ def invert(data_loader, loss_fn, optimizer,
         return loss, info
 
     print(flush=True)
-    # print("Beginning Inversion.", flush=True)
 
-    # with tqdm(range(1, steps + 1), desc="Epoch") as pbar:
-    with tqdm(**utility.tqdm_fmt_dict(steps, len(data_loader))) as pbar:
-
+    with tqdmEpoch(steps, len(data_loader)) as pbar:
         for epoch in range(steps):
-
             for batch_i, data in enumerate(data_loader):
 
                 step = epoch + batch_i / num_batches
@@ -133,12 +123,12 @@ def invert(data_loader, loss_fn, optimizer,
                 pbar.update()
 
                 for k, v in info.items():
-                    if batch_i == 0:
-                        TRACKING[k].append(v)
+                    if batch_i == 0 or plot_batch:
+                        metrics[k].append(v)
                     else:
-                        TRACKING[k][-1] += v
+                        metrics[k][-1] += v
 
-            TRACKING['step'].append(step)
+            metrics['step'].append(step)
 
             if callback_fn:
                 callback_fn(epoch)
@@ -146,14 +136,14 @@ def invert(data_loader, loss_fn, optimizer,
             #         step % track_history_every == 0 or step == steps):
             #     history.append((inputs.detach().cpu().clone(), step))
 
-    print(flush=True, end='')
+    print(flush=True)
 
     if plot and steps > 1:
-        utility.plot_metrics(TRACKING, smoothing=0)
+        utility.plot_metrics(metrics, smoothing=0)
         plt.show()
 
     # return history
-    return TRACKING
+    return metrics
 
 
 def inversion_loss(stats_net, criterion, target_labels, hp,
