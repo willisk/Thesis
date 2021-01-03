@@ -251,7 +251,7 @@ def collect_stats(data_loader, projection, n_classes, class_conditional,
                   device='cpu', path=None, use_drive=True):
 
     def data_fn(inputs, labels):
-        inputs, labels = inputs.to(device), labels.to(device)
+        # inputs, labels = inputs.to(device), labels.to(device)
         outputs = projection((inputs, labels))
         stats = get_stats(outputs, labels, n_classes, class_conditional,
                           std=False, return_count=True, keepdim=keepdim, dtype=torch.double)

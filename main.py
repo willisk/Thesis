@@ -172,17 +172,22 @@ MODELDIR = dataset.data_dir
 A, B, B_val = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B)
 
 
-def data_loader(D):
-    batch_size = args.batch_size if args.batch_size != -1 else len(D)
-    if args.seed != -1:
-        return DataLoader(D, batch_size=batch_size, shuffle=True,
-                          worker_init_fn=lambda x: np.random.seed(args.seed))
-    return DataLoader(D, batch_size=batch_size, shuffle=True)
+class DataL(DataLoader):
+    def __init__(self, *args, batch_size=1, device='cpu', **kwargs):
+        if batch_size == -1:
+            batch_size = len(D)
+        super().__init__(*args, batch_size=batch_size, **kwargs)
+        self.device = device
+
+    def __iter__(self):
+        for inputs, labels in super().__iter__():
+            yield inputs.to(self.device), labels.to(self.device)
 
 
-DATA_A = data_loader(A)
-DATA_B = data_loader(B)
-DATA_B_val = data_loader(B_val)
+DATA_A = DataL(A, batch_size=args.batch_size, shuffle=True, device=DEVICE)
+DATA_B = DataL(B, batch_size=args.batch_size, shuffle=True, device=DEVICE)
+DATA_B_val = DataL(B_val, batch_size=args.batch_size,
+                   shuffle=True, device=DEVICE)
 
 input_shape = dataset.input_shape
 n_dims = dataset.n_dims
