@@ -70,7 +70,8 @@ def invert(data_loader, loss_fn, optimizer,
         info = {'loss': loss.item(), **info}
         return loss, info
 
-    print("Beginning Inversion.", flush=True)
+    print(flush=True)
+    # print("Beginning Inversion.", flush=True)
 
     # with tqdm(range(1, steps + 1), desc="Epoch") as pbar:
     with tqdm(**utility.tqdm_fmt_dict(steps, len(data_loader))) as pbar:

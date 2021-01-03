@@ -10,10 +10,10 @@ from collections import defaultdict
 import torch
 import torch.nn.functional as F
 # from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import DataLoader
 import torchvision
 
 import matplotlib.pyplot as plt
+# plt.style.use('default')
 
 import numpy as np
 
@@ -50,13 +50,15 @@ parser.add_argument("-seed", type=int, default=0)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
-parser.add_argument("--use_var", action="store_true")
+parser.add_argument("--use_std", action="store_true")
+parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-batch_size", type=int, default=64)
 parser.add_argument("-n_random_projections", type=int, default=256)
 parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
+parser.add_argument("-inv_batch_size", type=int, default=64)
 parser.add_argument("-f_reg", type=float, default=0.001)
 parser.add_argument("-f_crit", type=float, default=1)
 parser.add_argument("-f_stats", type=float, default=10)
@@ -77,7 +79,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.batch_size = 256
 
     # args.n_random_projections = 1024
-    args.use_var = True
+    # args.use_var = True
 else:
     args = parser.parse_args()
 
@@ -139,17 +141,18 @@ MODELDIR = dataset.data_dir
 A, B, B_val = dataset.get_datasets()
 
 
-def data_loader(D):
-    return DataLoader(D, batch_size=64, shuffle=True)
-
-
-DATA_A = data_loader(A)
+DATA_A = utility.DataL(
+    A, batch_size=args.batch_size, shuffle=True, device=DEVICE)
+DATA_B = utility.DataL(
+    B, batch_size=args.batch_size, shuffle=True, device=DEVICE)
+DATA_B_val = utility.DataL(
+    B_val, batch_size=args.batch_size, shuffle=True, device=DEVICE)
 
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
 
 
-STD = not args.use_var
+STD = args.use_var
 stats_path = os.path.join(MODELDIR, "stats_{}.pt")
 
 # ======= Neural Network =======
@@ -420,13 +423,11 @@ def grad_norm_fn(x):
 for method, loss_fn in methods:
     print("\n## Method:", method)
 
-    batch = torch.randn((args.batch_size, *dataset.input_shape),
+    batch = torch.randn((args.inv_batch_size, *dataset.input_shape),
                         requires_grad=True, device=DEVICE)
-    targets = torch.LongTensor(range(args.batch_size)).to(DEVICE) % n_classes
+    targets = torch.LongTensor(
+        range(args.inv_batch_size)).to(DEVICE) % n_classes
     DATA = [(batch, targets)]
-
-    # print("Before:")
-    # im_show(batch)
 
     def data_loss_fn(data):
         inputs, labels = data

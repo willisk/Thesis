@@ -11,7 +11,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 # from torch.optim.lr_scheduler import ReduceLROnPlateau
-# from torch.utils.data import DataLoader
 import torchvision
 
 import matplotlib.pyplot as plt
@@ -552,6 +551,12 @@ im_show(perturb(show_batch))
 metrics = defaultdict(dict)
 
 
+def jitter(x):
+    off1, off2 = torch.randint(low=-2, high=2, size=(2, 1))
+    x = torch.roll(x, shifts=(off1, off2), dims=(2, 3))
+    return x
+
+
 def grad_norm_fn(x):
     return min(x, 10)  # torch.sqrt(x) if x > 1 else x
 
@@ -613,17 +618,17 @@ for method, loss_fn in methods:
     loss = info['loss'][-1]
     print(f"\tloss: {loss:.3f}")
 
+    # PSNR
+    psnr = utility.average_psnr(DATA_B, invert_fn)
+    psnr_perturb = utility.average_psnr(DATA_B, perturb)
+    print(f"\taverage PSNR: {psnr:.3f} | {psnr_perturb:.3f}")
+
     # L2 Reconstruction Error
     Id = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
     l2_err = (invert_fn(Id) - Id).norm().item() / Id.norm().item()
     l2_err_perturb = (perturb(Id) - Id).norm().item() / Id.norm().item()
     print(
         f"\trel. l2 reconstruction error: {l2_err:.3f} | {l2_err_perturb:.3f}")
-
-    # PSNR
-    psnr = utility.average_psnr(DATA_B, invert_fn)
-    psnr_perturb = utility.average_psnr(DATA_B, perturb)
-    print(f"\taverage PSNR: {psnr:.3f} | {psnr_perturb:.3f}")
 
     # NN Accuracy
     accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=invert_fn)
@@ -641,9 +646,9 @@ for method, loss_fn in methods:
             verifier_net, DATA_B, inputs_pre_fn=invert_fn)
         print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
         metrics[method]['acc(ver)'] = accuracy_ver
+    metrics[method]['av. PSNR'] = psnr
     metrics[method]['l2-err'] = l2_err
     metrics[method]['loss'] = loss
-    metrics[method]['psnr'] = psnr
 
 baseline = defaultdict(dict)
 
@@ -671,7 +676,6 @@ baseline['B (original)']['acc(val)'] = accuracy_B_val
 
 baseline['B (perturbed)']['acc'] = accuracy_B_pert
 baseline['B (perturbed)']['acc(val)'] = accuracy_B_val_pert
-baseline['B (perturbed)']['av. PSNR'] = utility.average_psnr(DATA_B, perturb)
 
 baseline['A']['acc'] = accuracy_A
 
@@ -679,6 +683,9 @@ if verifier_net:
     baseline['B (perturbed)']['acc(ver)'] = accuracy_B_pert_ver
     baseline['B (original)']['acc(ver)'] = accuracy_B_ver
     baseline['A']['acc(ver)'] = accuracy_A_ver
+
+baseline['B (perturbed)']['av. PSNR'] = psnr_perturb
+baseline['B (perturbed)']['l2-err'] = l2_err_perturb
 
 
 print("\n# Summary")

@@ -520,8 +520,8 @@ def train(net, data_loader, criterion, optimizer,
         return TRACKING
 
 
-def sgm(x, sh=1):
-    return np.exp(np.log(x + sh).sum() / len(x)) - sh
+def sgm(x, sh=0, **kwargs):
+    return np.exp(np.log(x + sh).mean(**kwargs)) - sh
 
 
 def smoothen(values, weight):
@@ -532,7 +532,7 @@ def smoothen(values, weight):
             av_val = av_val * weight + (1 - weight) * val
             smoothed.append(av_val)
         else:
-            smoothed.append(10000)
+            smoothed.append(float('nan'))
     return smoothed
 
 
@@ -552,8 +552,8 @@ def plot_metrics(metrics, step_start=1, smoothing=0):
         plt.plot(steps, values, label=key)
 
     vals = np.ma.masked_invalid(np.vstack(metrics.values()))
-    vals_m = vals.mean(axis=1)
-    vals_s = vals.std(axis=1)
+    vals_m = sgm(vals, axis=1, keepdims=True)
+    vals_s = ((vals - vals_m)**2).mean(axis=1).sqrt()
     y_max = min(vals.max(), max(vals_m + vals_s))
     y_min = max(vals.min(), min(vals_m - vals_s))
     # print("min", vals.min())
@@ -601,7 +601,8 @@ def scatter_matrix(data, labels,
     ndata, ncols = data.shape
     data = data.T
     if fig is None:
-        fig, axes = plt.subplots(nrows=ncols, ncols=ncols, figsize=(12, 12))
+        fig, axes = plt.subplots(
+            nrows=ncols, ncols=ncols, figsize=(12, 12))
         fig.subplots_adjust(hspace=0.05, wspace=0.05)
     else:
         axes = np.array(fig.axes).reshape(4, 4)
