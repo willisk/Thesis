@@ -197,8 +197,10 @@ class perturb_model(nn.Module):
         nch = input_shape[0]
         lambd = args.perturb_strength
 
-        self.conv1 = nn.Conv2d(nch, nch, kernel_size, padding=1)
-        self.conv2 = nn.Conv2d(nch, nch, kernel_size, padding=1)
+        self.conv1 = nn.Conv2d(nch, nch, kernel_size,
+                               padding=1, padding_mode='reflect')
+        self.conv2 = nn.Conv2d(nch, nch, kernel_size,
+                               padding=1, padding_mode='reflect')
         self.noise = nn.Parameter(
             torch.randn(input_shape).unsqueeze(0))
 
@@ -620,7 +622,7 @@ for method, loss_fn in methods:
     # PSNR
     psnr = utility.average_psnr(DATA_B, invert_fn)
     psnr_perturb = utility.average_psnr(DATA_B, perturb)
-    print(f"\tav. PSNR: {psnr:.3f} | {psnr_perturb:.3f}")
+    print(f"\taverage PSNR: {psnr:.3f} | {psnr_perturb:.3f}")
 
     # NN Accuracy
     accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=invert_fn)
@@ -668,8 +670,7 @@ baseline['B (original)']['acc(val)'] = accuracy_B_val
 
 baseline['B (perturbed)']['acc'] = accuracy_B_pert
 baseline['B (perturbed)']['acc(val)'] = accuracy_B_val_pert
-# baseline['B (perturbed)']['av. PSNR'] = accuracy_B_val_pert
-# psnr_B_pert = utility.average_psnr(show_batch, perturb(show_batch))
+baseline['B (perturbed)']['av. PSNR'] = utility.average_psnr(DATA_B, perturb)
 
 baseline['A']['acc'] = accuracy_A
 
