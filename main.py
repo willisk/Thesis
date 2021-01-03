@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 # from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import DataLoader
+# from torch.utils.data import DataLoader
 import torchvision
 
 import matplotlib.pyplot as plt
@@ -172,22 +172,12 @@ MODELDIR = dataset.data_dir
 A, B, B_val = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B)
 
 
-class DataL(DataLoader):
-    def __init__(self, *args, batch_size=1, device='cpu', **kwargs):
-        if batch_size == -1:
-            batch_size = len(D)
-        super().__init__(*args, batch_size=batch_size, **kwargs)
-        self.device = device
-
-    def __iter__(self):
-        for inputs, labels in super().__iter__():
-            yield inputs.to(self.device), labels.to(self.device)
-
-
-DATA_A = DataL(A, batch_size=args.batch_size, shuffle=True, device=DEVICE)
-DATA_B = DataL(B, batch_size=args.batch_size, shuffle=True, device=DEVICE)
-DATA_B_val = DataL(B_val, batch_size=args.batch_size,
-                   shuffle=True, device=DEVICE)
+DATA_A = utility.DataL(
+    A, batch_size=args.batch_size, shuffle=True, device=DEVICE)
+DATA_B = utility.DataL(
+    B, batch_size=args.batch_size, shuffle=True, device=DEVICE)
+DATA_B_val = utility.DataL(
+    B_val, batch_size=args.batch_size, shuffle=True, device=DEVICE)
 
 input_shape = dataset.input_shape
 n_dims = dataset.n_dims
@@ -576,7 +566,7 @@ for method, loss_fn in methods:
 
     def data_loss_fn(data):
         inputs, labels = data
-        inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
+        # inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
         data = (invert_fn(inputs), labels)
         with torch.no_grad():
             ideal_loss = loss_fn(data).item()

@@ -131,9 +131,13 @@ def invert(data_loader, loss_fn, optimizer,
                 pbar.set_postfix(**info, refresh=False)
                 pbar.update()
 
-                TRACKING['step'].append(step)
                 for k, v in info.items():
-                    TRACKING[k].append(v)
+                    if batch_i == 0:
+                        TRACKING[k].append(v)
+                    else:
+                        TRACKING[k] += v
+
+            TRACKING['step'].append(step)
 
             if callback_fn:
                 callback_fn(epoch)
@@ -143,8 +147,8 @@ def invert(data_loader, loss_fn, optimizer,
 
     print(flush=True, end='')
 
-    if plot and TRACKING:
-        utility.plot_metrics(TRACKING, smoothing=0.9)
+    if plot and steps > 1:
+        utility.plot_metrics(TRACKING, smoothing=0)
         plt.show()
 
     # return history

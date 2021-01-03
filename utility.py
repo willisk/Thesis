@@ -9,6 +9,7 @@ from matplotlib import gridspec
 import torch
 import torch.nn as nn
 from torch.cuda.amp import autocast, GradScaler
+from torch.utils.data import DataLoader
 
 import inspect
 from functools import reduce, wraps
@@ -22,6 +23,18 @@ import time
 from tqdm import tqdm
 
 from debug import debug
+
+
+class DataL(DataLoader):
+    def __init__(self, *args, batch_size=1, device='cpu', **kwargs):
+        if batch_size == -1:
+            batch_size = len(D)
+        super().__init__(*args, batch_size=batch_size, **kwargs)
+        self.device = device
+
+    def __iter__(self):
+        for inputs, labels in super().__iter__():
+            yield inputs.to(self.device), labels.to(self.device)
 
 
 def tqdm_fmt_dict(epochs, batch_size):
@@ -107,7 +120,7 @@ def net_accuracy(net, data_loader, inputs_pre_fn=None):
     device = next(iter(net.parameters())).device
     with torch.no_grad():
         for inputs, labels in data_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
+            # inputs, labels = inputs.to(device), labels.to(device)
             if inputs_pre_fn:
                 inputs = inputs_pre_fn(inputs)
             outputs = net(inputs)
@@ -433,7 +446,7 @@ def train(net, data_loader, criterion, optimizer,
             grad_total = 0.0
 
             for inputs, labels in data_loader:
-                inputs, labels = inputs.to(device), labels.to(device)
+                # inputs, labels = inputs.to(device), labels.to(device)
 
                 optimizer.zero_grad()
                 if USE_AMP:
