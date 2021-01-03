@@ -67,7 +67,6 @@ parser.add_argument("-f_stats", type=float, default=10)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
 parser.add_argument("-perturb_strength", type=float, default=0.03)
-# parser.add_argument("-preprocessing_depth", type=int, default=2)
 
 # GMM
 parser.add_argument("-g_modes", type=int, default=3)
@@ -83,7 +82,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
 
     args = parser.parse_args('-dataset MNIST'.split())
     # args.nn_steps = 5
-    args.inv_steps = 100
+    args.inv_steps = 10
     # args.batch_size = 64
     # # args.size_B = 10
     # # args.n_random_projections = 1024
@@ -95,7 +94,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.batch_size = 64
     args.seed = 0
 
-    args.size_B = 1
+    args.size_B = 64
     # args.nn_resume_train = True
     # args.nn_reset_train = True
     args.use_var = True
@@ -568,10 +567,9 @@ for method, loss_fn in methods:
 
     def data_loss_fn(data):
         inputs, labels = data
-        # inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
-        data = (invert_fn(inputs), labels)
         with torch.no_grad():
             ideal_loss = loss_fn(data).item()
+        data = (invert_fn(inputs), labels)
         return loss_fn(data), {'ideal': ideal_loss}
 
     def callback_fn(epoch):
