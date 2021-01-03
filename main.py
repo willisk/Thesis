@@ -54,7 +54,8 @@ parser.add_argument("-seed", type=int, default=-1)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
-parser.add_argument("--use_var", action="store_true")
+parser.add_argument("--use_std", action="store_true")
+parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-batch_size", type=int, default=64)
@@ -97,7 +98,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args.size_B = 64
     # args.nn_resume_train = True
     # args.nn_reset_train = True
-    args.use_var = True
+    # args.use_std = True
 else:
     args = parser.parse_args()
 
@@ -183,7 +184,7 @@ n_dims = dataset.n_dims
 n_classes = dataset.n_classes
 
 
-STD = not args.use_var
+STD = args.use_std
 stats_path = os.path.join(MODELDIR, "stats_{}.pt")
 # ======= Perturbation =======
 
@@ -481,51 +482,51 @@ def loss_fn_wrapper(name, project, class_conditional):
 
 
 methods = [
-    # loss_fn_wrapper(
-    #     name="NN",
-    #     project=project_NN,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN CC",
-    #     project=project_NN,
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="NN",
+        project=project_NN,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="NN CC",
+        project=project_NN,
+        class_conditional=True,
+    ),
     loss_fn_wrapper(
         name="NN ALL",
         project=project_NN_all,
         class_conditional=False,
     ),
-    # loss_fn_wrapper(
-    #     name="NN ALL CC",
-    #     project=project_NN_all,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="RP",
-    #     project=project_RP,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="RP CC",
-    #     project=project_RP_CC,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="RP ReLU",
-    #     project=project_RP_relu,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="RP ReLU CC",
-    #     project=project_RP_relu_CC,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL + RP CC",
-    #     project=combine(project_NN_all, project_RP_CC),
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="NN ALL CC",
+        project=project_NN_all,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="RP",
+        project=project_RP,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="RP CC",
+        project=project_RP_CC,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="RP ReLU",
+        project=project_RP_relu,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="RP ReLU CC",
+        project=project_RP_relu_CC,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="NN ALL + RP CC",
+        project=combine(project_NN_all, project_RP_CC),
+        class_conditional=True,
+    ),
 ]
 
 
@@ -566,11 +567,13 @@ for method, loss_fn in methods:
         return preprocess(perturb(inputs))
 
     def data_loss_fn(data):
-        with torch.no_grad():
-            ideal_loss = loss_fn(data).item()
         inputs, labels = data
-        data = (invert_fn(inputs), labels)
-        return loss_fn(data), {'ideal': ideal_loss}
+        data_inv = (invert_fn(inputs), labels)
+        if args.plot_ideal:
+            with torch.no_grad():
+                ideal_loss = loss_fn(data).item()
+            return loss_fn(data_inv), {'ideal': ideal_loss}
+        return loss_fn(data_inv)
 
     def callback_fn(epoch):
         if epoch % 100 == 0 and epoch > 0:
