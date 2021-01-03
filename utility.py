@@ -553,7 +553,7 @@ def plot_metrics(metrics, step_start=1, smoothing=0):
 
     vals = np.ma.masked_invalid(np.vstack(metrics.values()))
     vals_m = sgm(vals, axis=1, keepdims=True)
-    vals_s = ((vals - vals_m)**2).mean(axis=1).sqrt()
+    vals_s = np.sqrt(((vals - vals_m)**2).mean(axis=1))
     y_max = min(vals.max(), max(vals_m + vals_s))
     y_min = max(vals.min(), min(vals_m - vals_s))
     # print("min", vals.min())

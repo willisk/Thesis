@@ -54,6 +54,7 @@ parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("--use_std", action="store_true")
+parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
@@ -95,6 +96,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args.seed = 0
 
     args.size_B = 64
+    args.plot_ideal = True
     # args.nn_resume_train = True
     # args.nn_reset_train = True
     # args.use_std = True
@@ -551,10 +553,9 @@ im_show(perturb(show_batch))
 metrics = defaultdict(dict)
 
 
-def jitter(x):
-    off1, off2 = torch.randint(low=-2, high=2, size=(2, 1))
-    x = torch.roll(x, shifts=(off1, off2), dims=(2, 3))
-    return x
+def jitter(inputs):
+    shifts = tuple(torch.randint(low=-2, high=2, size=(2,)))
+    return torch.roll(inputs, shifts=shifts, dims=(2, 3))
 
 
 def grad_norm_fn(x):
@@ -573,6 +574,8 @@ for method, loss_fn in methods:
 
     def data_loss_fn(data):
         inputs, labels = data
+        if args.use_jitter:
+            inputs = jitter(inputs)
         data_inv = (invert_fn(inputs), labels)
         if args.plot_ideal:
             with torch.no_grad():
