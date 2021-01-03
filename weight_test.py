@@ -83,7 +83,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
 
     args = parser.parse_args('-dataset MNIST'.split())
     # args.nn_steps = 5
-    args.inv_steps = 2
+    args.inv_steps = 1
     # args.batch_size = 64
     # # args.size_B = 10
     # # args.n_random_projections = 1024
@@ -95,7 +95,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.batch_size = 64
     args.seed = 0
 
-    args.size_B = 64
+    args.size_B = 2
     args.plot_ideal = True
     # args.nn_resume_train = True
     # args.nn_reset_train = True

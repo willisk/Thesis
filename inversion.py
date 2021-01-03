@@ -128,7 +128,8 @@ def invert(data_loader, loss_fn, optimizer,
                     else:
                         metrics[k][-1] += v
 
-            metrics['step'].append(step)
+                if batch_i == 0 or plot_batch:
+                    metrics['step'].append(step)
 
             if callback_fn:
                 callback_fn(epoch)
