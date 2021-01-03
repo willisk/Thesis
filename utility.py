@@ -250,8 +250,7 @@ def collect_stats(data_loader, projection, n_classes, class_conditional,
                   std=False, keepdim=False,
                   device='cpu', path=None, use_drive=True):
 
-    def data_fn(data):
-        inputs, labels = data
+    def data_fn(inputs, labels):
         inputs, labels = inputs.to(device), labels.to(device)
         outputs = projection((inputs, labels))
         stats = get_stats(outputs, labels, n_classes, class_conditional,
@@ -271,6 +270,21 @@ def collect_stats(data_loader, projection, n_classes, class_conditional,
     return stats[0].float(), stats[1].sqrt().float() if std else stats[1].float()
 
 
+def psnr(x_gt, x_approx, x_max=None):
+    if x_max is None:
+        x_max = x_gt.max()
+    with torch.no_grad():
+        return 20 * x_max.log10() - 10 * (((x_gt - x_approx)**2).mean((1, 2, 3))).log10()
+
+
+def average_psnr(data_loader, invert_fn, x_max=None):
+    out = count = 0
+    for inputs, labels in data_loader:
+        out += psnr(inputs, invert_fn(inputs), x_max=x_max).sum().item()
+        count += len(inputs)
+    return out / count
+
+
 def collect_data(data_loader, data_fn, accumulate_fn,
                  final_fn=None, map_location='cpu', path=None, use_drive=True):
 
@@ -282,22 +296,21 @@ def collect_data(data_loader, data_fn, accumulate_fn,
 
     print(flush=True)
 
-    output = None
+    out = None
     with torch.no_grad(), tqdm(data_loader, unit="batch") as pbar:
-        for data in pbar:
-            if output is None:
-                output = data_fn(data)
-            else:
-                output = accumulate_fn(output, data_fn(data))
+        for inputs, labels in pbar:
+            val = data_fn(inputs, labels)
+            out = val if out is None else accumulate_fn(out, val)
 
     if final_fn:
-        output = final_fn(output)
+        out = final_fn(out)
 
     print(flush=True)
+
     if save_path:
-        torch.save(output, save_path)
         print(f"Saving data to {save_path}.")
-    return output
+        torch.save(out, save_path)
+    return out
 
 
 def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
@@ -498,7 +511,19 @@ def sgm(x, sh=1):
     return np.exp(np.log(x + sh).sum() / len(x)) - sh
 
 
-def plot_metrics(metrics, step_start=1):
+def smoothen(values, weight):
+    av_val = values[0]
+    smoothed = []
+    for val in values:
+        if val != float('nan'):
+            av_val = av_val * weight + (1 - weight) * val
+            smoothed.append(av_val)
+        else:
+            smoothed.append(10000)
+    return smoothed
+
+
+def plot_metrics(metrics, step_start=1, smoothing=0):
     if 'step' in metrics:
         steps = metrics.pop('step')
     else:
@@ -508,8 +533,10 @@ def plot_metrics(metrics, step_start=1):
     if 'accuracy' in metrics:
         accuracy = metrics.pop('accuracy')
 
-    for key, val in metrics.items():
-        plt.plot(steps, val, label=key)
+    for key, values in metrics.items():
+        if smoothing:
+            values = smoothen(values, smoothing)
+        plt.plot(steps, values, label=key)
 
     vals = np.nan_to_num(np.array(sum(metrics.values(), [])), nan=10000)
     # print("min", vals.min())
@@ -527,7 +554,10 @@ def plot_metrics(metrics, step_start=1):
         acc_scaled = [y_min + a * (y_max - y_min) for a in accuracy]
         plt.plot(steps, acc_scaled, alpha=0.6, label='acc(scaled)')
 
-    plt.title('metrics')
+    title = "metrics"
+    if smoothing:
+        title = f"metrics (smoothing={smoothing})"
+    plt.title(title)
     plt.xlabel('steps')
     plt.legend()
 
@@ -735,12 +765,6 @@ def logsumexp(a, dim=None, b=None):
     else:
         out = (a - a_max).exp().sum(dim=0).log()
     return out + a_max
-
-
-def average_psnr(x_gt, x_approx, x_max=None):
-    if x_max is None:
-        x_max = x_gt.max()
-    return (20 * x_max.log10() - 10 * (((x_gt - x_approx)**2).mean((1, 2, 3))).log10()).mean().item()
 
 
 # stupid matplotlib....

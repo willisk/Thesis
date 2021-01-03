@@ -36,7 +36,6 @@ from debug import debug
 # @timing
 def invert(data_loader, loss_fn, optimizer,
            steps=10,
-           data_pre_fn=None,
            scheduler=None,
            #    track_history_every=None,
            plot=False,
@@ -106,8 +105,8 @@ def invert(data_loader, loss_fn, optimizer,
                     loss.backward()
                     grad_scale = 1
 
-                for k in info:
-                    info[k] *= num_batches / batch_size
+                # for k in info:
+                #     info[k] *= num_batches / batch_size
 
                 total_norm = torch.norm(torch.stack(
                     [p.grad.detach().norm() / grad_scale for p in params])).item()
@@ -118,7 +117,7 @@ def invert(data_loader, loss_fn, optimizer,
                     for param in params:
                         param.grad.detach().mul_(rescale_coef)
 
-                info['|g|'] = total_norm
+                info['|grad|'] = total_norm
 
                 if USE_AMP:
                     scaler.step(optimizer)
@@ -145,7 +144,7 @@ def invert(data_loader, loss_fn, optimizer,
     print(flush=True, end='')
 
     if plot and TRACKING:
-        utility.plot_metrics(TRACKING)
+        utility.plot_metrics(TRACKING, smoothing=0.3)
         plt.show()
 
     # return history

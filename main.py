@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader
 import torchvision
 
 import matplotlib.pyplot as plt
+# plt.style.use('default')
 
 import numpy as np
 
@@ -80,9 +81,9 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.inv_steps = 500
     # args.batch_size = -1
 
-    # args = parser.parse_args('-dataset MNIST'.split())
+    args = parser.parse_args('-dataset MNIST'.split())
     # args.nn_steps = 5
-    # args.inv_steps = 100
+    args.inv_steps = 100
     # args.batch_size = 64
     # # args.size_B = 10
     # # args.n_random_projections = 1024
@@ -94,7 +95,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.batch_size = 64
     args.seed = 0
 
-    args.size_B = 64
+    args.size_B = 1
     # args.nn_resume_train = True
     # args.nn_reset_train = True
     args.use_var = True
@@ -529,8 +530,6 @@ methods = [
         project=combine(project_NN_all, project_RP_CC),
         class_conditional=True,
     ),
-
-
 ]
 
 
@@ -567,20 +566,21 @@ for method, loss_fn in methods:
     preprocess.train()
     preprocess.to(DEVICE)
 
-    def data_loss_fn(data):
-        inputs, labels = data
-        inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
-        outputs = perturb(inputs)
-        outputs = preprocess(outputs)
-        data = (outputs, labels)
-        return loss_fn(data)
-
     def invert_fn(inputs):
         return preprocess(perturb(inputs))
 
+    def data_loss_fn(data):
+        inputs, labels = data
+        inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
+        data = (invert_fn(inputs), labels)
+        with torch.no_grad():
+            ideal_loss = loss_fn(data).item()
+        return loss_fn(data), {'ideal': ideal_loss}
+
     def callback_fn(epoch):
         if epoch % 100 == 0 and epoch > 0:
-            print(f"\nepoch {epoch}", flush=True)
+            print(f"\nepoch {epoch}:\
+                    \tpsnr {utility.average_psnr(DATA_B, invert_fn)}", flush=True)
             im_show(invert_fn(show_batch))
             print(flush=True)
 
@@ -623,9 +623,9 @@ for method, loss_fn in methods:
         f"\trel. l2 reconstruction error: {l2_err:.3f} | {l2_err_perturb:.3f}")
 
     # PSNR
-    psnr = utility.average_psnr(show_batch, invert_fn(show_batch))
-    psnr_perturb = utility.average_psnr(show_batch, perturb(show_batch))
-    print(f"\taverage PSNR: {psnr:.3f} | {psnr_perturb:.3f}")
+    psnr = utility.average_psnr(DATA_B, invert_fn)
+    psnr_perturb = utility.average_psnr(DATA_B, perturb)
+    print(f"\tav. PSNR: {psnr:.3f} | {psnr_perturb:.3f}")
 
     # NN Accuracy
     accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=invert_fn)
@@ -673,6 +673,8 @@ baseline['B (original)']['acc(val)'] = accuracy_B_val
 
 baseline['B (perturbed)']['acc'] = accuracy_B_pert
 baseline['B (perturbed)']['acc(val)'] = accuracy_B_val_pert
+# baseline['B (perturbed)']['av. PSNR'] = accuracy_B_val_pert
+# psnr_B_pert = utility.average_psnr(show_batch, perturb(show_batch))
 
 baseline['A']['acc'] = accuracy_A
 
