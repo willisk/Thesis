@@ -505,3 +505,6 @@ for method, loss_fn in methods:
     # ======= Result =======
     print("Inverted:")
     im_show(batch)
+
+    accuracy = utility.net_accuracy(net, DATA)
+    print(f"\tnn accuracy: {accuracy * 100:.1f} %")
