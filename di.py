@@ -151,6 +151,8 @@ n_dims = dataset.n_dims
 n_classes = dataset.n_classes
 
 
+# ======= Setup Methods =======
+
 STD = args.use_std
 stats_path = os.path.join(MODELDIR, "stats_{}.pt")
 
@@ -306,20 +308,28 @@ def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
     assert len(stats_a) == len(stats_b), "lists need to be of same length"
+    num_stats = len(stats_a)
     loss = torch.tensor(0).float().to(DEVICE)
-    for (ma, sa), (mb, sb) in zip(stats_a, stats_b):
+    info = {}
+    for i, ((ma, sa), (mb, sb)) in enumerate(zip(stats_a, stats_b)):
         if ma.ndim == 1:
-            loss += (ma.squeeze() - mb.squeeze()).norm()
-            loss += (sa.squeeze() - sb.squeeze()).norm()
-        else:
-            # one feature
+            loss_m = (ma.squeeze() - mb.squeeze()).norm()
+            loss_s = (sa.squeeze() - sb.squeeze()).norm()
+        else:   # class conditional
             if np.prod(ma.shape) == ma.shape[0] or np.prod(mb.shape) == mb.shape[0]:
-                loss += (ma.squeeze() - mb.squeeze()).abs().mean()
-                loss += (sa.squeeze() - sb.squeeze()).abs().mean()
-            else:
-                loss += (ma.squeeze() - mb.squeeze()).norm(dim=1).mean()
-                loss += (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
-    return loss
+                loss_m = (ma.squeeze() - mb.squeeze()).abs().mean()
+                loss_s = (sa.squeeze() - sb.squeeze()).abs().mean()
+            else:  # multiple features
+                loss_m = (ma.squeeze() - mb.squeeze()).norm(dim=1).mean()
+                loss_s = (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
+        if num_stats > 1:
+            info[f'[stats losses means] {i}'] = loss_m.item()
+            info[f'[stats losses vars] {i}'] = loss_s.item()
+        else:
+            info[f'[stats losses] m'] = loss_m.item()
+            info[f'[stats losses] s'] = loss_s.item()
+        loss += loss_m + loss_s
+    return loss, info
 
 
 f_crit = args.f_crit
@@ -347,25 +357,27 @@ def loss_fn_wrapper(name, project, class_conditional):
 
         if f_reg:
             loss_reg = f_reg * regularization(inputs)
-            info['[loss] reg'] = loss_reg.item()
+            info['[losses] reg'] = loss_reg.item()
             loss += loss_reg
 
         if f_stats:
             outputs = project(data)
             stats = utility.get_stats(
                 outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
-            cost_stats = f_stats * loss_stats(stats_A, stats)
-            info['[loss] stats'] = cost_stats.item()
+            cost_stats, info_stats = loss_stats(stats_A, stats)
+            cost_stats *= f_stats
+            info = {**info, **info_stats}
+            info['[losses] stats'] = cost_stats.item()
             loss += cost_stats
 
         if f_crit:
             if net_last_outputs is None:
                 net_last_outputs = net(inputs)
             loss_crit = f_crit * criterion(net_last_outputs, labels)
-            info['[loss] crit'] = loss_crit.item()
+            info['[losses] crit'] = loss_crit.item()
             loss += loss_crit
 
-            info['[mean] accuracy'] = utility.count_correct(
+            info[':mean: accuracy'] = utility.count_correct(
                 net_last_outputs, labels) / len(labels)
 
         info['loss'] = loss
@@ -425,6 +437,8 @@ methods = [
 
 def im_show(batch):
     with torch.no_grad():
+        if args.normalize_images:
+            print("(normalized)")
         img_grid = torchvision.utils.make_grid(
             batch.cpu(), nrow=10, normalize=args.normalize_images, scale_each=True)
         plt.figure(figsize=(16, 32))
@@ -465,7 +479,7 @@ for method, loss_fn in methods:
     def callback_fn(epoch, metrics):
         if epoch % 100 == 0 and epoch > 0:
             print(f"\nepoch {epoch}:\
-                    \taccuracy {metrics['[mean] accuracy'][-1]}", flush=True)
+                    \taccuracy {metrics[':mean: accuracy'][-1]}", flush=True)
             im_show(show_batch)
             print(flush=True)
 

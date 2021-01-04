@@ -29,6 +29,7 @@ def invert(data_loader, loss_fn, optimizer,
            plot=False,
            track_per_batch=False,
            track_grad_norm=False,
+           print_grouped=False,
            ):
 
     assert utility.valid_data_loader(
@@ -60,7 +61,10 @@ def invert(data_loader, loss_fn, optimizer,
         for epoch in range(steps):
             for batch_i, data in enumerate(data_loader):
 
-                step = epoch + batch_i / num_batches
+                if track_per_batch:
+                    step = epoch + (batch_i + 1) / num_batches
+                else:
+                    step = epoch + 1 + batch_i / num_batches
 
                 optimizer.zero_grad()
 
@@ -96,7 +100,10 @@ def invert(data_loader, loss_fn, optimizer,
 
                     info['|grad|'] = total_norm
 
-                pbar.set_postfix(**info, refresh=False)
+                pbar.set_postfix(**{
+                    k.split(']')[1].strip() if ']' in k else k: v
+                    for k, v in info.items() if ']' not in k
+                }, refresh=False)
                 pbar.update()
 
                 for k, v in info.items():
@@ -111,11 +118,10 @@ def invert(data_loader, loss_fn, optimizer,
 
             if not track_per_batch:
                 for k, v in metrics.items():
-                    if '[mean]' in v:
+                    if ':mean:' in v:
                         metrics[k][-1] /= num_batches
 
             if callback_fn:
-                # m = {k: v[-1] for k, v in metrics.items()}
                 callback_fn(epoch, metrics)
             # epoch end
 
@@ -126,6 +132,3 @@ def invert(data_loader, loss_fn, optimizer,
         plt.show()
 
     return metrics
-
-
-def setup_methods():

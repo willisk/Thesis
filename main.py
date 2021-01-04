@@ -185,9 +185,6 @@ input_shape = dataset.input_shape
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
 
-
-STD = args.use_std
-stats_path = os.path.join(MODELDIR, "stats_{}.pt")
 # ======= Perturbation =======
 
 
@@ -265,6 +262,10 @@ class preprocessing_model(nn.Module):
         # outputs = self.conv4(outputs)
         # return outputs
 
+
+# ======= Setup Methods =======
+STD = args.use_std
+stats_path = os.path.join(MODELDIR, "stats_{}.pt")
 
 # ======= Neural Network =======
 model_path, net = dataset.net()
@@ -470,7 +471,7 @@ def loss_fn_wrapper(name, project, class_conditional):
 
         if f_reg:
             loss_reg = f_reg * regularization(inputs)
-            info['loss_reg'] = loss_reg.item()
+            info['[losses] reg'] = loss_reg.item()
             loss += loss_reg
 
         if f_stats:
@@ -478,17 +479,17 @@ def loss_fn_wrapper(name, project, class_conditional):
             stats = utility.get_stats(
                 outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
             cost_stats = f_stats * loss_stats(stats_A, stats)
-            info['loss_stats'] = cost_stats.item()
+            info['[losses] stats'] = cost_stats.item()
             loss += cost_stats
 
         if f_crit:
             if net_last_outputs is None:
                 net_last_outputs = net(inputs)
             loss_crit = f_crit * criterion(net_last_outputs, labels)
-            info['loss_crit'] = loss_crit.item()
+            info['[losses] crit'] = loss_crit.item()
             loss += loss_crit
 
-            info['[mean] accuracy'] = utility.count_correct(
+            info[':mean: accuracy'] = utility.count_correct(
                 net_last_outputs, labels) / len(labels)
 
         info['loss'] = loss
@@ -592,7 +593,7 @@ for method, loss_fn in methods:
             inputs = jitter(inputs)
         data_inv = (invert_fn(inputs), labels)
         info = loss_fn(data_inv)
-        info['[mean] psnr'] = utility.average_psnr(data, invert_fn)
+        info[':mean: psnr'] = utility.average_psnr(data, invert_fn)
         if args.plot_ideal:
             with torch.no_grad():
                 info['ideal'] = loss_fn(data)['loss'].item()
@@ -601,7 +602,7 @@ for method, loss_fn in methods:
     def callback_fn(epoch, metrics):
         if epoch % 100 == 0 and epoch > 0:
             print(f"\nepoch {epoch}:\
-                    \tpsnr {metrics['[mean] psnr'][-1]}", flush=True)
+                    \tpsnr {metrics[':mean: psnr'][-1]}", flush=True)
             im_show(invert_fn(show_batch))
             print(flush=True)
 

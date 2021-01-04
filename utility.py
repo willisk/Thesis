@@ -457,9 +457,8 @@ def train(net, data_loader, criterion, optimizer,
             grad_total = 0.0
 
             for inputs, labels in data_loader:
-                # inputs, labels = inputs.to(device), labels.to(device)
-
                 optimizer.zero_grad()
+
                 if USE_AMP:
                     with autocast():
                         outputs = net(inputs)
@@ -503,7 +502,7 @@ def train(net, data_loader, criterion, optimizer,
             if TRACKING:
                 TRACKING['loss'].append(loss)
                 TRACKING['accuracy'].append(accuracy)
-                TRACKING['grad'].append(grad_norm)
+                TRACKING['|grad|'].append(grad_norm)
 
             if save_path is not None \
                 and (save_every is not None
@@ -547,46 +546,44 @@ def smoothen(values, weight):
     return smoothed
 
 
+jet = plt.cm.brg
+
+
 def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
-    metrics = {k.replace('[mean]', '').strip(): v for k, v in metrics.items()}
+    metrics = {k.replace(':mean:', '').strip(): v for k, v in metrics.items()}
 
-    for group in set(e.split(']')[0][1:] for e in d if ']' in e):
-        group_metrics = {k.split(' ')[1]: d.pop(k)
-                         for k, v in list(d.items()) if group in k}
-        plot_metrics(metrics=group_metrics, title=group,
-                     step_start=step_start, smoothing=smoothing)
-
-    if not metrics:
-        return
+    grouped = {}
+    for group in set(e.split(']')[0].split('[')[1] for e in metrics if ']' in e):
+        grouped[group] = {k.split(']')[1].strip(): metrics.pop(k)
+                          for k, v in list(metrics.items()) if f'[{group}]' in k}
+        if 'step' in metrics:
+            grouped[group]['step'] = metrics['step']
 
     if 'step' in metrics:
         steps = metrics.pop('step')
     else:
-        steps = range(step_start, len(metrics['loss']) + 1)
+        steps = range(step_start, len(list(metrics.values())[0]) + 1)
 
     accuracy = None
     if 'accuracy' in metrics:
         accuracy = metrics.pop('accuracy')
 
-    for key, values in metrics.items():
+    num_plots = len(metrics)
+    if num_plots > 10:
+        colors = jet(np.linspace(0, 1, num_plots))
+    for i, (key, values) in enumerate(metrics.items()):
         if smoothing:
             values = smoothen(values, smoothing)
-        plt.plot(steps, values, label=key)
+        if num_plots > 10:
+            plt.plot(steps, values, label=key, color=colors[i])
+        else:
+            plt.plot(steps, values, label=key)
 
     vals = np.ma.masked_invalid(np.vstack(list(metrics.values())))
     vals_m = sgm(vals, axis=1, keepdims=True)
     vals_s = np.sqrt(((vals - vals_m)**2).mean(axis=1))
     y_max = min(vals.max(), max(vals_m.squeeze() + vals_s))
     y_min = max(vals.min(), min(vals_m.squeeze() - vals_s))
-    # print("min", vals.min())
-    # print("max", vals.max())
-    # sgm_m = sgm(vals, sh=vals.max())
-    # sgm_s = sgm(np.abs(vals - sgm_m), sh=vals.max())
-    # sgm_m = sgm(vals)
-    # sgm_s = sgm(np.abs(vals - sgm_m))
-    # y_min, y_max = min(vals), max(vals)
-    # buffer = 0.1 * (sgm_s **2)
-    # y_min, y_max = max(y_min, sgm_m - sgm_s), min(y_max, sgm_m + sgm_s)
     buffer = 0.1 * (y_max - y_min)
     plt.gca().set_ylim([y_min - buffer, y_max + buffer])
 
@@ -594,12 +591,17 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
         acc_scaled = [y_min + a * (y_max - y_min) for a in accuracy]
         plt.plot(steps, acc_scaled, alpha=0.6, label='acc(scaled)')
 
-    title = "metrics"
     if smoothing:
-        title = f"metrics (smoothing={smoothing})"
+        title = f"{title} (smoothing={smoothing})"
     plt.title(title)
     plt.xlabel('steps')
     plt.legend()
+    plt.show()
+
+    if grouped:
+        for group, metrics in grouped.items():
+            plot_metrics(metrics=metrics, title=group,
+                         step_start=step_start, smoothing=smoothing)
 
 
 def learn_stats(stats_net, data_loader):
