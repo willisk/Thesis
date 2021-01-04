@@ -372,5 +372,5 @@ for method, loss_fn in methods:
                             use_amp=args.use_amp,
                             # grad_norm_fn=grad_norm_fn,
                             # callback_fn=callback_fn,
-                            plot_batch=True,
+                            track_per_batch=True,
                             )

@@ -25,11 +25,12 @@ from debug import debug
 
 from tqdm import tqdm
 
+
 class tqdmEpoch(tqdm):
     def __init__(self, epochs, batch_size, **kwargs):
         super().__init__(
             total=epochs * batch_size,
-            bar_format=f"{{l_bar}}{{bar}}|{{n:.1f}}/{epochs} [{{elapsed}}<{{remaining}}, {{rate_fmt}}{{postfix}}]",
+            bar_format=f"{{l_bar}}{{bar}}|{{n:.1f}}/{epochs} [{{elapsed}}<{{remaining}},{{rate_fmt}}{{postfix}}]",
             unit_scale=1 / batch_size,
             unit='epoch',
             **kwargs
@@ -46,16 +47,6 @@ class DataL(DataLoader):
     def __iter__(self):
         for inputs, labels in super().__iter__():
             yield inputs.to(self.device), labels.to(self.device)
-
-
-def tqdm_fmt_dict(epochs, batch_size):
-    total = epochs * batch_size
-    return dict(
-        total=total,
-        bar_format=f"{{l_bar}}{{bar}}|{{n:.1f}}/{str(epochs)} [{{elapsed}}<{{remaining}}, {{rate_fmt}}{{postfix}}]",
-        unit_scale=1 / batch_size,
-        unit='epoch',
-    )
 
 
 class timer():
@@ -548,6 +539,8 @@ def smoothen(values, weight):
 
 
 def plot_metrics(metrics, step_start=1, smoothing=0):
+    metrics = {k.replace('[mean]').strip():v for k,v in metrics.items()}
+
     if 'step' in metrics:
         steps = metrics.pop('step')
     else:

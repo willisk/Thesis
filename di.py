@@ -43,7 +43,7 @@ from debug import debug
 
 
 # ======= Arg Parse =======
-parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
+parser = argparse.ArgumentParser(description="Reconstruction Tests")
 parser.add_argument(
     "-dataset", choices=['CIFAR10', 'MNIST'], required=True)
 parser.add_argument("-seed", type=int, default=0)
@@ -51,17 +51,19 @@ parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("--use_std", action="store_true")
-parser.add_argument("--plot_ideal", action="store_true")
+parser.add_argument("--use_jitter", action="store_true")
+parser.add_argument("--normalize_images", action="store_true")
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-batch_size", type=int, default=64)
 parser.add_argument("-n_random_projections", type=int, default=256)
 parser.add_argument("-inv_lr", type=float, default=0.1)
 parser.add_argument("-inv_steps", type=int, default=100)
-parser.add_argument("-inv_batch_size", type=int, default=64)
 parser.add_argument("-f_reg", type=float, default=0.001)
 parser.add_argument("-f_crit", type=float, default=1)
 parser.add_argument("-f_stats", type=float, default=10)
+parser.add_argument("-size_A", type=int, default=-1)
+parser.add_argument("-size_B", type=int, default=64)
 
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset GMM'.split())
@@ -138,21 +140,18 @@ elif args.dataset == 'MNIST':
 MODELDIR = dataset.data_dir
 
 
-A, B, B_val = dataset.get_datasets()
+A, B, B_val = dataset.get_datasets(size_A=args.size_A)
 
 
 DATA_A = utility.DataL(
     A, batch_size=args.batch_size, shuffle=True, device=DEVICE)
-DATA_B = utility.DataL(
-    B, batch_size=args.batch_size, shuffle=True, device=DEVICE)
-DATA_B_val = utility.DataL(
-    B_val, batch_size=args.batch_size, shuffle=True, device=DEVICE)
 
+input_shape = dataset.input_shape
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
 
 
-STD = args.use_var
+STD = args.use_std
 stats_path = os.path.join(MODELDIR, "stats_{}.pt")
 
 # ======= Neural Network =======
@@ -181,8 +180,7 @@ net_last_outputs = None
 
 
 def layer_hook_wrapper(idx):
-    def hook(_module, inputs, outputs):
-        # layer_activations[idx] = inputs[0]
+    def hook(_module, _inputs, outputs):
         layer_activations[idx] = outputs
     return hook
 
@@ -195,7 +193,8 @@ def project_NN(data):
     global net_last_outputs
     inputs, labels = data
     net_last_outputs = net(inputs)
-    return net_last_outputs
+    return layer_activations[-1]
+    # return net_last_outputs
 
 
 def project_NN_all(data):
@@ -322,6 +321,7 @@ def loss_fn_wrapper(name, project, class_conditional):
     _name = name.replace(' ', '-')
     if "RP" in _name:
         _name = f"{_name}-{rp_hash}"
+
     stats_A = utility.collect_stats(
         DATA_A, project, n_classes, class_conditional,
         std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE)
@@ -331,20 +331,36 @@ def loss_fn_wrapper(name, project, class_conditional):
         net_last_outputs = None
 
         inputs, labels = data
-        outputs = project(data)
 
-        stats = utility.get_stats(
-            outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
-
+        info = {}
         loss = torch.tensor(0).float().to(DEVICE)
-        loss += f_stats * loss_stats(stats, stats_A) if f_stats else 0
-        loss += f_reg * regularization(inputs) if f_reg else 0
+
+        if f_reg:
+            loss_reg = f_reg * regularization(inputs)
+            info['loss_reg'] = loss_reg.item()
+            loss += loss_reg
+
+        if f_stats:
+            outputs = project(data)
+            stats = utility.get_stats(
+                outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
+            cost_stats = f_stats * loss_stats(stats_A, stats)
+            info['loss_stats'] = cost_stats.item()
+            loss += cost_stats
 
         if f_crit:
             if net_last_outputs is None:
                 net_last_outputs = net(inputs)
-            loss += f_crit * criterion(net_last_outputs, labels)
-        return loss
+            loss_crit = f_crit * criterion(net_last_outputs, labels)
+            info['loss_crit'] = loss_crit.item()
+            loss += loss_crit
+
+            info['[mean] accuracy'] = utility.count_correct(
+                net_last_outputs, labels) / len(labels)
+
+        info['loss'] = loss
+        return info
+        # return loss
     return name, _loss_fn
 
 
@@ -400,7 +416,7 @@ methods = [
 def im_show(batch):
     with torch.no_grad():
         img_grid = torchvision.utils.make_grid(
-            batch.cpu(), nrow=10, normalize=True, scale_each=True)
+            batch.cpu(), nrow=10, normalize=args.normalize_images, scale_each=True)
         plt.figure(figsize=(16, 32))
         plt.imshow(img_grid.permute(1, 2, 0))
         plt.show()
@@ -422,17 +438,26 @@ def grad_norm_fn(x):
 for method, loss_fn in methods:
     print("\n## Method:", method)
 
-    batch = torch.randn((args.inv_batch_size, *dataset.input_shape),
+    batch = torch.randn((args.size_B, *input_shape),
                         requires_grad=True, device=DEVICE)
     targets = torch.LongTensor(
-        range(args.inv_batch_size)).to(DEVICE) % n_classes
+        range(args.size_B)).to(DEVICE) % n_classes
     DATA = [(batch, targets)]
+    show_batch = batch[:10]
 
     def data_loss_fn(data):
         inputs, labels = data
-        inputs = jitter(inputs)
-        data = (inputs, labels)
+        if args.use_jitter:
+            inputs = jitter(inputs)
+            data = (inputs, labels)
         return loss_fn(data)
+
+    def callback_fn(epoch, metrics):
+        if epoch % 100 == 0 and epoch > 0:
+            print(f"\nepoch {epoch}:\
+                    \taccuracy {metrics['[mean] accuracy']}", flush=True)
+            im_show(show_batch)
+            print(flush=True)
 
     optimizer = torch.optim.Adam([batch], lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
@@ -444,12 +469,12 @@ for method, loss_fn in methods:
                             steps=inv_steps,
                             # steps=2,
                             # data_pre_fn=data_pre_fn,
-                            # inputs_pre_fn=jitter,
                             #    track_history=True,
                             #    track_history_every=10,
                             plot=True,
                             use_amp=args.use_amp,
                             #    grad_norm_fn=grad_norm_fn,
+                            callback_fn=callback_fn,
                             )
 
     # ======= Result =======

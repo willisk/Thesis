@@ -46,7 +46,7 @@ from debug import debug
 
 
 # ======= Arg Parse =======
-parser = argparse.ArgumentParser(description="GMM Reconstruction Tests")
+parser = argparse.ArgumentParser(description="Reconstruction Tests")
 parser.add_argument(
     "-dataset", choices=['CIFAR10', 'GMM', 'MNIST'], required=True)
 parser.add_argument("-seed", type=int, default=-1)
@@ -56,6 +56,7 @@ parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("--use_std", action="store_true")
 parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
+parser.add_argument("--normalize_images", action="store_true")
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-batch_size", type=int, default=64)
@@ -230,6 +231,7 @@ class perturb_model(nn.Module):
 
 
 perturb = perturb_model()
+perturb.eval()
 perturb.to(DEVICE)
 
 # ======= Preprocessing Model =======
@@ -238,11 +240,10 @@ perturb.to(DEVICE)
 class preprocessing_model(nn.Module):
     def __init__(self):
         super().__init__()
+
         nch = input_shape[0]
-        # block_depth = args.preprocessing_depth
-        # self.block_layer = nn.Sequential(*[
-        #     nets.ResidualBlock(nch, nch, 1) for _ in range(block_depth)])
         n_chan_inner = 8
+
         self.block_layer = nn.Sequential(
             nets.ResidualBlock(nch, n_chan_inner, 1, bias=False),
             nets.ResidualBlock(n_chan_inner, nch, 1, bias=False),
@@ -255,9 +256,6 @@ class preprocessing_model(nn.Module):
         # self.shift = nn.Parameter(torch.zeros(input_shape).unsqueeze(0))
 
     def forward(self, inputs):
-        # outputs = self.block_layer(inputs)
-        # debug(outputs)
-        # return outputs
         return self.block_layer(inputs)
         # outputs = inputs
         # outputs = outputs + self.shift
@@ -268,17 +266,6 @@ class preprocessing_model(nn.Module):
         # return outputs
 
 
-# def perturb(X):
-#     X_shape = X.shape
-#     X = X.reshape(-1, n_dims)
-#     out = X @ perturb_matrix + perturb_shift
-#     return out.reshape(X_shape)
-# M = torch.eye(n_dims, requires_grad=True, device=DEVICE)
-# b = torch.zeros((n_dims), requires_grad=True, device=DEVICE)
-# def preprocessing_fn(X):
-#     X_shape = X.shape
-#     X = X.reshape(-1, n_dims)
-#     return (X @ M + b).reshape(X_shape)
 # ======= Neural Network =======
 model_path, net = dataset.net()
 net.to(DEVICE)
@@ -457,6 +444,7 @@ def loss_fn_wrapper(name, project, class_conditional):
     _name = name.replace(' ', '-')
     if "RP" in _name:
         _name = f"{_name}-{rp_hash}"
+
     stats_A = utility.collect_stats(
         DATA_A, project, n_classes, class_conditional,
         std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE)
@@ -467,19 +455,35 @@ def loss_fn_wrapper(name, project, class_conditional):
 
         inputs, labels = data
 
+        info = {}
         loss = torch.tensor(0).float().to(DEVICE)
+
+        if f_reg:
+            loss_reg = f_reg * regularization(inputs)
+            info['loss_reg'] = loss_reg.item()
+            loss += loss_reg
+
         if f_stats:
             outputs = project(data)
             stats = utility.get_stats(
                 outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
-            loss += f_stats * loss_stats(stats, stats_A) if f_stats else 0
-        loss += f_reg * regularization(inputs) if f_reg else 0
+            cost_stats = f_stats * loss_stats(stats_A, stats)
+            info['loss_stats'] = cost_stats.item()
+            loss += cost_stats
 
         if f_crit:
             if net_last_outputs is None:
                 net_last_outputs = net(inputs)
-            loss += f_crit * criterion(net_last_outputs, labels)
-        return loss
+            loss_crit = f_crit * criterion(net_last_outputs, labels)
+            info['loss_crit'] = loss_crit.item()
+            loss += loss_crit
+
+            info['[mean] accuracy'] = utility.count_correct(
+                net_last_outputs, labels) / len(labels)
+
+        info['loss'] = loss
+        return info
+        # return loss
     return name, _loss_fn
 
 
@@ -535,13 +539,12 @@ methods = [
 def im_show(batch):
     with torch.no_grad():
         img_grid = torchvision.utils.make_grid(
-            batch.cpu(), nrow=5, normalize=True, scale_each=True)
+            batch.cpu(), nrow=5, normalize=args.normalize_images, scale_each=True)
         plt.figure(figsize=(16, 4))
         plt.imshow(img_grid.permute(1, 2, 0))
         plt.show()
 
 
-# DATA_B = [next(iter(DATA_B))]
 show_batch = next(iter(DATA_B))[0][:10].to(DEVICE)
 
 print("\nground truth:", flush=True)
@@ -578,16 +581,17 @@ for method, loss_fn in methods:
         if args.use_jitter:
             inputs = jitter(inputs)
         data_inv = (invert_fn(inputs), labels)
+        info = loss_fn(data_inv)
+        info['[mean] psnr'] = utility.average_psnr(data, invert_fn)
         if args.plot_ideal:
             with torch.no_grad():
-                ideal_loss = loss_fn(data).item()
-            return loss_fn(data_inv), {'ideal': ideal_loss}
-        return loss_fn(data_inv)
+                info['ideal'] = loss_fn(data)['loss'].item()
+        return info
 
-    def callback_fn(epoch):
+    def callback_fn(epoch, metrics):
         if epoch % 100 == 0 and epoch > 0:
             print(f"\nepoch {epoch}:\
-                    \tpsnr {utility.average_psnr(DATA_B, invert_fn)}", flush=True)
+                    \tpsnr {metrics['[mean] psnr']}", flush=True)
             im_show(invert_fn(show_batch))
             print(flush=True)
 
@@ -605,7 +609,7 @@ for method, loss_fn in methods:
                             #    track_history_every=10,
                             plot=True,
                             use_amp=args.use_amp,
-                            # grad_norm_fn=grad_norm_fn,
+                            #    grad_norm_fn=grad_norm_fn,
                             callback_fn=callback_fn,
                             )
 

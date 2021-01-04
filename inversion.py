@@ -39,7 +39,8 @@ def invert(data_loader, loss_fn, optimizer,
            grad_norm_fn=None,
            callback_fn=None,
            plot=False,
-           plot_batch=False,
+           track_per_batch=False,
+           track_gradient=False,
            ):
 
     assert utility.valid_data_loader(
@@ -56,11 +57,11 @@ def invert(data_loader, loss_fn, optimizer,
     num_batches = len(data_loader)
 
     def process_result(res):
-        if isinstance(res, tuple):
-            loss, info = res
+        if isinstance(res, dict):
+            info = res
+            loss = res['loss']
         else:
             loss = res
-            info = {}
         info = {'loss': loss.item(), **info}
         return loss, info
 
@@ -72,17 +73,7 @@ def invert(data_loader, loss_fn, optimizer,
 
                 step = epoch + batch_i / num_batches
 
-                # if step == 1 and track_history_every:
-                #     history = [(inputs.detach().cpu().clone(), 0)]
                 optimizer.zero_grad()
-
-                if isinstance(data, torch.Tensor):
-                    batch_size = len(data)
-                else:
-                    batch_size = len(data[0])
-
-                # if data_pre_fn is not None:
-                #     data = data_pre_fn(data)
 
                 if USE_AMP:
                     with autocast():
@@ -96,20 +87,6 @@ def invert(data_loader, loss_fn, optimizer,
                     loss.backward()
                     grad_scale = 1
 
-                # for k in info:
-                #     info[k] *= num_batches / batch_size
-
-                total_norm = torch.norm(torch.stack(
-                    [p.grad.detach().norm() / grad_scale for p in params])).item()
-                rescale_coef = 1
-
-                if grad_norm_fn:
-                    rescale_coef = grad_norm_fn(total_norm) / total_norm
-                    for param in params:
-                        param.grad.detach().mul_(rescale_coef)
-
-                info['|grad|'] = total_norm
-
                 if USE_AMP:
                     scaler.step(optimizer)
                     scaler.update()
@@ -117,25 +94,41 @@ def invert(data_loader, loss_fn, optimizer,
                     optimizer.step()
 
                 if scheduler is not None:
-                    scheduler.step(total_norm)
+                    scheduler.step(loss)
+
+                if track_gradient or grad_norm_fn:
+                    total_norm = torch.norm(torch.stack(
+                        [p.grad.detach().norm() / grad_scale for p in params])).item()
+
+                    if grad_norm_fn:
+                        rescale_coef = grad_norm_fn(total_norm) / total_norm
+                        for param in params:
+                            param.grad.detach().mul_(rescale_coef)
+
+                    info['|grad|'] = total_norm
 
                 pbar.set_postfix(**info, refresh=False)
                 pbar.update()
 
                 for k, v in info.items():
-                    if batch_i == 0 or plot_batch:
+                    if batch_i == 0 or track_per_batch:
                         metrics[k].append(v)
                     else:
                         metrics[k][-1] += v
 
-                if batch_i == 0 or plot_batch:
+                if batch_i == 0 or track_per_batch:
                     metrics['step'].append(step)
+                # batch end
+
+            if not track_per_batch:
+                for k, v in metrics.items():
+                    if '[mean]' in v:
+                        metrics[k][-1] /= num_batches
 
             if callback_fn:
-                callback_fn(epoch)
-            # if track_history_every and (
-            #         step % track_history_every == 0 or step == steps):
-            #     history.append((inputs.detach().cpu().clone(), step))
+                m = {k: v[-1] for k, v in metrics.items()}
+                callback_fn(epoch, m)
+            # epoch end
 
     print(flush=True)
 
@@ -143,7 +136,6 @@ def invert(data_loader, loss_fn, optimizer,
         utility.plot_metrics(metrics, smoothing=0)
         plt.show()
 
-    # return history
     return metrics
 
 
