@@ -598,7 +598,8 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
     if num_plots > 10:
         plt.legend(bbox_to_anchor=(1.05, 1),
                    loc='upper left', fontsize='xx-small')
-    plt.legend()
+    else:
+        plt.legend()
     plt.show()
 
     if grouped:

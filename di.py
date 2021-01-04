@@ -71,13 +71,14 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.inv_steps = 500
     # args.batch_size = -1
 
-    args = parser.parse_args('-dataset MNIST'.split())
-    args.inv_steps = 2
+    # args = parser.parse_args('-dataset MNIST'.split())
+    # args.inv_steps = 2
     # args.size_B = 128
     # args.inv_lr = 0.01
 
-    # args = parser.parse_args('-dataset CIFAR10'.split())
-    # args.inv_steps = 600
+    args = parser.parse_args('-dataset CIFAR10'.split())
+    args.inv_steps = 2
+    args.size_B = 8
     # args.batch_size = 256
 
     # args.n_random_projections = 1024
@@ -172,8 +173,8 @@ utility.train(net, DATA_A, criterion, optimizer,
               )
 net.eval()
 
-utility.print_net_accuracy(net, DATA_A)
-print()
+# utility.print_net_accuracy(net, DATA_A)
+# print()
 
 verifier_path, verifier_net = dataset.verifier_net()
 if verifier_net:
@@ -186,8 +187,8 @@ if verifier_net:
                   reset=nn_reset_training,
                   use_drive=USE_DRIVE,
                   )
-    print("verifier ", end='')
-    utility.print_net_accuracy(verifier_net, DATA_A)
+    # print("verifier ", end='')
+    # utility.print_net_accuracy(verifier_net, DATA_A)
 
 
 # ======= NN Project =======
@@ -343,8 +344,8 @@ def loss_stats(stats_a, stats_b):
             info[f'[stats losses means] {i}'] = loss_m.item()
             info[f'[stats losses vars] {i}'] = loss_s.item()
         else:
-            info[f'[stats losses] m'] = loss_m.item()
-            info[f'[stats losses] s'] = loss_s.item()
+            info[f'[stats losses] mean'] = loss_m.item()
+            info[f'[stats losses] var'] = loss_s.item()
         loss += loss_m + loss_s
     return loss, info
 
@@ -409,51 +410,51 @@ methods = [
     #     project=get_input,
     #     class_conditional=False,
     # ),
-    loss_fn_wrapper(
-        name="NN",
-        project=project_NN,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="NN CC",
-        project=project_NN,
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN",
+    #     project=project_NN,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN CC",
+    #     project=project_NN,
+    #     class_conditional=True,
+    # ),
     loss_fn_wrapper(
         name="NN ALL",
         project=project_NN_all,
         class_conditional=False,
     ),
-    loss_fn_wrapper(
-        name="NN ALL CC",
-        project=project_NN_all,
-        class_conditional=True,
-    ),
-    loss_fn_wrapper(
-        name="RP",
-        project=project_RP,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="RP CC",
-        project=project_RP_CC,
-        class_conditional=True,
-    ),
-    loss_fn_wrapper(
-        name="RP ReLU",
-        project=project_RP_relu,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="RP ReLU CC",
-        project=project_RP_relu_CC,
-        class_conditional=True,
-    ),
-    loss_fn_wrapper(
-        name="NN ALL + RP CC",
-        project=combine(project_NN_all, project_RP_CC),
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
+    #     class_conditional=True,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP",
+    #     project=project_RP,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP CC",
+    #     project=project_RP_CC,
+    #     class_conditional=True,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP ReLU",
+    #     project=project_RP_relu,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP ReLU CC",
+    #     project=project_RP_relu_CC,
+    #     class_conditional=True,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN ALL + RP CC",
+    #     project=combine(project_NN_all, project_RP_CC),
+    #     class_conditional=True,
+    # ),
 ]
 
 
