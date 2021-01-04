@@ -40,7 +40,7 @@ def invert(data_loader, loss_fn, optimizer,
            callback_fn=None,
            plot=False,
            track_per_batch=False,
-           track_gradient=False,
+           track_grad_norm=False,
            ):
 
     assert utility.valid_data_loader(
@@ -96,7 +96,7 @@ def invert(data_loader, loss_fn, optimizer,
                 if scheduler is not None:
                     scheduler.step(loss)
 
-                if track_gradient or grad_norm_fn:
+                if track_grad_norm or grad_norm_fn:
                     total_norm = torch.norm(torch.stack(
                         [p.grad.detach().norm() / grad_scale for p in params])).item()
 

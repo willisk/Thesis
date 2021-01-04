@@ -475,6 +475,7 @@ for method, loss_fn in methods:
                             use_amp=args.use_amp,
                             #    grad_norm_fn=grad_norm_fn,
                             callback_fn=callback_fn,
+                            track_grad_norm=True,
                             )
 
     # ======= Result =======
