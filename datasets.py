@@ -13,7 +13,8 @@ import torchvision
 from torch.utils.data import random_split, DataLoader, TensorDataset, Subset
 import torchvision.transforms as transforms
 
-from ext.cifar10pretrained.cifar10_models import resnet34 as ResNet34
+# https://github.com/huyvnphan/PyTorch_CIFAR10
+from ext.cifar10pretrained.cifar10_models import resnet34 as ResNet34, resnet50 as ResNet50
 # from ext.cifar10pretrained.cifar10_download import main as download_resnet
 # download_resnet()
 import utility
@@ -94,9 +95,13 @@ class CIFAR10(Dataset):
                          transform=transform)
 
     def net(self):
-        # https://github.com/huyvnphan/PyTorch_CIFAR10
         resnet = ResNet34()
         model_path = os.path.join(self.data_dir, "net_resnet34.pt")
+        return model_path, resnet
+
+    def verifier_net(self):
+        resnet = ResNet50()
+        model_path = os.path.join(self.data_dir, "net_resnet50.pt")
         return model_path, resnet
 
 
