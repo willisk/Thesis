@@ -547,8 +547,17 @@ def smoothen(values, weight):
     return smoothed
 
 
-def plot_metrics(metrics, step_start=1, smoothing=0):
+def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
     metrics = {k.replace('[mean]', '').strip(): v for k, v in metrics.items()}
+
+    for group in set(e.split(']')[0][1:] for e in d if ']' in e):
+        group_metrics = {k.split(' ')[1]: d.pop(k)
+                         for k, v in list(d.items()) if group in k}
+        plot_metrics(metrics=group_metrics, title=group,
+                     step_start=step_start, smoothing=smoothing)
+
+    if not metrics:
+        return
 
     if 'step' in metrics:
         steps = metrics.pop('step')

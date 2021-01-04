@@ -347,7 +347,7 @@ def loss_fn_wrapper(name, project, class_conditional):
 
         if f_reg:
             loss_reg = f_reg * regularization(inputs)
-            info['loss_reg'] = loss_reg.item()
+            info['[loss] reg'] = loss_reg.item()
             loss += loss_reg
 
         if f_stats:
@@ -355,14 +355,14 @@ def loss_fn_wrapper(name, project, class_conditional):
             stats = utility.get_stats(
                 outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
             cost_stats = f_stats * loss_stats(stats_A, stats)
-            info['loss_stats'] = cost_stats.item()
+            info['[loss] stats'] = cost_stats.item()
             loss += cost_stats
 
         if f_crit:
             if net_last_outputs is None:
                 net_last_outputs = net(inputs)
             loss_crit = f_crit * criterion(net_last_outputs, labels)
-            info['loss_crit'] = loss_crit.item()
+            info['[loss] crit'] = loss_crit.item()
             loss += loss_crit
 
             info['[mean] accuracy'] = utility.count_correct(
@@ -465,7 +465,7 @@ for method, loss_fn in methods:
     def callback_fn(epoch, metrics):
         if epoch % 100 == 0 and epoch > 0:
             print(f"\nepoch {epoch}:\
-                    \taccuracy {metrics['[mean] accuracy']}", flush=True)
+                    \taccuracy {metrics['[mean] accuracy'][-1]}", flush=True)
             im_show(show_batch)
             print(flush=True)
 

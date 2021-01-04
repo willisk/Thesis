@@ -20,18 +20,6 @@ if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
 from debug import debug
 
 
-# def betabinom_distr(N, a=1, b=1):
-#     rv = betabinom(N - 1, a, b)
-#     return [rv.pmf(k) for k in range(N)]
-
-
-# def inversion_weights(N, slope=0, power=1, factor=1):
-#     linear = [(1 + i * slope / N) for i in range(N)]
-#     exponential = [l ** power for l in linear]
-#     s = sum(exponential)
-#     out = [factor * e / s for e in exponential]
-#     return out
-# @timing
 def invert(data_loader, loss_fn, optimizer,
            steps=10,
            scheduler=None,
@@ -127,8 +115,8 @@ def invert(data_loader, loss_fn, optimizer,
                         metrics[k][-1] /= num_batches
 
             if callback_fn:
-                m = {k: v[-1] for k, v in metrics.items()}
-                callback_fn(epoch, m)
+                # m = {k: v[-1] for k, v in metrics.items()}
+                callback_fn(epoch, metrics)
             # epoch end
 
     print(flush=True)
@@ -140,51 +128,4 @@ def invert(data_loader, loss_fn, optimizer,
     return metrics
 
 
-def inversion_loss(stats_net, criterion, target_labels, hp,
-                   layer_weights=None, regularization=None,
-                   reg_reduction_type='mean'):
-    # if layer_weights is None:
-    #     layer_weights = betabinom_distr(
-    #         len(stats_net.hooks) - 1, hp['distr_a'], hp['distr_b'])
-
-    def loss_fn(x):
-        stats_net.set_reg_reduction_type(reg_reduction_type)
-        if len(target_labels) == 1:
-            targets = target_labels.repeat(len(x))
-        else:
-            targets = target_labels
-        outputs = stats_net({'inputs': x, 'labels': targets})
-        criterion_loss = criterion(outputs, targets)
-
-        r_input, r_components = stats_net.get_hook_regularizations()
-        if layer_weights is not None:
-            r_layer = sum([w * c for w, c in zip(layer_weights, r_components)])
-        else:
-            r_layer = sum(r_components)
-
-        info = {}
-        loss = torch.Tensor([0])
-        if hp['factor_input'] != 0.0:
-            loss = loss + hp['factor_input'] * r_input
-        if hp['factor_layer'] != 0.0:
-            loss = loss + hp['factor_layer'] * r_layer
-        if hp['factor_reg'] != 0.0 and regularization is not None:
-            loss = loss + hp['factor_reg'] * regularization(x)
-        if hp['factor_criterion'] != 0.0:
-            loss = loss + hp['factor_criterion'] * criterion_loss
-
-        if reg_reduction_type != "none":
-            info['accuracy'] = (torch.argmax(outputs, dim=1)
-                                == targets).to(torch.float).mean().item()
-            if hp['factor_input'] != 0.0:
-                info['r_input'] = r_input.item()
-            if hp['factor_layer'] != 0.0:
-                info['r_layer'] = r_layer.item()
-            if hp['factor_reg'] != 0.0 and regularization is not None:
-                info['reg'] = regularization.item()
-            if hp['factor_criterion'] != 0.0:
-                info['criterion'] = criterion_loss.item()
-            return loss, info
-
-        return loss
-    return loss_fn
+def setup_methods():

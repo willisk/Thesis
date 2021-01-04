@@ -601,7 +601,7 @@ for method, loss_fn in methods:
     def callback_fn(epoch, metrics):
         if epoch % 100 == 0 and epoch > 0:
             print(f"\nepoch {epoch}:\
-                    \tpsnr {metrics['[mean] psnr']}", flush=True)
+                    \tpsnr {metrics['[mean] psnr'][-1]}", flush=True)
             im_show(invert_fn(show_batch))
             print(flush=True)
 
