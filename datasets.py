@@ -125,9 +125,9 @@ class MNIST(Dataset):
                          transform=transform)
 
     def net(self):
-        resnet = nets.ResNet9(1, self.n_classes)
-        # resnet = nets.ResNet20(1, self.n_classes)
-        model_path = os.path.join(self.data_dir, "net_resnet9.pt")
+        # resnet = nets.ResNet9(1, self.n_classes)
+        resnet = nets.ResNet20(1, self.n_classes)
+        model_path = os.path.join(self.data_dir, "net_resnet20.pt")
         return model_path, resnet
 
 
