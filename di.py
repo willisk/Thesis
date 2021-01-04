@@ -173,6 +173,7 @@ utility.train(net, DATA_A, criterion, optimizer,
 net.eval()
 
 utility.print_net_accuracy(net, DATA_A)
+print()
 
 
 # ======= NN Project =======
@@ -509,4 +510,4 @@ for method, loss_fn in methods:
     im_show(batch)
 
     accuracy = utility.net_accuracy(net, DATA)
-    print(f"\tnn accuracy: {accuracy * 100:.1f} %")
+    print(f"\tbatch accuracy: {accuracy * 100:.1f} %")
