@@ -205,8 +205,20 @@ def project_NN_all(data):
 
 
 # ======= Random Projections =======
-RP = torch.randn((n_dims, n_random_projections)).to(DEVICE)
-RP = RP / RP.norm(2, dim=0)
+rp_hash = f"{n_random_projections}"
+path_RP = os.path.join(MODELDIR, f"RP-{rp_hash}")
+
+
+@utility.store_data
+def random_projections():
+    RP = torch.randn((n_dims, n_random_projections)).to(DEVICE)
+    RP = RP / RP.norm(2, dim=0)
+    return RP
+
+
+# for reproducibility
+RP = random_projections(  # pylint: disable=unexpected-keyword-arg
+    path=path_RP, map_location=DEVICE, use_drive=USE_DRIVE)
 
 
 def get_input(data):
@@ -241,8 +253,6 @@ def project_RP_CC(data):
         X_proj_C[mask] = X_proj_c
     return X_proj_C
 
-
-rp_hash = f"{n_random_projections}-{args.seed}"
 
 mean_RP_A, std_RP_A = utility.collect_stats(
     DATA_A, project_RP, n_classes, class_conditional=False, std=True, keepdim=True,

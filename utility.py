@@ -266,7 +266,6 @@ def collect_stats(data_loader, projection, n_classes, class_conditional,
                   device='cpu', path=None, use_drive=True):
 
     def data_fn(inputs, labels):
-        # inputs, labels = inputs.to(device), labels.to(device)
         outputs = projection((inputs, labels))
         stats = get_stats(outputs, labels, n_classes, class_conditional,
                           std=False, return_count=True, keepdim=keepdim, dtype=torch.double)
@@ -285,6 +284,44 @@ def collect_stats(data_loader, projection, n_classes, class_conditional,
     return stats[0].float(), stats[1].sqrt().float() if std else stats[1].float()
 
 
+def store_data(func):
+    @wraps(func)
+    def _func(*args, map_location='cpu', path=None, use_drive=True, **kwargs):
+
+        save_path, load_path = save_load_path(path, use_drive=use_drive)
+
+        if load_path and os.path.exists(load_path):
+            print(f"Loading data from {load_path}.", flush=True)
+            return torch.load(load_path, map_location=map_location)
+
+        out = func(*args, **kwargs)
+
+        if save_path:
+            print(f"Saving data to {save_path}.")
+            torch.save(out, save_path)
+        return out
+    return _func
+
+
+@store_data
+def collect_data(data_loader, data_fn, accumulate_fn, final_fn=None):
+
+    print(flush=True, end='')
+
+    out = None
+    with torch.no_grad(), tqdm(data_loader, unit="batch") as pbar:
+        for inputs, labels in pbar:
+            val = data_fn(inputs, labels)
+            out = val if out is None else accumulate_fn(out, val)
+
+    if final_fn:
+        out = final_fn(out)
+
+    print(flush=True)
+
+    return out
+
+
 def psnr(x_gt, x_approx, x_max=None):
     if x_max is None:
         x_max = x_gt.max()
@@ -298,34 +335,6 @@ def average_psnr(data_loader, invert_fn, x_max=None):
         out += psnr(inputs, invert_fn(inputs), x_max=x_max).sum().item()
         count += len(inputs)
     return out / count
-
-
-def collect_data(data_loader, data_fn, accumulate_fn,
-                 final_fn=None, map_location='cpu', path=None, use_drive=True):
-
-    save_path, load_path = save_load_path(path, use_drive=use_drive)
-
-    if load_path and os.path.exists(load_path):
-        print(f"Loading data from {load_path}.", flush=True)
-        return torch.load(load_path, map_location=map_location)
-
-    print(flush=True)
-
-    out = None
-    with torch.no_grad(), tqdm(data_loader, unit="batch") as pbar:
-        for inputs, labels in pbar:
-            val = data_fn(inputs, labels)
-            out = val if out is None else accumulate_fn(out, val)
-
-    if final_fn:
-        out = final_fn(out)
-
-    print(flush=True)
-
-    if save_path:
-        print(f"Saving data to {save_path}.")
-        torch.save(out, save_path)
-    return out
 
 
 def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
@@ -406,7 +415,7 @@ def train(net, data_loader, criterion, optimizer,
 
     save_path, load_path = save_load_path(model_path, use_drive)
 
-    if load_path is not None and not reset and os.path.exists(load_path):
+    if load_path and os.path.exists(load_path) and not reset:
         checkpoint = torch.load(load_path, map_location=device)
         if 'net_state_dict' in checkpoint:
             net.load_state_dict(checkpoint['net_state_dict'], strict=False)
@@ -539,7 +548,7 @@ def smoothen(values, weight):
 
 
 def plot_metrics(metrics, step_start=1, smoothing=0):
-    metrics = {k.replace('[mean]').strip():v for k,v in metrics.items()}
+    metrics = {k.replace('[mean]').strip(): v for k, v in metrics.items()}
 
     if 'step' in metrics:
         steps = metrics.pop('step')
