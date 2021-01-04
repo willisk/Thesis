@@ -83,8 +83,9 @@ if 'ipykernel_launcher' in sys.argv[0]:
 
     args = parser.parse_args('-dataset MNIST'.split())
     # args.nn_steps = 5
-    args.inv_steps = 1
+    args.inv_steps = 2
     # args.batch_size = 64
+    args.size_A = 64
     # # args.size_B = 10
     # # args.n_random_projections = 1024
     # args.inv_lr = 0.05

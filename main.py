@@ -329,7 +329,8 @@ def project_NN(data):
     global net_last_outputs
     inputs, labels = data
     net_last_outputs = net(inputs)
-    return net_last_outputs
+    return layer_activations[-1]
+    # return net_last_outputs
 
 
 def project_NN_all(data):
@@ -465,13 +466,13 @@ def loss_fn_wrapper(name, project, class_conditional):
         net_last_outputs = None
 
         inputs, labels = data
-        outputs = project(data)
-
-        stats = utility.get_stats(
-            outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
 
         loss = torch.tensor(0).float().to(DEVICE)
-        loss += f_stats * loss_stats(stats, stats_A) if f_stats else 0
+        if f_stats:
+            outputs = project(data)
+            stats = utility.get_stats(
+                outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
+            loss += f_stats * loss_stats(stats, stats_A) if f_stats else 0
         loss += f_reg * regularization(inputs) if f_reg else 0
 
         if f_crit:
@@ -513,16 +514,16 @@ methods = [
         project=project_RP_CC,
         class_conditional=True,
     ),
-    loss_fn_wrapper(
-        name="RP ReLU",
-        project=project_RP_relu,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="RP ReLU CC",
-        project=project_RP_relu_CC,
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="RP ReLU",
+    #     project=project_RP_relu,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP ReLU CC",
+    #     project=project_RP_relu_CC,
+    #     class_conditional=True,
+    # ),
     loss_fn_wrapper(
         name="NN ALL + RP CC",
         project=combine(project_NN_all, project_RP_CC),
