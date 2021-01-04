@@ -524,11 +524,11 @@ methods = [
     #     project=project_RP_relu_CC,
     #     class_conditional=True,
     # ),
-    loss_fn_wrapper(
-        name="NN ALL + RP CC",
-        project=combine(project_NN_all, project_RP_CC),
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN ALL + RP CC",
+    #     project=combine(project_NN_all, project_RP_CC),
+    #     class_conditional=True,
+    # ),
 ]
 
 
