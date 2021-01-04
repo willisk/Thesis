@@ -72,8 +72,8 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.batch_size = -1
 
     args = parser.parse_args('-dataset MNIST'.split())
-    args.inv_steps = 1
-    args.batch_size = 128
+    args.inv_steps = 2
+    # args.size_B = 128
     # args.inv_lr = 0.01
 
     # args = parser.parse_args('-dataset CIFAR10'.split())

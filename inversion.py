@@ -58,11 +58,12 @@ def invert(data_loader, loss_fn, optimizer,
 
     def process_result(res):
         if isinstance(res, dict):
-            info = res
             loss = res['loss']
+            info = res
         else:
             loss = res
-        info = {'loss': loss.item(), **info}
+            info = {}
+        info = {**info, 'loss': loss.item()}
         return loss, info
 
     print(flush=True)
