@@ -548,7 +548,7 @@ def smoothen(values, weight):
 
 
 def plot_metrics(metrics, step_start=1, smoothing=0):
-    metrics = {k.replace('[mean]').strip(): v for k, v in metrics.items()}
+    metrics = {k.replace('[mean]', '').strip(): v for k, v in metrics.items()}
 
     if 'step' in metrics:
         steps = metrics.pop('step')
