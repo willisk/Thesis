@@ -173,8 +173,8 @@ utility.train(net, DATA_A, criterion, optimizer,
               )
 net.eval()
 
-# utility.print_net_accuracy(net, DATA_A)
-# print()
+utility.print_net_accuracy(net, DATA_A)
+print()
 
 verifier_path, verifier_net = dataset.verifier_net()
 if verifier_net:
@@ -187,8 +187,8 @@ if verifier_net:
                   reset=nn_reset_training,
                   use_drive=USE_DRIVE,
                   )
-    # print("verifier ", end='')
-    # utility.print_net_accuracy(verifier_net, DATA_A)
+    print("verifier ", end='')
+    utility.print_net_accuracy(verifier_net, DATA_A)
 
 
 # ======= NN Project =======
