@@ -150,8 +150,6 @@ input_shape = dataset.input_shape
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
 
-utility.print_net_accuracy(net, DATA_A)
-
 
 # ======= Setup Methods =======
 
@@ -173,6 +171,8 @@ utility.train(net, DATA_A, criterion, optimizer,
               use_drive=USE_DRIVE,
               )
 net.eval()
+
+utility.print_net_accuracy(net, DATA_A)
 
 
 # ======= NN Project =======
