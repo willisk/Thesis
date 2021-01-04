@@ -563,7 +563,7 @@ def plot_metrics(metrics, step_start=1, smoothing=0):
         if smoothing:
             values = smoothen(values, smoothing)
         plt.plot(steps, values, label=key)
-    print(metrics)
+
     vals = np.ma.masked_invalid(np.vstack(list(metrics.values())))
     vals_m = sgm(vals, axis=1, keepdims=True)
     vals_s = np.sqrt(((vals - vals_m)**2).mean(axis=1))
