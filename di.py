@@ -406,7 +406,7 @@ def loss_fn_wrapper(name, project, class_conditional):
 methods = [
     loss_fn_wrapper(
         name="criterion",
-        project=None,
+        project=get_input,
         class_conditional=False,
     ),
     # loss_fn_wrapper(
