@@ -295,6 +295,8 @@ if verifier_net:
                   reset=nn_reset_training,
                   use_drive=USE_DRIVE,
                   )
+    # print("verifier ", end='')
+    # utility.print_net_accuracy(verifier_net, DATA_A)
 
 
 # ======= NN Project =======

@@ -175,6 +175,20 @@ net.eval()
 utility.print_net_accuracy(net, DATA_A)
 print()
 
+verifier_path, verifier_net = dataset.verifier_net()
+if verifier_net:
+    verifier_net.to(DEVICE)
+    optimizer = torch.optim.Adam(verifier_net.parameters(), lr=nn_lr)
+    utility.train(verifier_net, DATA_A, criterion, optimizer,
+                  model_path=verifier_path,
+                  epochs=nn_steps,
+                  resume_training=nn_resume_training,
+                  reset=nn_reset_training,
+                  use_drive=USE_DRIVE,
+                  )
+    print("verifier ", end='')
+    utility.print_net_accuracy(verifier_net, DATA_A)
+
 
 # ======= NN Project =======
 # NOTE: when using bn_layers, use inputs from hook
@@ -510,4 +524,9 @@ for method, loss_fn in methods:
     im_show(batch)
 
     accuracy = utility.net_accuracy(net, DATA)
-    print(f"\tbatch accuracy: {accuracy * 100:.1f} %")
+    print(f"\tnn accuracy: {accuracy * 100:.1f} %")
+
+    if verifier_net:
+        accuracy_ver = utility.net_accuracy(
+            verifier_net, DATA)
+        print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
