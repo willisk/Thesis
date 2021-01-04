@@ -489,31 +489,31 @@ methods = [
         project=project_NN,
         class_conditional=False,
     ),
-    loss_fn_wrapper(
-        name="NN CC",
-        project=project_NN,
-        class_conditional=True,
-    ),
-    loss_fn_wrapper(
-        name="NN ALL",
-        project=project_NN_all,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="NN ALL CC",
-        project=project_NN_all,
-        class_conditional=True,
-    ),
-    loss_fn_wrapper(
-        name="RP",
-        project=project_RP,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="RP CC",
-        project=project_RP_CC,
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN CC",
+    #     project=project_NN,
+    #     class_conditional=True,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN ALL",
+    #     project=project_NN_all,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
+    #     class_conditional=True,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP",
+    #     project=project_RP,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP CC",
+    #     project=project_RP_CC,
+    #     class_conditional=True,
+    # ),
     # loss_fn_wrapper(
     #     name="RP ReLU",
     #     project=project_RP_relu,
