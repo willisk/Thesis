@@ -574,10 +574,11 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
     for i, (key, values) in enumerate(metrics.items()):
         if smoothing:
             values = smoothen(values, smoothing)
-        if num_plots > 10:
-            plt.plot(steps, values, label=key, color=colors[i])
-        else:
-            plt.plot(steps, values, label=key)
+        missing_values = len(steps) != len(values)
+        values.extend([values[-1]] * (len(steps) - len(values)))
+        plt.plot(steps, values,
+                 '-' if not missing_values else '--',
+                 label=key, color=colors[i] if num_plots > 10 else None)
 
     vals = np.ma.masked_invalid(np.vstack(list(metrics.values())))
     vals_m = sgm(vals, axis=1, keepdims=True)
@@ -596,7 +597,7 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
     plt.title(title)
     plt.xlabel('steps')
     if num_plots > 10:
-        plt.legend(bbox_to_anchor=(1.05, 1),
+        plt.legend(bbox_to_anchor=(1.05, 1.02),
                    loc='upper left', fontsize='xx-small')
     else:
         plt.legend()

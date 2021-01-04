@@ -52,6 +52,7 @@ parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("--use_std", action="store_true")
 parser.add_argument("--use_jitter", action="store_true")
+parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("--normalize_images", action="store_true")
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
@@ -83,6 +84,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
 
     # args.n_random_projections = 1024
     # args.use_var = True
+    args.plot_ideal = True
 else:
     args = parser.parse_args()
 
@@ -173,8 +175,9 @@ utility.train(net, DATA_A, criterion, optimizer,
               )
 net.eval()
 
-utility.print_net_accuracy(net, DATA_A)
-print()
+if not 'ipykernel_launcher' in sys.argv[0]:
+    utility.print_net_accuracy(net, DATA_A)
+    print()
 
 verifier_path, verifier_net = dataset.verifier_net()
 if verifier_net:
@@ -187,8 +190,9 @@ if verifier_net:
                   reset=nn_reset_training,
                   use_drive=USE_DRIVE,
                   )
-    print("verifier ", end='')
-    utility.print_net_accuracy(verifier_net, DATA_A)
+    if not 'ipykernel_launcher' in sys.argv[0]:
+        print("verifier ", end='')
+        utility.print_net_accuracy(verifier_net, DATA_A)
 
 
 # ======= NN Project =======
@@ -490,14 +494,22 @@ for method, loss_fn in methods:
     DATA = [(batch, targets)]
     show_batch = batch[:10]
 
+    first_epoch = True
+
     def data_loss_fn(data):
         inputs, labels = data
         if args.use_jitter:
             inputs = jitter(inputs)
             data = (inputs, labels)
-        return loss_fn(data)
+        info = loss_fn(data)
+        if args.plot_ideal and first_epoch:
+            with torch.no_grad():
+                info['ideal'] = loss_fn(next(iter(DATA_A)))['loss'].item()
+        return info
 
     def callback_fn(epoch, metrics):
+        global first_epoch
+        first_epoch = False
         if epoch % 100 == 0 and epoch > 0:
             print(f"\nepoch {epoch}:\
                     \taccuracy {metrics[':mean: accuracy'][-1]}", flush=True)
