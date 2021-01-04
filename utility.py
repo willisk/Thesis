@@ -599,7 +599,7 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
     plt.show()
 
     if grouped:
-        for group, metrics in grouped.items():
+        for group, metrics in sorted(grouped.items()):
             plot_metrics(metrics=metrics, title=group,
                          step_start=step_start, smoothing=smoothing)
 
