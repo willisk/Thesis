@@ -459,8 +459,6 @@ methods = [
 
 def im_show(batch):
     with torch.no_grad():
-        if args.normalize_images:
-            print("(normalized)")
         img_grid = torchvision.utils.make_grid(
             batch.cpu(), nrow=10, normalize=args.normalize_images, scale_each=True)
         plt.figure(figsize=(16, 32))
@@ -526,6 +524,8 @@ for method, loss_fn in methods:
 
     # ======= Result =======
     print("Inverted:")
+    if args.normalize_images:
+        print("(normalized)")
     im_show(batch)
 
     accuracy = utility.net_accuracy(net, DATA)
