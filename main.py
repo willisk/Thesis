@@ -239,7 +239,7 @@ distort.to(DEVICE)
 
 
 class ReconstructionModel(nn.Module):
-    def __init__(self, relu_out=True, bias=True):
+    def __init__(self, relu_out=False, bias=True):
         super().__init__()
 
         nch = input_shape[0]
@@ -297,7 +297,7 @@ if verifier_net:
     if not 'ipykernel_launcher' in sys.argv[0]:
         print("verifier ", end='')
         utility.print_net_accuracy(verifier_net, DATA_A)
-
+print()
 
 # ======= NN Project =======
 # NOTE: when using bn_layers, use inputs from hook
