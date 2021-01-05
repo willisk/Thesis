@@ -646,7 +646,7 @@ for method, loss_fn in methods:
     print("Inverted:")
     if args.normalize_images:
         print("(normalized)")
-    im_show(invert_fn(next(iter(DATA_B))))
+    im_show(invert_fn(next(iter(DATA_B))[0]))
 
     print("Results:")
 
