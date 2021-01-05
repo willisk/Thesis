@@ -583,7 +583,7 @@ class ReconstructionModel(nn.Module):
 def im_show(batch):
     s = 1.6
     img_grid = torchvision.utils.make_grid(
-        batch.cpu(), nrow=10, normalize=args.normalize_images, scale_each=True)
+        batch.cpu(), nrow=10, normalize=args.normalize_images, scale_each=False)
     plt.figure(figsize=(s * 10, s * len(batch)))
     plt.imshow(img_grid.permute(1, 2, 0))
     plt.show()

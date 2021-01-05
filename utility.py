@@ -558,7 +558,7 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
 
     metrics = {
         k.replace(':mean:', '').strip(): v[:steps_total]
-        for k, v in metrics.items()}
+        for k, v in metrics.items() if 'step' not in k}
 
     grouped = {}
     for group in set(e.split(']')[0].split('[')[1] for e in metrics if ']' in e):
@@ -577,7 +577,8 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
         if smoothing:
             values = smoothen(values, smoothing)
         missing_values = len(values) < steps_total
-        values.extend([values[-1]] * (steps_total - len(values)))
+        if missing_values:
+            values.extend([values[-1]] * (steps_total - len(values)))
         plt.plot(steps, values,
                  '-' if not missing_values else '--',
                  label=key, color=colors[i] if num_plots > 10 else None)

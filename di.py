@@ -494,7 +494,7 @@ def im_show(batch):
 test_batch = next(iter(DATA_B))[0].to(DEVICE)
 # ======= Optimize =======
 metrics = defaultdict(dict)
-metrics_plots = {}
+plots = {}
 
 
 def jitter(inputs):
@@ -550,7 +550,7 @@ for method, loss_fn in methods:
                             callback_fn=callback_fn,
                             track_grad_norm=True,
                             )
-    metrics_plots[method] = info
+    plots[method] = info
 
     # ======= Result =======
     print("Inverted:")
