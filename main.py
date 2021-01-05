@@ -599,7 +599,7 @@ def grad_norm_fn(x):
 
 
 for method, loss_fn in methods:
-    print("\n## Method:", method)
+    print("\n\n## Method:", method)
 
     preprocess = preprocessing_model()
     preprocess.train()
