@@ -83,10 +83,11 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.inv_steps = 500
     # args.batch_size = -1
 
-    args = parser.parse_args('-dataset MNIST'.split())
+    args = parser.parse_args('-dataset CIFAR10'.split())
+    # args = parser.parse_args('-dataset MNIST'.split())
     # args.nn_steps = 5
     args.inv_steps = 2
-    args.perturb_strength = 0.3
+    args.perturb_strength = 0.1
     # args.batch_size = 64
     # # args.size_B = 10
     # # args.n_random_projections = 1024
@@ -94,10 +95,9 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args.f_stats = 0.001
     # args.perturb_strength = 0.5
 
-    # args = parser.parse_args('-dataset CIFAR10'.split())
     # args.inv_steps = 1
     # args.batch_size = 64
-    args.seed = 0
+    args.seed = -1
 
     args.size_B = 64
     args.plot_ideal = True
@@ -221,12 +221,12 @@ class perturb_model(nn.Module):
 
         self.noise.data *= lambd
 
+    @torch.no_grad()
     def forward(self, inputs):
         outputs = inputs
-        with torch.no_grad():
-            outputs = outputs + self.noise
-            outputs = self.conv1(outputs)
-            outputs = self.conv2(outputs)
+        outputs = outputs + self.noise
+        outputs = self.conv1(outputs)
+        outputs = self.conv2(outputs)
         return outputs
 
 
@@ -234,36 +234,28 @@ perturb = perturb_model()
 perturb.eval()
 perturb.to(DEVICE)
 
-# ======= Preprocessing Model =======
+# ======= reconstruct Model =======
 
 
-class preprocessing_model(nn.Module):
-    def __init__(self):
+class reconstruct_model(nn.Module):
+    def __init__(self, noise_level=0.1, relu_out=False, bias=False):
         super().__init__()
 
         nch = input_shape[0]
-        n_chan_inner = 8
+        n_hidden = 4
 
-        self.block_layer = nn.Sequential(
-            nets.ResidualBlock(nch, n_chan_inner, 1, bias=False),
-            nets.ResidualBlock(n_chan_inner, nch, 1, bias=False),
-        )
-        # kernel_size = 3
-        # self.conv1 = nn.Conv2d(nch, nch, kernel_size, padding=1)
-        # self.conv2 = nn.Conv2d(nch, nch, kernel_size, padding=1)
-        # self.conv3 = nn.Conv2d(nch, nch, kernel_size, padding=1)
-        # self.conv4 = nn.Conv2d(nch, nch, kernel_size, padding=1)
-        # self.shift = nn.Parameter(torch.zeros(input_shape).unsqueeze(0))
+        self.invert_block = nn.Sequential(*[
+            nets.InvertBlock(
+                nch,
+                n_hidden,
+                noise_level=noise_level / np.sqrt(n + 1),
+                relu_out=relu_out,
+                bias=bias,
+            ) for n in range(n_hidden)
+        ])
 
     def forward(self, inputs):
-        return self.block_layer(inputs)
-        # outputs = inputs
-        # outputs = outputs + self.shift
-        # outputs = self.conv1(outputs)
-        # outputs = self.conv2(outputs)
-        # outputs = self.conv3(outputs)
-        # outputs = self.conv4(outputs)
-        # return outputs
+        return self.invert_block(inputs)
 
 
 # ======= Setup Methods =======
@@ -529,8 +521,8 @@ def criterion_only(data):
 
     info = {
         'loss': loss,
-        'reg': loss_reg.item(),
-        'crit': loss_crit.item(),
+        '[loss] reg': loss_reg.item(),
+        '[loss] crit': loss_crit.item(),
         ':mean: accuracy': utility.count_correct(outputs, labels) / len(labels)
     }
 
@@ -569,16 +561,16 @@ methods = [
         project=project_RP_CC,
         class_conditional=True,
     ),
-    loss_fn_wrapper(
-        name="RP ReLU",
-        project=project_RP_relu,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="RP ReLU CC",
-        project=project_RP_relu_CC,
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="RP ReLU",
+    #     project=project_RP_relu,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP ReLU CC",
+    #     project=project_RP_relu_CC,
+    #     class_conditional=True,
+    # ),
     loss_fn_wrapper(
         name="NN ALL + RP CC",
         project=combine(project_NN_all, project_RP_CC),
@@ -587,14 +579,14 @@ methods = [
 ]
 
 
+@torch.no_grad()
 def im_show(batch):
-    with torch.no_grad():
-        s = 1.6
-        img_grid = torchvision.utils.make_grid(
-            batch.cpu(), nrow=10, normalize=args.normalize_images, scale_each=True)
-        plt.figure(figsize=(s * 10, s * len(batch)))
-        plt.imshow(img_grid.permute(1, 2, 0))
-        plt.show()
+    s = 1.6
+    img_grid = torchvision.utils.make_grid(
+        batch.cpu(), nrow=10, normalize=args.normalize_images, scale_each=True)
+    plt.figure(figsize=(s * 10, s * len(batch)))
+    plt.imshow(img_grid.permute(1, 2, 0))
+    plt.show()
 
 
 show_batch = next(iter(DATA_B))[0][:10].to(DEVICE)
@@ -621,7 +613,7 @@ def grad_norm_fn(x):
 for method, loss_fn in methods:
     print("\n\n## Method:", method)
 
-    preprocess = preprocessing_model()
+    preprocess = reconstruct_model()
     preprocess.train()
     preprocess.to(DEVICE)
 
@@ -668,8 +660,8 @@ for method, loss_fn in methods:
     if args.normalize_images:
         print("(normalized)")
     show_batch_big = next(iter(DATA_B))[0]
-    if len(show_batch_big) != len(DATA_B):
-        print(f"{len(show_batch_big)} / {len(DATA_B)}")
+    if len(show_batch_big) != len(B):
+        print(f"{len(show_batch_big)} / {len(B)}")
     im_show(invert_fn(show_batch_big))
 
     print("Results:")

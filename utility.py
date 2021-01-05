@@ -116,18 +116,17 @@ def expand_as_r(a, b):
     return a.reshape(shape)
 
 
+@torch.no_grad()
 def net_accuracy(net, data_loader, inputs_pre_fn=None):
     total_count = 0.0
     total_correct = 0.0
     device = next(iter(net.parameters())).device
-    with torch.no_grad():
-        for inputs, labels in data_loader:
-            # inputs, labels = inputs.to(device), labels.to(device)
-            if inputs_pre_fn:
-                inputs = inputs_pre_fn(inputs)
-            outputs = net(inputs)
-            total_count += len(inputs)
-            total_correct += count_correct(outputs, labels)
+    for inputs, labels in data_loader:
+        if inputs_pre_fn:
+            inputs = inputs_pre_fn(inputs)
+        outputs = net(inputs)
+        total_count += len(inputs)
+        total_correct += count_correct(outputs, labels)
     return total_correct / total_count
 
 
@@ -136,10 +135,10 @@ def print_net_accuracy(net, data_loader):
     print(f"net accuracy: {accuracy * 100:.1f}%")
 
 
+@torch.no_grad()
 def net_accuracy_batch(net, inputs, labels):
-    with torch.no_grad():
-        outputs = net(inputs)
-        return count_correct(outputs, labels) / len(inputs)
+    outputs = net(inputs)
+    return count_correct(outputs, labels) / len(inputs)
 
 
 def print_net_accuracy_batch(net, inputs, labels):
@@ -550,7 +549,9 @@ jet = plt.cm.brg
 
 
 def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
-    metrics = {k.replace(':mean:', '').strip(): v for k, v in metrics.items()}
+    metrics = {
+        k.replace(':mean:', '').strip(): v
+        for k, v in metrics.items()}
 
     grouped = {}
     for group in set(e.split(']')[0].split('[')[1] for e in metrics if ']' in e):
@@ -590,7 +591,7 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
 
     if accuracy:
         acc_scaled = [y_min + a * (y_max - y_min) for a in accuracy]
-        plt.plot(steps, acc_scaled, label='acc(scaled)')
+        plt.plot(steps, acc_scaled, label='accuracy')
 
     if smoothing:
         title = f"{title} (smoothing={smoothing})"
@@ -607,22 +608,6 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
         for group, metrics in sorted(grouped.items()):
             plot_metrics(metrics=metrics, title=group,
                          step_start=step_start, smoothing=smoothing)
-
-
-def learn_stats(stats_net, data_loader):
-
-    stats_net.start_tracking_stats()
-
-    print("Beginning tracking stats.", flush=True)
-
-    with torch.no_grad(), tqdm(data_loader, desc="Batch") as pbar:
-        for data in pbar:
-            inputs, labels = data
-            x = {'inputs': inputs,
-                 'labels': labels}
-            stats_net(x)
-
-    print(flush=True)
 
 
 def scatter_matrix(data, labels,

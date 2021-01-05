@@ -69,12 +69,12 @@ plt.show()
 print("Cross Entropy of A:", gmm.cross_entropy(X_A).item())
 print("Cross Entropy of B:", gmm.cross_entropy(X_B).item())
 
-# ======= Preprocessing Model =======
+# ======= reconstruct Model =======
 A = torch.randn((2, 2), requires_grad=True)
 b = torch.randn((2), requires_grad=True)
 
 
-def preprocessing(X):
+def reconstruct(X):
     return X @ A + b
 
 
@@ -96,12 +96,12 @@ inversion.deep_inversion([X_B],
                          loss_fn,
                          optimizer,
                          steps=steps,
-                         data_pre_fn=preprocessing,
+                         data_pre_fn=reconstruct,
                          plot=True,
                          )
 
 # ======= Result =======
-X_B_proc = preprocessing(X_B).detach()
+X_B_proc = reconstruct(X_B).detach()
 print("After Pre-Processing:")
 print("Cross Entropy of B:", gmm.cross_entropy(X_B_proc).item())
 print("Cross Entropy of unperturbed B:", gmm.cross_entropy(X_B_orig).item())
@@ -118,5 +118,5 @@ m_B_pre, v_B_pre = X_B_proc.mean(dim=0), X_B_proc.var(dim=0)
 
 # L2 Reconstruction Error
 Id = torch.eye(2)
-l2_err = (preprocessing(perturb(Id)) - Id).norm(2).item()
+l2_err = (reconstruct(perturb(Id)) - Id).norm(2).item()
 print(f"l2 reconstruction error: {l2_err:.3f}")

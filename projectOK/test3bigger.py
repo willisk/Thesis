@@ -83,12 +83,12 @@ print("Before:")
 print("Cross Entropy of A:", dataset.cross_entropy(X_A).item())
 print("Cross Entropy of B:", dataset.cross_entropy(X_B).item())
 
-# ======= Preprocessing Model =======
+# ======= reconstruct Model =======
 A = torch.eye((2), requires_grad=True)
 b = torch.zeros((2), requires_grad=True)
 
 
-def preprocessing(X):
+def reconstruct(X):
     return X @ A + b
 
 
@@ -122,7 +122,7 @@ inversion.deep_inversion([X_B],
                          loss_fn,
                          optimizer,
                          steps=steps,
-                         data_pre_fn=preprocessing,
+                         data_pre_fn=reconstruct,
                          #    track_history=True,
                          #    track_history_every=10,
                          plot=True,
@@ -131,7 +131,7 @@ inversion.deep_inversion([X_B],
 # for x, step in zip(*zip(*history)):
 #     utility.plot_stats(x, colors=['r'] * len(history))
 # ======= Result =======
-X_B_proc = preprocessing(X_B).detach()
+X_B_proc = reconstruct(X_B).detach()
 print("After Pre-Processing:")
 print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc).item())
 print("Cross Entropy of unperturbed B:",
@@ -166,5 +166,5 @@ plt.show()
 
 # L2 Reconstruction Error
 Id = torch.eye(2)
-l2_err = (preprocessing(perturb(Id)) - Id).norm(2).item()
+l2_err = (reconstruct(perturb(Id)) - Id).norm(2).item()
 print(f"l2 reconstruction error: {l2_err:.3f}")

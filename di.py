@@ -455,13 +455,13 @@ methods = [
 ]
 
 
+@torch.no_grad()
 def im_show(batch):
-    with torch.no_grad():
-        img_grid = torchvision.utils.make_grid(
-            batch.cpu(), nrow=10, normalize=args.normalize_images, scale_each=True)
-        plt.figure(figsize=(16, 32))
-        plt.imshow(img_grid.permute(1, 2, 0))
-        plt.show()
+    img_grid = torchvision.utils.make_grid(
+        batch.cpu(), nrow=10, normalize=args.normalize_images, scale_each=True)
+    plt.figure(figsize=(16, 32))
+    plt.imshow(img_grid.permute(1, 2, 0))
+    plt.show()
 
 
 # ======= Optimize =======

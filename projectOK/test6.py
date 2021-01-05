@@ -118,12 +118,12 @@ with torch.no_grad():
     X_A_proj = project(X_A)
 A_proj_means, A_proj_vars, _ = utility.c_mean_var(X_A_proj, Y_A, n_classes)
 
-# ======= Preprocessing Model =======
+# ======= reconstruct Model =======
 A = torch.eye((2), requires_grad=True)
 b = torch.zeros((2), requires_grad=True)
 
 
-def preprocessing(X):
+def reconstruct(X):
     return X @ A + b
 
 
@@ -160,7 +160,7 @@ deepinversion.deep_inversion([X_B],
                              optimizer,
                              #    scheduler=scheduler,
                              steps=steps,
-                             pre_fn=preprocessing,
+                             pre_fn=reconstruct,
                              #    track_history=True,
                              #    track_history_every=10,
                              plot=True,
@@ -169,7 +169,7 @@ deepinversion.deep_inversion([X_B],
 # for x, step in zip(*zip(*history)):
 #     utility.plot_stats(x, colors=['r'] * len(history))
 # ======= Result =======
-X_B_proc = preprocessing(X_B).detach()
+X_B_proc = reconstruct(X_B).detach()
 print("After Pre-Processing:")
 print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc, Y_B).item())
 plt.title("Data A")
@@ -186,4 +186,4 @@ plt.show()
 
 # L2 Reconstruction Error
 Id = torch.eye(2)
-l2_err = (preprocessing(perturb(Id)) - Id).norm(2).item()
+l2_err = (reconstruct(perturb(Id)) - Id).norm(2).item()

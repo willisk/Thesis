@@ -7,11 +7,10 @@ class Net(nn.Module):
     def __init__(self):
         super().__init__()
 
+    @torch.no_grad()
     def predict(self, x):
         self.eval()
-        with torch.no_grad():
-            y = self.__call__(x)
-        return torch.argmax(y, dim=1)
+        return torch.argmax(self(x), dim=1)
 
 
 class ResNet(Net):
@@ -68,8 +67,57 @@ class ResNet20(ResNet):
         super().__init__(in_channels, n_classes, [3, 3, 3])
 
 
+class InvertBlock(nn.Module):
+    def __init__(self, n_channels, n_features, noise_level=0.1,
+                 relu_out=True, bias=False):
+        super().__init__()
+
+        self.conv1 = nn.Conv2d(n_channels, n_features,
+                               kernel_size=3,
+                               padding=1,
+                               bias=bias,
+                               padding_mode='reflect')
+
+        self.bn1 = nn.BatchNorm2d(n_features)
+
+        self.conv2 = nn.Conv2d(n_features, n_channels,
+                               kernel_size=3,
+                               padding=1,
+                               bias=bias,
+                               padding_mode='reflect')
+        self.bn2 = nn.BatchNorm2d(n_channels)
+        self.relu = nn.ReLU()
+
+        self.conv1.weight.data *= noise_level
+        self.conv2.weight.data *= noise_level
+
+        if bias:
+            self.conv1.bias.data *= 0
+            self.conv2.bias.data *= 0
+
+        self.relu_out = relu_out
+
+    def forward(self, x):
+
+        y = x
+
+        x = self.conv1(x)
+        x = self.bn1(x)
+
+        x = self.relu(x)
+
+        x = self.conv2(x)
+        x = self.bn2(x)
+
+        x = x + y
+
+        if self.relu_out:
+            x = self.relu(x)
+        return x
+
+
 class ResidualBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1, bias=False):
+    def __init__(self, in_channels, out_channels, stride=1, bias=False, padding_mode='zeros'):
         super().__init__()
 
         self.conv1 = nn.Conv2d(in_channels, out_channels,

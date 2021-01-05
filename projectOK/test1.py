@@ -37,14 +37,14 @@ plt.scatter(X_B[:, 0], X_B[:, 1], c='r', label="Data B")
 plt.legend()
 plt.show()
 
-# ======= Preprocessing Model =======
+# ======= reconstruct Model =======
 A = torch.eye(2, requires_grad=True)
 b = torch.zeros((2), requires_grad=True)
 
 from utility import debug
 
 
-def preprocessing(X):
+def reconstruct(X):
     return X @ A + b
 
 
@@ -59,12 +59,12 @@ inversion.deep_inversion([X_B],
                          loss_fn,
                          optimizer,
                          steps=200,
-                         data_pre_fn=preprocessing,
+                         data_pre_fn=reconstruct,
                          plot=True,
                          )
 
 print("After Pre-Processing:")
-X_B_proc = preprocessing(X_B).detach()
+X_B_proc = reconstruct(X_B).detach()
 plt.scatter(X_A[:, 0], X_A[:, 1], c='b', label="Data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1], c='r', label="preprocessed Data B")
 plt.legend()
@@ -72,5 +72,5 @@ plt.show()
 
 # L2 Reconstruction Error
 Id = torch.eye(2)
-l2_err = (preprocessing(perturb(Id)) - Id).norm(2).item()
+l2_err = (reconstruct(perturb(Id)) - Id).norm(2).item()
 print(f"l2 reconstruction error: {l2_err:.3f}")
