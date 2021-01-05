@@ -56,6 +56,7 @@ parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("--use_std", action="store_true")
 parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
+parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("--normalize_images", action="store_true")
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
@@ -238,7 +239,7 @@ distort.to(DEVICE)
 
 
 class ReconstructionModel(nn.Module):
-    def __init__(self, noise_level=0.1, relu_out=False, bias=False):
+    def __init__(self, relu_out=True, bias=True):
         super().__init__()
 
         nch = input_shape[0]
@@ -249,7 +250,7 @@ class ReconstructionModel(nn.Module):
             nets.InvertBlock(
                 nch,
                 n_hidden,
-                noise_level=noise_level / np.sqrt(n + 1),
+                noise_level=1 / np.sqrt(n + 1),
                 relu_out=relu_out,
                 bias=bias,
             ) for n in range(depth)
