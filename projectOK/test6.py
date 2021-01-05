@@ -175,7 +175,7 @@ print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc, Y_B).item())
 plt.title("Data A")
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A", alpha=0.5)
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-            c=cmaps[1], label="preprocessed Data B", alpha=0.5)
+            c=cmaps[1], label="reconstructed Data B", alpha=0.5)
 plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
             c='orange', label="undistorted Data B", alpha=0.4)
 for c in range(n_classes):

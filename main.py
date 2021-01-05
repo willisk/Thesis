@@ -83,10 +83,10 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args.inv_steps = 500
     # args.batch_size = -1
 
-    args = parser.parse_args('-dataset CIFAR10'.split())
-    # args = parser.parse_args('-dataset MNIST'.split())
+    # args = parser.parse_args('-dataset CIFAR10'.split())
+    args = parser.parse_args('-dataset MNIST'.split())
     # args.nn_steps = 5
-    args.inv_steps = 2
+    args.inv_steps = 3
     args.distort_level = 0.1
     # args.batch_size = 64
     # # args.size_B = 10
@@ -599,6 +599,7 @@ im_show(distort(show_batch[:10]))
 
 # ======= Optimize =======
 metrics = defaultdict(dict)
+plots = {}
 
 
 def jitter(inputs):
@@ -613,12 +614,12 @@ def grad_norm_fn(x):
 for method, loss_fn in methods:
     print("\n\n## Method:", method)
 
-    preprocess = ReconstructionModel()
-    preprocess.train()
-    preprocess.to(DEVICE)
+    reconstruct = ReconstructionModel()
+    reconstruct.train()
+    reconstruct.to(DEVICE)
 
     def invert_fn(inputs):
-        return preprocess(distort(inputs))
+        return reconstruct(distort(inputs))
 
     def data_loss_fn(data):
         inputs, labels = data
@@ -638,7 +639,7 @@ for method, loss_fn in methods:
             im_show(invert_fn(show_batch[:10]))
             print(flush=True)
 
-    optimizer = torch.optim.Adam(preprocess.parameters(), lr=inv_lr)
+    optimizer = torch.optim.Adam(reconstruct.parameters(), lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
     info = inversion.invert(DATA_B,
@@ -652,9 +653,10 @@ for method, loss_fn in methods:
                             callback_fn=callback_fn,
                             track_grad_norm=True,
                             )
+    plots[method] = info
 
     # ======= Result =======
-    preprocess.eval()
+    reconstruct.eval()
 
     print("Inverted:")
     if len(show_batch) != len(B):

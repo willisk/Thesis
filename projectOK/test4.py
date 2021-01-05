@@ -162,7 +162,7 @@ print("Cross Entropy of undistorted B:",
 plt.title("Data A")
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], alpha=0.4, label="Data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-            c=cmaps[1], alpha=0.4, label="preprocessed Data B")
+            c=cmaps[1], alpha=0.4, label="reconstructed Data B")
 plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
             c='orange', alpha=0.4, label="undistorted Data B")
 utility.plot_stats([X_A[Y_A == 0], X_B_proc[Y_B == 0]])

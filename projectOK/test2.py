@@ -107,7 +107,7 @@ print("Cross Entropy of B:", gmm.cross_entropy(X_B_proc).item())
 print("Cross Entropy of undistorted B:", gmm.cross_entropy(X_B_orig).item())
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-            c=cmaps[1], label="preprocessed Data B")
+            c=cmaps[1], label="reconstructed Data B")
 plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
             c='orange', label="undistorted Data B", alpha=0.4)
 utility.plot_stats([X_A, X_B_proc])

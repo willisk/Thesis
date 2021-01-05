@@ -66,7 +66,8 @@ inversion.deep_inversion([X_B],
 print("After Pre-Processing:")
 X_B_proc = reconstruct(X_B).detach()
 plt.scatter(X_A[:, 0], X_A[:, 1], c='b', label="Data A")
-plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1], c='r', label="preprocessed Data B")
+plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
+            c='r', label="reconstructed Data B")
 plt.legend()
 plt.show()
 

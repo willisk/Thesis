@@ -549,21 +549,22 @@ jet = plt.cm.brg
 
 
 def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
+    if 'step' in metrics:
+        steps = metrics['step']
+    else:
+        steps = range(step_start, len(list(metrics.values())[0]) + 1)
+
+    steps_total = len(steps)
+
     metrics = {
-        k.replace(':mean:', '').strip(): v
+        k.replace(':mean:', '').strip(): v[:steps_total]
         for k, v in metrics.items()}
 
     grouped = {}
     for group in set(e.split(']')[0].split('[')[1] for e in metrics if ']' in e):
         grouped[group] = {k.split(']')[1].strip(): metrics.pop(k)
                           for k, v in list(metrics.items()) if f'[{group}]' in k}
-        if 'step' in metrics:
-            grouped[group]['step'] = metrics['step']
-
-    if 'step' in metrics:
-        steps = metrics.pop('step')
-    else:
-        steps = range(step_start, len(list(metrics.values())[0]) + 1)
+        grouped[group]['step'] = steps
 
     accuracy = None
     if 'accuracy' in metrics:
@@ -575,8 +576,8 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
     for i, (key, values) in enumerate(metrics.items()):
         if smoothing:
             values = smoothen(values, smoothing)
-        missing_values = len(steps) != len(values)
-        values.extend([values[-1]] * (len(steps) - len(values)))
+        missing_values = len(values) < steps_total
+        values.extend([values[-1]] * (steps_total - len(values)))
         plt.plot(steps, values,
                  '-' if not missing_values else '--',
                  label=key, color=colors[i] if num_plots > 10 else None)
