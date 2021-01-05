@@ -48,7 +48,7 @@ from debug import debug
 # ======= Arg Parse =======
 parser = argparse.ArgumentParser(description="Reconstruction Tests")
 parser.add_argument(
-    "-dataset", choices=['CIFAR10', 'GMM', 'MNIST'], required=True)
+    "-dataset", choices=['CIFAR10', 'MNIST'], required=True)
 parser.add_argument("-seed", type=int, default=0)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
@@ -56,7 +56,6 @@ parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("--use_std", action="store_true")
 parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
-# parser.add_argument("--", action="store_true")
 parser.add_argument("--normalize_images", action="store_true")
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
@@ -72,11 +71,11 @@ parser.add_argument("-size_B", type=int, default=64)
 parser.add_argument("-show_after", type=int, default=20)
 parser.add_argument("-distort_level", type=float, default=0.3)
 
-# GMM
-parser.add_argument("-g_modes", type=int, default=3)
-parser.add_argument("-g_scale_mean", type=float, default=2)
-parser.add_argument("-g_scale_cov", type=float, default=20)
-parser.add_argument("-g_mean_shift", type=float, default=0)
+# # GMM
+# parser.add_argument("-g_modes", type=int, default=3)
+# parser.add_argument("-g_scale_mean", type=float, default=2)
+# parser.add_argument("-g_scale_cov", type=float, default=20)
+# parser.add_argument("-g_mean_shift", type=float, default=0)
 
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset GMM'.split())
@@ -156,19 +155,19 @@ print(f"Running on '{DEVICE}'\n")
 # ======= Create Dataset =======
 
 
-if args.dataset == 'GMM':
-    dataset = datasets.MULTIGMM(
-        input_shape=(20,),
-        n_classes=3,
-        n_modes=args.g_modes,
-        scale_mean=args.g_scale_mean,
-        scale_cov=args.g_scale_cov,
-        mean_shift=args.g_mean_shift,
-        n_samples_A=1000,
-        n_samples_B=100,
-        n_samples_B_val=100,
-    )
-elif args.dataset == 'CIFAR10':
+# if args.dataset == 'GMM':
+#     dataset = datasets.MULTIGMM(
+#         input_shape=(20,),
+#         n_classes=3,
+#         n_modes=args.g_modes,
+#         scale_mean=args.g_scale_mean,
+#         scale_cov=args.g_scale_cov,
+#         mean_shift=args.g_mean_shift,
+#         n_samples_A=1000,
+#         n_samples_B=100,
+#         n_samples_B_val=100,
+#     )
+if args.dataset == 'CIFAR10':
     dataset = datasets.CIFAR10()
 elif args.dataset == 'MNIST':
     dataset = datasets.MNIST()
@@ -188,77 +187,6 @@ DATA_B_val = utility.DataL(
 input_shape = dataset.input_shape
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
-
-# ======= distortation =======
-
-
-class DistortionModel(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-        kernel_size = 3
-        nch = input_shape[0]
-        lambd = args.distort_level
-
-        self.conv1 = nn.Conv2d(nch, nch, kernel_size,
-                               padding=1, padding_mode='reflect')
-        self.conv2 = nn.Conv2d(nch, nch, kernel_size,
-                               padding=1, padding_mode='reflect')
-        self.noise = nn.Parameter(
-            torch.randn(input_shape).unsqueeze(0))
-
-        self.conv1.weight.data.normal_()
-        self.conv2.weight.data.normal_()
-        self.conv1.weight.data *= lambd
-        self.conv2.weight.data *= lambd
-        for f in range(nch):
-            self.conv1.weight.data[f][f][1][1] += 1
-            self.conv2.weight.data[f][f][1][1] += 1
-
-        self.conv1.bias.data.normal_()
-        self.conv2.bias.data.normal_()
-        self.conv1.bias.data *= lambd
-        self.conv2.bias.data *= lambd
-
-        self.noise.data *= lambd
-
-    @torch.no_grad()
-    def forward(self, inputs):
-        outputs = inputs
-        outputs = outputs + self.noise
-        outputs = self.conv1(outputs)
-        outputs = self.conv2(outputs)
-        return outputs
-
-
-distort = DistortionModel()
-distort.eval()
-distort.to(DEVICE)
-
-# ======= Reconstruction Model =======
-
-
-class ReconstructionModel(nn.Module):
-    def __init__(self, relu_out=False, bias=True):
-        super().__init__()
-
-        nch = input_shape[0]
-        n_hidden = 4
-        depth = 4
-
-        self.invert_block = nn.Sequential(*[
-            nets.InvertBlock(
-                nch,
-                n_hidden,
-                noise_level=1 / np.sqrt(n + 1),
-                relu_out=relu_out,
-                bias=bias,
-            ) for n in range(depth)
-        ])
-
-    def forward(self, inputs):
-        return self.invert_block(inputs)
-
 
 # ======= Setup Methods =======
 STD = args.use_std
@@ -580,6 +508,76 @@ methods = [
     ),
 ]
 
+# ======= Distortation =======
+
+
+class DistortionModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        kernel_size = 3
+        nch = input_shape[0]
+        lambd = args.distort_level
+
+        self.conv1 = nn.Conv2d(nch, nch, kernel_size,
+                               padding=1, padding_mode='reflect')
+        self.conv2 = nn.Conv2d(nch, nch, kernel_size,
+                               padding=1, padding_mode='reflect')
+        self.noise = nn.Parameter(
+            torch.randn(input_shape).unsqueeze(0))
+
+        self.conv1.weight.data.normal_()
+        self.conv2.weight.data.normal_()
+        self.conv1.weight.data *= lambd
+        self.conv2.weight.data *= lambd
+        for f in range(nch):
+            self.conv1.weight.data[f][f][1][1] += 1
+            self.conv2.weight.data[f][f][1][1] += 1
+
+        self.conv1.bias.data.normal_()
+        self.conv2.bias.data.normal_()
+        self.conv1.bias.data *= lambd
+        self.conv2.bias.data *= lambd
+
+        self.noise.data *= lambd
+
+    @torch.no_grad()
+    def forward(self, inputs):
+        outputs = inputs
+        outputs = outputs + self.noise
+        outputs = self.conv1(outputs)
+        outputs = self.conv2(outputs)
+        return outputs
+
+
+distort = DistortionModel()
+distort.eval()
+distort.to(DEVICE)
+
+# ======= Reconstruction Model =======
+
+
+class ReconstructionModel(nn.Module):
+    def __init__(self, relu_out=False, bias=True):
+        super().__init__()
+
+        nch = input_shape[0]
+        n_hidden = 4
+        depth = 4
+
+        self.invert_block = nn.Sequential(*[
+            nets.InvertBlock(
+                nch,
+                n_hidden,
+                noise_level=1 / np.sqrt(n + 1),
+                relu_out=relu_out,
+                bias=bias,
+            ) for n in range(depth)
+        ])
+
+    def forward(self, inputs):
+        return self.invert_block(inputs)
+
 
 @torch.no_grad()
 def im_show(batch):
@@ -591,13 +589,13 @@ def im_show(batch):
     plt.show()
 
 
-show_batch = next(iter(DATA_B))[0][:10].to(DEVICE)
+show_batch = next(iter(DATA_B))[0].to(DEVICE)
 
 print("\nground truth:", flush=True)
-im_show(show_batch)
+im_show(show_batch[:10])
 
 print("\ndistorted:")
-im_show(distort(show_batch))
+im_show(distort(show_batch[:10]))
 
 # ======= Optimize =======
 metrics = defaultdict(dict)
@@ -637,7 +635,7 @@ for method, loss_fn in methods:
     def callback_fn(epoch, metrics):
         if epoch % args.show_after == 0 and epoch > 0:
             print(f"\nepoch {epoch}:", flush=True)
-            im_show(invert_fn(show_batch))
+            im_show(invert_fn(show_batch[:10]))
             print(flush=True)
 
     optimizer = torch.optim.Adam(preprocess.parameters(), lr=inv_lr)
@@ -659,12 +657,12 @@ for method, loss_fn in methods:
     preprocess.eval()
 
     print("Inverted:")
+    if len(show_batch) != len(B):
+        print(f"{len(show_batch)} / {len(B)} ", end='')
     if args.normalize_images:
-        print("(normalized)")
-    show_batch_big = next(iter(DATA_B))[0]
-    if len(show_batch_big) != len(B):
-        print(f"{len(show_batch_big)} / {len(B)}")
-    im_show(invert_fn(show_batch_big))
+        print("(normalized)", end='')
+    # print()
+    im_show(invert_fn(show_batch))
 
     print("Results:")
 

@@ -8,6 +8,7 @@ import argparse
 from collections import defaultdict
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 # from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torchvision
@@ -24,6 +25,7 @@ import utility
 import inversion
 import datasets
 import debug
+import nets
 
 try:
     get_ipython()   # pylint: disable=undefined-variable
@@ -38,6 +40,7 @@ if interactive_notebook:
     importlib.reload(inversion)
     importlib.reload(datasets)
     importlib.reload(debug)
+    importlib.reload(nets)
 
 from debug import debug
 
@@ -143,12 +146,15 @@ elif args.dataset == 'MNIST':
 
 MODELDIR = dataset.data_dir
 
-
-A, B, B_val = dataset.get_datasets(size_A=args.size_A)
+A, B, B_val = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B)
 
 
 DATA_A = utility.DataL(
     A, batch_size=args.batch_size, shuffle=True, device=DEVICE)
+DATA_B = utility.DataL(
+    B, batch_size=-1, shuffle=True, device=DEVICE)
+# DATA_B_val = utility.DataL(
+#     B_val, batch_size=args.batch_size, shuffle=True, device=DEVICE)
 
 input_shape = dataset.input_shape
 n_dims = dataset.n_dims
@@ -191,7 +197,7 @@ if verifier_net:
     if not 'ipykernel_launcher' in sys.argv[0]:
         print("verifier ", end='')
         utility.print_net_accuracy(verifier_net, DATA_A)
-
+print()
 
 # ======= NN Project =======
 # NOTE: when using bn_layers, use inputs from hook
@@ -406,7 +412,27 @@ def loss_fn_wrapper(name, project, class_conditional):
     return name, _loss_fn
 
 
+def criterion_only(data):
+    inputs, labels = data
+    outputs = net(inputs)
+
+    loss_reg = f_reg * regularization(inputs)
+    loss_crit = f_crit * criterion(net(inputs), labels)
+
+    loss = loss_reg + loss_crit
+
+    info = {
+        'loss': loss,
+        '[loss] reg': loss_reg.item(),
+        '[loss] crit': loss_crit.item(),
+        ':mean: accuracy': utility.count_correct(outputs, labels) / len(labels)
+    }
+
+    return info
+
+
 methods = [
+    ("CRITERION", criterion_only),
     loss_fn_wrapper(
         name="NN",
         project=project_NN,
@@ -457,13 +483,15 @@ methods = [
 
 @torch.no_grad()
 def im_show(batch):
+    s = 1.6
     img_grid = torchvision.utils.make_grid(
         batch.cpu(), nrow=10, normalize=args.normalize_images, scale_each=True)
-    plt.figure(figsize=(16, 32))
+    plt.figure(figsize=(s * 10, s * len(batch)))
     plt.imshow(img_grid.permute(1, 2, 0))
     plt.show()
 
 
+test_batch = next(iter(DATA_B))[0].to(DEVICE)
 # ======= Optimize =======
 metrics = defaultdict(dict)
 
@@ -478,14 +506,13 @@ def grad_norm_fn(x):
 
 
 for method, loss_fn in methods:
-    print("\n## Method:", method)
+    print("\n\n## Method:", method)
 
     batch = torch.randn((args.size_B, *input_shape),
                         requires_grad=True, device=DEVICE)
     targets = torch.LongTensor(
         range(args.size_B)).to(DEVICE) % n_classes
     DATA = [(batch, targets)]
-    show_batch = batch[:10]
 
     first_epoch = True
 
@@ -497,8 +524,7 @@ for method, loss_fn in methods:
         info = loss_fn(data)
         if args.plot_ideal and first_epoch:
             with torch.no_grad():
-                # NOTE change this
-                info['ideal'] = loss_fn(next(iter(DATA_A)))['loss'].item()
+                info['ideal'] = loss_fn(test_batch)['loss'].item()
         return info
 
     def callback_fn(epoch, metrics):
@@ -506,7 +532,7 @@ for method, loss_fn in methods:
         first_epoch = False
         if epoch % args.show_after == 0 and epoch > 0:
             print(f"\nepoch {epoch}:", flush=True)
-            im_show(show_batch)
+            im_show(batch[:10])
             print(flush=True)
 
     optimizer = torch.optim.Adam([batch], lr=inv_lr)
