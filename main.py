@@ -68,6 +68,7 @@ parser.add_argument("-f_crit", type=float, default=1)
 parser.add_argument("-f_stats", type=float, default=10)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
+parser.add_argument("-show_after", type=int, default=20)
 parser.add_argument("-perturb_strength", type=float, default=0.3)
 
 # GMM
@@ -84,11 +85,13 @@ if 'ipykernel_launcher' in sys.argv[0]:
 
     args = parser.parse_args('-dataset MNIST'.split())
     # args.nn_steps = 5
-    args.inv_steps = 2
+    args.inv_steps = 10
+    args.perturb_strength = 0.5
     # args.batch_size = 64
     # # args.size_B = 10
     # # args.n_random_projections = 1024
-    # args.inv_lr = 0.05
+    args.inv_lr = 0.01
+    args.f_stats = 0.001
     # args.perturb_strength = 0.5
 
     # args = parser.parse_args('-dataset CIFAR10'.split())
@@ -617,7 +620,7 @@ for method, loss_fn in methods:
         return info
 
     def callback_fn(epoch, metrics):
-        if epoch % 20 == 0 and epoch > 0:
+        if epoch % args.show_after == 0 and epoch > 0:
             print(f"\nepoch {epoch}:", flush=True)
             im_show(invert_fn(show_batch))
             print(flush=True)

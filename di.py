@@ -65,6 +65,7 @@ parser.add_argument("-f_crit", type=float, default=1)
 parser.add_argument("-f_stats", type=float, default=10)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
+parser.add_argument("-show_after", type=int, default=100)
 
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset GMM'.split())
@@ -503,7 +504,7 @@ for method, loss_fn in methods:
     def callback_fn(epoch, metrics):
         global first_epoch
         first_epoch = False
-        if epoch % 100 == 0 and epoch > 0:
+        if epoch % args.show_after == 0 and epoch > 0:
             print(f"\nepoch {epoch}:", flush=True)
             im_show(show_batch)
             print(flush=True)
