@@ -506,8 +506,7 @@ for method, loss_fn in methods:
         global first_epoch
         first_epoch = False
         if epoch % 100 == 0 and epoch > 0:
-            print(f"\nepoch {epoch}:\
-                    \taccuracy {metrics[':mean: accuracy'][-1]}", flush=True)
+            print(f"\nepoch {epoch}:", flush=True)
             im_show(show_batch)
             print(flush=True)
 
