@@ -118,7 +118,7 @@ def invert(data_loader, loss_fn, optimizer,
 
             if not track_per_batch:
                 for k, v in metrics.items():
-                    if ':mean:' in v:
+                    if ':mean:' in k:
                         metrics[k][-1] /= num_batches
 
             if callback_fn:
