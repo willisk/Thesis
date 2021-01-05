@@ -67,7 +67,7 @@ parser.add_argument("-f_crit", type=float, default=1)
 parser.add_argument("-f_stats", type=float, default=10)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
-parser.add_argument("-distort_strength", type=float, default=0.03)
+parser.add_argument("-distort_level", type=float, default=0.03)
 
 # GMM
 parser.add_argument("-g_modes", type=int, default=3)
@@ -89,7 +89,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # # args.size_B = 10
     # # args.n_random_projections = 1024
     # args.inv_lr = 0.05
-    # args.distort_strength = 0.5
+    # args.distort_level = 0.5
 
     # args = parser.parse_args('-dataset CIFAR10'.split())
     # args.inv_steps = 1

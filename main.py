@@ -69,7 +69,7 @@ parser.add_argument("-f_stats", type=float, default=10)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
 parser.add_argument("-show_after", type=int, default=20)
-parser.add_argument("-distort_strength", type=float, default=0.3)
+parser.add_argument("-distort_level", type=float, default=0.3)
 
 # GMM
 parser.add_argument("-g_modes", type=int, default=3)
@@ -87,13 +87,13 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset MNIST'.split())
     # args.nn_steps = 5
     args.inv_steps = 2
-    args.distort_strength = 0.1
+    args.distort_level = 0.1
     # args.batch_size = 64
     # # args.size_B = 10
     # # args.n_random_projections = 1024
     args.inv_lr = 0.01
     args.f_stats = 0.001
-    # args.distort_strength = 0.5
+    # args.distort_level = 0.5
 
     # args.inv_steps = 1
     # args.batch_size = 64
@@ -197,7 +197,7 @@ class DistortionModel(nn.Module):
 
         kernel_size = 3
         nch = input_shape[0]
-        lambd = args.distort_strength
+        lambd = args.distort_level
 
         self.conv1 = nn.Conv2d(nch, nch, kernel_size,
                                padding=1, padding_mode='reflect')
@@ -234,7 +234,7 @@ distort = DistortionModel()
 distort.eval()
 distort.to(DEVICE)
 
-# ======= reconstruct Model =======
+# ======= Reconstruction Model =======
 
 
 class ReconstructionModel(nn.Module):
@@ -243,6 +243,7 @@ class ReconstructionModel(nn.Module):
 
         nch = input_shape[0]
         n_hidden = 4
+        depth = 4
 
         self.invert_block = nn.Sequential(*[
             nets.InvertBlock(
@@ -251,7 +252,7 @@ class ReconstructionModel(nn.Module):
                 noise_level=noise_level / np.sqrt(n + 1),
                 relu_out=relu_out,
                 bias=bias,
-            ) for n in range(n_hidden)
+            ) for n in range(depth)
         ])
 
     def forward(self, inputs):

@@ -8,7 +8,7 @@ python projectOK/main.py \
 -n_samples_A=5000 \
 -n_samples_B=1000 \
 -n_samples_valid=5000 \
--distort_strength=1.5 \
+-distort_level=1.5 \
 -g_modes=12 \
 -g_scale_mean=3 \
 -g_scale_cov=20 \
@@ -34,7 +34,7 @@ python projectOK/main.py \
     n_samples_A=5000
     n_samples_B=1000
     n_samples_valid=5000
-    distort_strength=1.5
+    distort_level=1.5
     g_modes=12
     g_scale_mean=3.0
     g_scale_cov=20.0
