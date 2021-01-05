@@ -514,7 +514,7 @@ for method, loss_fn in methods:
         range(args.size_B)).to(DEVICE) % n_classes
     DATA = [(batch, targets)]
 
-    first_epoch = True
+    ideal_value = None
 
     def data_loss_fn(data):
         inputs, labels = data
@@ -522,14 +522,15 @@ for method, loss_fn in methods:
             inputs = jitter(inputs)
             data = (inputs, labels)
         info = loss_fn(data)
-        if args.plot_ideal and first_epoch:
-            with torch.no_grad():
-                info['ideal'] = loss_fn(test_batch)['loss'].item()
+        if args.plot_ideal:
+            global ideal_value
+            if ideal_value is None:
+                with torch.no_grad():
+                    ideal_value = loss_fn(test_batch)['loss'].item()
+            info[':--: ideal'] = ideal_value
         return info
 
     def callback_fn(epoch, metrics):
-        global first_epoch
-        first_epoch = False
         if epoch % args.show_after == 0 and epoch > 0:
             print(f"\nepoch {epoch}:", flush=True)
             im_show(batch[:10])

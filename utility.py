@@ -548,16 +548,20 @@ def smoothen(values, weight):
 jet = plt.cm.brg
 
 
-def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
+def plot_metrics(metrics, title='metrics', step_start=1, plot_range=None, smoothing=0):
     if 'step' in metrics:
         steps = metrics['step']
     else:
         steps = range(step_start, len(list(metrics.values())[0]) + 1)
 
-    steps_total = len(steps)
+    a, b = 0, len(steps)
+    if plot_range:
+        a, b = plot_range
+        if b == -1:
+            b = len(steps)
 
     metrics = {
-        k.replace(':mean:', '').strip(): v[:steps_total]
+        k.replace(':mean:', '').strip(): v
         for k, v in metrics.items() if 'step' not in k}
 
     grouped = {}
@@ -566,34 +570,37 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
                           for k, v in list(metrics.items()) if f'[{group}]' in k}
         grouped[group]['step'] = steps
 
-    accuracy = None
-    if 'accuracy' in metrics:
-        accuracy = metrics.pop('accuracy')
+    kw_order = ['loss', 'accuracy', '|grad|', 'ideal']
+    order = {key: str(i) for i, key in enumerate(kw_order)}
+    sorted_items = sorted(metrics.items(),
+                          key=lambda e: order[e[0]] if e[0] in order else e[0])
 
-    num_plots = len(metrics)
-    if num_plots > 10:
-        colors = jet(np.linspace(0, 1, num_plots))
-    for i, (key, values) in enumerate(sorted(metrics.items())):
-        if smoothing:
-            values = smoothen(values, smoothing)
-        missing_values = len(values) < steps_total
-        if missing_values:
-            values.extend([values[-1]] * (steps_total - len(values)))
-        plt.plot(steps, values,
-                 '-' if not missing_values else '--',
-                 label=key, color=colors[i] if num_plots > 10 else None)
-
-    vals = np.ma.masked_invalid(np.vstack(list(metrics.values())))
+    vals = np.ma.masked_invalid(np.vstack(
+        [v[a:b] for v in metrics.values() if v != 'accuracy']))
     vals_m = sgm(vals, axis=1, keepdims=True)
     vals_s = np.sqrt(((vals - vals_m)**2).mean(axis=1))
     y_max = min(vals.max(), max(vals_m.squeeze() + vals_s))
     y_min = max(vals.min(), min(vals_m.squeeze() - vals_s))
+
+    num_plots = len(metrics)
+    if num_plots > 10:
+        colors = jet(np.linspace(0, 1, num_plots))
+
+    for i, (key, values) in enumerate(sorted_items):
+        if smoothing:
+            values = smoothen(values, smoothing)
+        dashed = ':--:' in key
+        if key == 'accuracy':
+            acc_scaled = [y_min + acc * (y_max - y_min) for acc in values]
+            plt.plot(steps[a:b], acc_scaled[a:b], label='accuracy')
+        else:
+            plt.plot(steps[a:b], values[a:b],
+                     '--' if dashed else '-',
+                     label=key.replace(':--:', '').rstrip(),
+                     color=colors[i] if num_plots > 10 else None)
+
     buffer = 0.1 * (y_max - y_min)
     plt.gca().set_ylim([y_min - buffer, y_max + buffer])
-
-    if accuracy:
-        acc_scaled = [y_min + a * (y_max - y_min) for a in accuracy]
-        plt.plot(steps, acc_scaled, label='accuracy')
 
     if smoothing:
         title = f"{title} (smoothing={smoothing})"
@@ -608,8 +615,7 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
 
     if grouped:
         for group, metrics in sorted(grouped.items()):
-            plot_metrics(metrics=metrics, title=group,
-                         step_start=step_start, smoothing=smoothing)
+            plot_metrics(metrics, group, step_start, plot_range, smoothing)
 
 
 def scatter_matrix(data, labels,
