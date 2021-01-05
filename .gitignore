@@ -4,7 +4,7 @@
 .vscode
 
 data
-models/*
+models
 
 **runs
 **drive_figures
@@ -13,5 +13,3 @@ models/*
 **example_logs
 
 **.DS_Store
-drive
-test.js
