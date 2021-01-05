@@ -153,9 +153,7 @@ input_shape = dataset.input_shape
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
 
-
 # ======= Setup Methods =======
-
 STD = args.use_std
 stats_path = os.path.join(MODELDIR, "stats_{}.pt")
 
@@ -177,7 +175,6 @@ net.eval()
 
 if not 'ipykernel_launcher' in sys.argv[0]:
     utility.print_net_accuracy(net, DATA_A)
-    print()
 
 verifier_path, verifier_net = dataset.verifier_net()
 if verifier_net:
@@ -499,6 +496,7 @@ for method, loss_fn in methods:
         info = loss_fn(data)
         if args.plot_ideal and first_epoch:
             with torch.no_grad():
+                # NOTE change this
                 info['ideal'] = loss_fn(next(iter(DATA_A)))['loss'].item()
         return info
 
@@ -518,10 +516,6 @@ for method, loss_fn in methods:
                             optimizer,
                             #    scheduler=scheduler,
                             steps=inv_steps,
-                            # steps=2,
-                            # data_pre_fn=data_pre_fn,
-                            #    track_history=True,
-                            #    track_history_every=10,
                             plot=True,
                             use_amp=args.use_amp,
                             #    grad_norm_fn=grad_norm_fn,

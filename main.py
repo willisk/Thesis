@@ -49,7 +49,7 @@ from debug import debug
 parser = argparse.ArgumentParser(description="Reconstruction Tests")
 parser.add_argument(
     "-dataset", choices=['CIFAR10', 'GMM', 'MNIST'], required=True)
-parser.add_argument("-seed", type=int, default=-1)
+parser.add_argument("-seed", type=int, default=0)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
@@ -68,7 +68,7 @@ parser.add_argument("-f_crit", type=float, default=1)
 parser.add_argument("-f_stats", type=float, default=10)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
-parser.add_argument("-perturb_strength", type=float, default=0.03)
+parser.add_argument("-perturb_strength", type=float, default=0.3)
 
 # GMM
 parser.add_argument("-g_modes", type=int, default=3)
@@ -283,6 +283,8 @@ utility.train(net, DATA_A, criterion, optimizer,
               )
 net.eval()
 
+if not 'ipykernel_launcher' in sys.argv[0]:
+    utility.print_net_accuracy(net, DATA_A)
 
 verifier_path, verifier_net = dataset.verifier_net()
 if verifier_net:
@@ -295,11 +297,14 @@ if verifier_net:
                   reset=nn_reset_training,
                   use_drive=USE_DRIVE,
                   )
-    # print("verifier ", end='')
-    # utility.print_net_accuracy(verifier_net, DATA_A)
+    if not 'ipykernel_launcher' in sys.argv[0]:
+        print("verifier ", end='')
+        utility.print_net_accuracy(verifier_net, DATA_A)
 
 
 # ======= NN Project =======
+# NOTE: when using bn_layers, use inputs from hook
+# net_layers = utility.get_bn_layers(net)
 net_layers = utility.get_child_modules(net)[:-1]
 layer_activations = [None] * len(net_layers)
 net_last_outputs = None
@@ -432,20 +437,28 @@ def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
     assert len(stats_a) == len(stats_b), "lists need to be of same length"
+    num_stats = len(stats_a)
     loss = torch.tensor(0).float().to(DEVICE)
-    for (ma, sa), (mb, sb) in zip(stats_a, stats_b):
+    info = {}
+    for i, ((ma, sa), (mb, sb)) in enumerate(zip(stats_a, stats_b)):
         if ma.ndim == 1:
-            loss += (ma.squeeze() - mb.squeeze()).norm()
-            loss += (sa.squeeze() - sb.squeeze()).norm()
-        else:
-            # one feature
+            loss_m = (ma.squeeze() - mb.squeeze()).norm()
+            loss_s = (sa.squeeze() - sb.squeeze()).norm()
+        else:   # class conditional
             if np.prod(ma.shape) == ma.shape[0] or np.prod(mb.shape) == mb.shape[0]:
-                loss += (ma.squeeze() - mb.squeeze()).abs().mean()
-                loss += (sa.squeeze() - sb.squeeze()).abs().mean()
-            else:
-                loss += (ma.squeeze() - mb.squeeze()).norm(dim=1).mean()
-                loss += (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
-    return loss
+                loss_m = (ma.squeeze() - mb.squeeze()).abs().mean()
+                loss_s = (sa.squeeze() - sb.squeeze()).abs().mean()
+            else:  # multiple features
+                loss_m = (ma.squeeze() - mb.squeeze()).norm(dim=1).mean()
+                loss_s = (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
+        if num_stats > 1:
+            info[f'[stats losses means] {i}'] = loss_m.item()
+            info[f'[stats losses vars] {i}'] = loss_s.item()
+        else:
+            info[f'[stats losses] mean'] = loss_m.item()
+            info[f'[stats losses] var'] = loss_s.item()
+        loss += loss_m + loss_s
+    return loss, info
 
 
 f_crit = args.f_crit
@@ -480,7 +493,9 @@ def loss_fn_wrapper(name, project, class_conditional):
             outputs = project(data)
             stats = utility.get_stats(
                 outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
-            cost_stats = f_stats * loss_stats(stats_A, stats)
+            cost_stats, info_stats = loss_stats(stats_A, stats)
+            cost_stats *= f_stats
+            info = {**info, **info_stats}
             info['[losses] stats'] = cost_stats.item()
             loss += cost_stats
 
@@ -506,46 +521,46 @@ methods = [
         project=project_NN,
         class_conditional=False,
     ),
-    # loss_fn_wrapper(
-    #     name="NN CC",
-    #     project=project_NN,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL",
-    #     project=project_NN_all,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL CC",
-    #     project=project_NN_all,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="RP",
-    #     project=project_RP,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="RP CC",
-    #     project=project_RP_CC,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="RP ReLU",
-    #     project=project_RP_relu,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="RP ReLU CC",
-    #     project=project_RP_relu_CC,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL + RP CC",
-    #     project=combine(project_NN_all, project_RP_CC),
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="NN CC",
+        project=project_NN,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="NN ALL",
+        project=project_NN_all,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="NN ALL CC",
+        project=project_NN_all,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="RP",
+        project=project_RP,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="RP CC",
+        project=project_RP_CC,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="RP ReLU",
+        project=project_RP_relu,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="RP ReLU CC",
+        project=project_RP_relu_CC,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="NN ALL + RP CC",
+        project=combine(project_NN_all, project_RP_CC),
+        class_conditional=True,
+    ),
 ]
 
 
@@ -586,6 +601,8 @@ for method, loss_fn in methods:
     preprocess.train()
     preprocess.to(DEVICE)
 
+    first_epoch = True
+
     def invert_fn(inputs):
         return preprocess(perturb(inputs))
 
@@ -595,16 +612,17 @@ for method, loss_fn in methods:
             inputs = jitter(inputs)
         data_inv = (invert_fn(inputs), labels)
         info = loss_fn(data_inv)
-        info[':mean: psnr'] = utility.average_psnr(data, invert_fn)
-        if args.plot_ideal:
+        info[':mean: psnr'] = utility.average_psnr([data], invert_fn)
+        if args.plot_ideal and first_epoch:
             with torch.no_grad():
                 info['ideal'] = loss_fn(data)['loss'].item()
         return info
 
     def callback_fn(epoch, metrics):
+        global first_epoch
+        first_epoch = False
         if epoch % 100 == 0 and epoch > 0:
-            print(f"\nepoch {epoch}:\
-                    \tpsnr {metrics[':mean: psnr'][-1]}", flush=True)
+            print(f"\nepoch {epoch}:", flush=True)
             im_show(invert_fn(show_batch))
             print(flush=True)
 
@@ -616,10 +634,6 @@ for method, loss_fn in methods:
                             optimizer,
                             #    scheduler=scheduler,
                             steps=inv_steps,
-                            # steps=2,
-                            # data_pre_fn=data_pre_fn,
-                            #    track_history=True,
-                            #    track_history_every=10,
                             plot=True,
                             use_amp=args.use_amp,
                             #    grad_norm_fn=grad_norm_fn,
@@ -631,6 +645,8 @@ for method, loss_fn in methods:
     preprocess.eval()
 
     print("Inverted:")
+    if args.normalize_images:
+        print("(normalized)")
     im_show(invert_fn(show_batch))
 
     print("Results:")
