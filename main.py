@@ -56,7 +56,6 @@ parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("--use_std", action="store_true")
 parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
-parser.add_argument("--normalize_images", action="store_true")
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-batch_size", type=int, default=64)
@@ -583,7 +582,7 @@ class ReconstructionModel(nn.Module):
 def im_show(batch):
     s = 1.6
     img_grid = torchvision.utils.make_grid(
-        batch.cpu(), nrow=10, normalize=args.normalize_images, scale_each=False)
+        batch.cpu(), nrow=10, normalize=True, scale_each=False)
     plt.figure(figsize=(s * 10, s * len(batch)))
     plt.imshow(img_grid.permute(1, 2, 0))
     plt.show()
@@ -660,10 +659,7 @@ for method, loss_fn in methods:
 
     print("Inverted:")
     if len(show_batch) != len(B):
-        print(f"{len(show_batch)} / {len(B)} ", end='')
-    if args.normalize_images:
-        print("(normalized)", end='')
-    # print()
+        print(f"{len(show_batch)} / {len(B)} ")
     im_show(invert_fn(show_batch))
 
     print("Results:")

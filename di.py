@@ -56,7 +56,6 @@ parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("--use_std", action="store_true")
 parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
-parser.add_argument("--normalize_images", action="store_true")
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-batch_size", type=int, default=64)
@@ -485,7 +484,7 @@ methods = [
 def im_show(batch):
     s = 1.6
     img_grid = torchvision.utils.make_grid(
-        batch.cpu(), nrow=10, normalize=args.normalize_images, scale_each=True)
+        batch.cpu(), nrow=10, normalize=True, scale_each=False)
     plt.figure(figsize=(s * 10, s * len(batch)))
     plt.imshow(img_grid.permute(1, 2, 0))
     plt.show()
@@ -554,8 +553,6 @@ for method, loss_fn in methods:
 
     # ======= Result =======
     print("Inverted:")
-    if args.normalize_images:
-        print("(normalized)")
     im_show(batch)
 
     accuracy = utility.net_accuracy(net, DATA)
