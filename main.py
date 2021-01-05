@@ -601,8 +601,6 @@ for method, loss_fn in methods:
     preprocess.train()
     preprocess.to(DEVICE)
 
-    first_epoch = True
-
     def invert_fn(inputs):
         return preprocess(perturb(inputs))
 
@@ -613,14 +611,12 @@ for method, loss_fn in methods:
         data_inv = (invert_fn(inputs), labels)
         info = loss_fn(data_inv)
         info[':mean: psnr'] = utility.average_psnr([data], invert_fn)
-        if args.plot_ideal and first_epoch:
+        if args.plot_ideal:
             with torch.no_grad():
                 info['ideal'] = loss_fn(data)['loss'].item()
         return info
 
     def callback_fn(epoch, metrics):
-        global first_epoch
-        first_epoch = False
         if epoch % 20 == 0 and epoch > 0:
             print(f"\nepoch {epoch}:", flush=True)
             im_show(invert_fn(show_batch))
