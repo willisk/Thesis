@@ -621,7 +621,7 @@ for method, loss_fn in methods:
     def callback_fn(epoch, metrics):
         global first_epoch
         first_epoch = False
-        if epoch % 50 == 0 and epoch > 0:
+        if epoch % 20 == 0 and epoch > 0:
             print(f"\nepoch {epoch}:", flush=True)
             im_show(invert_fn(show_batch))
             print(flush=True)
