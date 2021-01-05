@@ -518,7 +518,27 @@ def loss_fn_wrapper(name, project, class_conditional):
     return name, _loss_fn
 
 
+def criterion_only(data):
+    inputs, labels = data
+    outputs = net(inputs)
+
+    loss_reg = f_reg * regularization(inputs)
+    loss_crit = f_crit * criterion(net(inputs), labels)
+
+    loss = loss_reg + loss_crit
+
+    info = {
+        'loss': loss,
+        'reg': loss_reg.item(),
+        'crit': loss_crit.item(),
+        ':mean: accuracy': utility.count_correct(outputs, labels) / len(labels)
+    }
+
+    return info
+
+
 methods = [
+    ("CRITERION", criterion_only),
     loss_fn_wrapper(
         name="NN",
         project=project_NN,

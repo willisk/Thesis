@@ -531,7 +531,7 @@ def train(net, data_loader, criterion, optimizer,
 
 
 def sgm(x, sh=0, **kwargs):
-    return np.exp(np.log(x + sh + 1e-50).mean(**kwargs)) - sh
+    return np.exp(np.log(x + sh + 1e-7).mean(**kwargs)) - sh
 
 
 def smoothen(values, weight):
