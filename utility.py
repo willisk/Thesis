@@ -591,7 +591,9 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
     print(y_max)
 
     if accuracy:
+        debug(accuracy)
         acc_scaled = [y_min + a * (y_max - y_min) for a in accuracy]
+        debug(acc_scaled)
         plt.plot(steps, acc_scaled, label='acc(scaled)')
 
     if smoothing:
