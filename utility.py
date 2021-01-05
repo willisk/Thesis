@@ -587,10 +587,12 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
     y_min = max(vals.min(), min(vals_m.squeeze() - vals_s))
     buffer = 0.1 * (y_max - y_min)
     plt.gca().set_ylim([y_min - buffer, y_max + buffer])
+    print(y_min)
+    print(y_max)
 
     if accuracy:
         acc_scaled = [y_min + a * (y_max - y_min) for a in accuracy]
-        plt.plot(steps, acc_scaled, alpha=0.6, label='acc(scaled)')
+        plt.plot(steps, acc_scaled, label='acc(scaled)')
 
     if smoothing:
         title = f"{title} (smoothing={smoothing})"
