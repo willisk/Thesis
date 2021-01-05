@@ -8,7 +8,7 @@ python projectOK/main.py \
 -n_samples_A=5000 \
 -n_samples_B=1000 \
 -n_samples_valid=5000 \
--perturb_strength=1.5 \
+-distort_strength=1.5 \
 -g_modes=12 \
 -g_scale_mean=3 \
 -g_scale_cov=20 \
@@ -34,7 +34,7 @@ python projectOK/main.py \
     n_samples_A=5000
     n_samples_B=1000
     n_samples_valid=5000
-    perturb_strength=1.5
+    distort_strength=1.5
     g_modes=12
     g_scale_mean=3.0
     g_scale_cov=20.0
@@ -263,7 +263,7 @@ python projectOK/main.py \
     cross entropy: 54.994
     nn accuracy: 79.3 %
     
-    perturbed Data B
+    distorted Data B
     cross entropy: inf
     nn accuracy: 12.3 %
     nn accuracy B valid: 12.2 %

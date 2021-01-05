@@ -89,7 +89,7 @@ python projectOK/test3.py
 
     After Pre-Processing:
     Cross Entropy of B: 4.431112289428711
-    Cross Entropy of unperturbed B: 3.6967499256134033
+    Cross Entropy of undistorted B: 3.6967499256134033
 
 
 
@@ -141,7 +141,7 @@ python projectOK/test3bigger.py
 
     After Pre-Processing:
     Cross Entropy of B: inf
-    Cross Entropy of unperturbed B: 4.961302757263184
+    Cross Entropy of undistorted B: 4.961302757263184
 
 
 
@@ -197,7 +197,7 @@ python projectOK/test4.py
 
     After Pre-Processing:
     Cross Entropy of B: 6.816658973693848
-    Cross Entropy of unperturbed B: 4.961302757263184
+    Cross Entropy of undistorted B: 4.961302757263184
 
 
 
@@ -249,7 +249,7 @@ python projectOK/test5.py
 
     After Pre-Processing:
     Cross Entropy of B: 6.226280689239502
-    Cross Entropy of unperturbed B: 4.961302757263184
+    Cross Entropy of undistorted B: 4.961302757263184
 
 
 

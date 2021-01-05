@@ -47,22 +47,22 @@ gmm = datasets.random_gmm(
 X_A = gmm.sample(n_samples=100)
 m_A, v_A = X_A.mean(dim=0), X_A.var(dim=0)
 
-# perturbed Dataset B
-perturb_matrix = torch.eye(2) + 1 * torch.randn((2, 2))
-perturb_shift = 2 * torch.randn(2)
+# distorted Dataset B
+distort_matrix = torch.eye(2) + 1 * torch.randn((2, 2))
+distort_shift = 2 * torch.randn(2)
 
 
-def perturb(X):
-    return X @ perturb_matrix + perturb_shift
+def distort(X):
+    return X @ distort_matrix + distort_shift
 
 
 X_B_orig = gmm.sample(n_samples=100)
-X_B = perturb(X_B_orig)
+X_B = distort(X_B_orig)
 m_B, v_B = X_B.mean(dim=0), X_B.var(dim=0)
 
 print("Before:")
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
-plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="perturbed Data B")
+plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="distorted Data B")
 utility.plot_stats([X_A, X_B])
 plt.legend()
 plt.show()
@@ -104,12 +104,12 @@ inversion.deep_inversion([X_B],
 X_B_proc = reconstruct(X_B).detach()
 print("After Pre-Processing:")
 print("Cross Entropy of B:", gmm.cross_entropy(X_B_proc).item())
-print("Cross Entropy of unperturbed B:", gmm.cross_entropy(X_B_orig).item())
+print("Cross Entropy of undistorted B:", gmm.cross_entropy(X_B_orig).item())
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
             c=cmaps[1], label="preprocessed Data B")
 plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
-            c='orange', label="unperturbed Data B", alpha=0.4)
+            c='orange', label="undistorted Data B", alpha=0.4)
 utility.plot_stats([X_A, X_B_proc])
 plt.legend()
 plt.show()
@@ -118,5 +118,5 @@ m_B_pre, v_B_pre = X_B_proc.mean(dim=0), X_B_proc.var(dim=0)
 
 # L2 Reconstruction Error
 Id = torch.eye(2)
-l2_err = (reconstruct(perturb(Id)) - Id).norm(2).item()
+l2_err = (reconstruct(distort(Id)) - Id).norm(2).item()
 print(f"l2 reconstruction error: {l2_err:.3f}")

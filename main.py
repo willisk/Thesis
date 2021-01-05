@@ -69,7 +69,7 @@ parser.add_argument("-f_stats", type=float, default=10)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
 parser.add_argument("-show_after", type=int, default=20)
-parser.add_argument("-perturb_strength", type=float, default=0.3)
+parser.add_argument("-distort_strength", type=float, default=0.3)
 
 # GMM
 parser.add_argument("-g_modes", type=int, default=3)
@@ -87,13 +87,13 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset MNIST'.split())
     # args.nn_steps = 5
     args.inv_steps = 2
-    args.perturb_strength = 0.1
+    args.distort_strength = 0.1
     # args.batch_size = 64
     # # args.size_B = 10
     # # args.n_random_projections = 1024
     args.inv_lr = 0.01
     args.f_stats = 0.001
-    # args.perturb_strength = 0.5
+    # args.distort_strength = 0.5
 
     # args.inv_steps = 1
     # args.batch_size = 64
@@ -188,16 +188,16 @@ input_shape = dataset.input_shape
 n_dims = dataset.n_dims
 n_classes = dataset.n_classes
 
-# ======= Perturbation =======
+# ======= distortation =======
 
 
-class perturb_model(nn.Module):
+class DistortionModel(nn.Module):
     def __init__(self):
         super().__init__()
 
         kernel_size = 3
         nch = input_shape[0]
-        lambd = args.perturb_strength
+        lambd = args.distort_strength
 
         self.conv1 = nn.Conv2d(nch, nch, kernel_size,
                                padding=1, padding_mode='reflect')
@@ -230,14 +230,14 @@ class perturb_model(nn.Module):
         return outputs
 
 
-perturb = perturb_model()
-perturb.eval()
-perturb.to(DEVICE)
+distort = DistortionModel()
+distort.eval()
+distort.to(DEVICE)
 
 # ======= reconstruct Model =======
 
 
-class reconstruct_model(nn.Module):
+class ReconstructionModel(nn.Module):
     def __init__(self, noise_level=0.1, relu_out=False, bias=False):
         super().__init__()
 
@@ -594,8 +594,8 @@ show_batch = next(iter(DATA_B))[0][:10].to(DEVICE)
 print("\nground truth:", flush=True)
 im_show(show_batch)
 
-print("\nperturbed:")
-im_show(perturb(show_batch))
+print("\ndistorted:")
+im_show(distort(show_batch))
 
 # ======= Optimize =======
 metrics = defaultdict(dict)
@@ -613,12 +613,12 @@ def grad_norm_fn(x):
 for method, loss_fn in methods:
     print("\n\n## Method:", method)
 
-    preprocess = reconstruct_model()
+    preprocess = ReconstructionModel()
     preprocess.train()
     preprocess.to(DEVICE)
 
     def invert_fn(inputs):
-        return preprocess(perturb(inputs))
+        return preprocess(distort(inputs))
 
     def data_loss_fn(data):
         inputs, labels = data
@@ -673,15 +673,15 @@ for method, loss_fn in methods:
 
     # PSNR
     psnr = utility.average_psnr(DATA_B, invert_fn)
-    psnr_perturb = utility.average_psnr(DATA_B, perturb)
-    print(f"\taverage PSNR: {psnr:.3f} | {psnr_perturb:.3f}")
+    psnr_distort = utility.average_psnr(DATA_B, distort)
+    print(f"\taverage PSNR: {psnr:.3f} | {psnr_distort:.3f}")
 
     # L2 Reconstruction Error
     Id = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
     l2_err = (invert_fn(Id) - Id).norm().item() / Id.norm().item()
-    l2_err_perturb = (perturb(Id) - Id).norm().item() / Id.norm().item()
+    l2_err_distort = (distort(Id) - Id).norm().item() / Id.norm().item()
     print(
-        f"\trel. l2 reconstruction error: {l2_err:.3f} | {l2_err_perturb:.3f}")
+        f"\trel. l2 reconstruction error: {l2_err:.3f} | {l2_err_distort:.3f}")
 
     # NN Accuracy
     accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=invert_fn)
@@ -712,9 +712,9 @@ accuracy_B_val = utility.net_accuracy(
     net, DATA_B_val)
 
 accuracy_B_pert = utility.net_accuracy(
-    net, DATA_B, inputs_pre_fn=perturb)
+    net, DATA_B, inputs_pre_fn=distort)
 accuracy_B_val_pert = utility.net_accuracy(
-    net, DATA_B_val, inputs_pre_fn=perturb)
+    net, DATA_B_val, inputs_pre_fn=distort)
 
 if verifier_net:
     accuracy_A_ver = utility.net_accuracy(
@@ -722,23 +722,23 @@ if verifier_net:
     accuracy_B_ver = utility.net_accuracy(
         verifier_net, DATA_B)
     accuracy_B_pert_ver = utility.net_accuracy(
-        verifier_net, DATA_B, inputs_pre_fn=perturb)
+        verifier_net, DATA_B, inputs_pre_fn=distort)
 
 baseline['B (original)']['acc'] = accuracy_B
 baseline['B (original)']['acc(val)'] = accuracy_B_val
 
-baseline['B (perturbed)']['acc'] = accuracy_B_pert
-baseline['B (perturbed)']['acc(val)'] = accuracy_B_val_pert
+baseline['B (distorted)']['acc'] = accuracy_B_pert
+baseline['B (distorted)']['acc(val)'] = accuracy_B_val_pert
 
 baseline['A']['acc'] = accuracy_A
 
 if verifier_net:
-    baseline['B (perturbed)']['acc(ver)'] = accuracy_B_pert_ver
+    baseline['B (distorted)']['acc(ver)'] = accuracy_B_pert_ver
     baseline['B (original)']['acc(ver)'] = accuracy_B_ver
     baseline['A']['acc(ver)'] = accuracy_A_ver
 
-baseline['B (perturbed)']['av. PSNR'] = psnr_perturb
-baseline['B (perturbed)']['l2-err'] = l2_err_perturb
+baseline['B (distorted)']['av. PSNR'] = psnr_distort
+baseline['B (distorted)']['l2-err'] = l2_err_distort
 
 
 print("\n# Summary")

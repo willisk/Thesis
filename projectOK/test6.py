@@ -54,17 +54,17 @@ dataset = datasets.DatasetGMM(
 
 X_A, Y_A = dataset.X, dataset.Y
 
-# perturbed Dataset B
-perturb_matrix = torch.eye(2) + 1 * torch.randn((2, 2))
-perturb_shift = 2 * torch.randn(2)
+# distorted Dataset B
+distort_matrix = torch.eye(2) + 1 * torch.randn((2, 2))
+distort_shift = 2 * torch.randn(2)
 
 
-def perturb(X):
-    return X @ perturb_matrix + perturb_shift
+def distort(X):
+    return X @ distort_matrix + distort_shift
 
 
 X_B_orig, Y_B = dataset.sample(n_samples_per_class=100)
-X_B = perturb(X_B_orig)
+X_B = distort(X_B_orig)
 
 
 # ======= Neural Network =======
@@ -177,7 +177,7 @@ plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A", alpha=0.5)
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
             c=cmaps[1], label="preprocessed Data B", alpha=0.5)
 plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
-            c='orange', label="unperturbed Data B", alpha=0.4)
+            c='orange', label="undistorted Data B", alpha=0.4)
 for c in range(n_classes):
     utility.plot_stats([X_A[Y_A == c], X_B_proc[Y_B == c]])
 plt.legend()
@@ -186,4 +186,4 @@ plt.show()
 
 # L2 Reconstruction Error
 Id = torch.eye(2)
-l2_err = (reconstruct(perturb(Id)) - Id).norm(2).item()
+l2_err = (reconstruct(distort(Id)) - Id).norm(2).item()
