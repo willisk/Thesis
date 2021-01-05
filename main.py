@@ -647,7 +647,10 @@ for method, loss_fn in methods:
     print("Inverted:")
     if args.normalize_images:
         print("(normalized)")
-    im_show(invert_fn(next(iter(DATA_B))[0]))
+    show_batch_big = next(iter(DATA_B))[0]
+    if len(show_batch_big) != len(DATA_B):
+        print(f"{len(show_batch_big)} / {len(DATA_B)}")
+    im_show(invert_fn(show_batch_big))
 
     print("Results:")
 
