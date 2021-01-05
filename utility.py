@@ -573,7 +573,7 @@ def plot_metrics(metrics, title='metrics', step_start=1, smoothing=0):
     num_plots = len(metrics)
     if num_plots > 10:
         colors = jet(np.linspace(0, 1, num_plots))
-    for i, (key, values) in enumerate(metrics.items()):
+    for i, (key, values) in enumerate(sorted(metrics.items())):
         if smoothing:
             values = smoothen(values, smoothing)
         missing_values = len(values) < steps_total
