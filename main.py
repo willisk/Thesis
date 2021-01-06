@@ -382,11 +382,11 @@ def loss_stats(stats_a, stats_b):
                 loss_s = (sa.squeeze() - sb.squeeze()
                           ).norm(dim=1).mean() / num_stats
         if num_stats > 1:
-            info[f'[stats losses means] {i}'] = loss_m.item()
-            info[f'[stats losses vars] {i}'] = loss_s.item()
+            info[f'[stats losses means] {i}'] = loss_m.item() * f_stats
+            info[f'[stats losses vars] {i}'] = loss_s.item() * f_stats
         else:
-            info[f'[stats losses] mean'] = loss_m.item()
-            info[f'[stats losses] var'] = loss_s.item()
+            info[f'[stats losses] mean'] = loss_m.item() * f_stats
+            info[f'[stats losses] var'] = loss_s.item() * f_stats
         loss += loss_m + loss_s
     return loss, info
 
