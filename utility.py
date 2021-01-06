@@ -570,10 +570,13 @@ def plot_metrics(metrics, title='metrics', step_start=1, plot_range=None, smooth
                           for k, v in list(metrics.items()) if f'[{group}]' in k}
         grouped[group]['step'] = steps
 
-    kw_order = ['loss', 'accuracy', '|grad|', 'ideal']
-    order = {key: str(i) for i, key in enumerate(kw_order)}
-    sorted_items = sorted(metrics.items(),
-                          key=lambda e: order[e[0]] if e[0] in order else e[0])
+    if all(k.isdigit() for k in metrics):
+        sorted_items = sorted(metrics.items(), key=lambda e: int(e[0]))
+    else:
+        kw_order = ['loss', 'accuracy', '|grad|', 'ideal']
+        order = {key: str(i) for i, key in enumerate(kw_order)}
+        sorted_items = sorted(metrics.items(),
+                              key=lambda e: order[e[0]] if e[0] in order else e[0])
 
     vals = np.ma.masked_invalid(np.vstack(
         [v[a:b] for v in metrics.values() if v != 'accuracy']))
