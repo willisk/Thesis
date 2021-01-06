@@ -101,7 +101,7 @@ def invert(data_loader, loss_fn, optimizer,
                     info['|grad|'] = total_norm
 
                 pbar.set_postfix(**{
-                    k.split(']')[1].strip() if ']' in k else k.replace(':mean:', '').strip(): v
+                    k.split(']')[-1].split(':')[-1].strip(): v
                     for k, v in info.items() if ']' not in k
                 }, refresh=False)
                 pbar.update()
