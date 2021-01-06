@@ -346,6 +346,10 @@ def combine(project1, project2):
 
 
 # ======= Loss Function =======
+f_crit = args.f_crit
+f_reg = args.f_reg
+f_stats = args.f_stats
+
 
 def regularization(x):
     diff1 = x[:, :, :, :-1] - x[:, :, :, 1:]
@@ -385,11 +389,6 @@ def loss_stats(stats_a, stats_b):
             info[f'[stats losses] var'] = loss_s.item()
         loss += loss_m + loss_s
     return loss, info
-
-
-f_crit = args.f_crit
-f_reg = args.f_reg
-f_stats = args.f_stats
 
 
 def loss_fn_wrapper(name, project, class_conditional):
@@ -667,7 +666,6 @@ for method, loss_fn in methods:
     print("Results:")
 
     # Loss
-    # loss = accumulate_fn(DATA_B, loss_fn)
     loss = info['loss'][-1]
     print(f"\tloss: {loss:.3f}")
 
@@ -701,7 +699,7 @@ for method, loss_fn in methods:
         metrics[method]['acc(ver)'] = accuracy_ver
     metrics[method]['av. PSNR'] = psnr
     metrics[method]['l2-err'] = l2_err
-    metrics[method]['loss'] = loss
+    # metrics[method]['loss'] = loss
 
 baseline = defaultdict(dict)
 
@@ -749,3 +747,8 @@ utility.print_tabular(baseline, row_name="baseline")
 print("\nReconstruction methods:")
 
 utility.print_tabular(metrics, row_name="method")
+
+
+def plot_metrics(method, plot_range=None):
+    print(f"\n## {method}")
+    utility.plot_metrics(plots[method], plot_range=plot_range)

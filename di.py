@@ -318,6 +318,10 @@ def combine(project1, project2):
 
 
 # ======= Loss Function =======
+f_crit = args.f_crit
+f_reg = args.f_reg
+f_stats = args.f_stats
+
 
 def regularization(x):
     diff1 = x[:, :, :, :-1] - x[:, :, :, 1:]
@@ -342,11 +346,13 @@ def loss_stats(stats_a, stats_b):
             loss_s = (sa.squeeze() - sb.squeeze()).norm()
         else:   # class conditional
             if np.prod(ma.shape) == ma.shape[0] or np.prod(mb.shape) == mb.shape[0]:
-                loss_m = (ma.squeeze() - mb.squeeze()).abs().mean()
-                loss_s = (sa.squeeze() - sb.squeeze()).abs().mean()
+                loss_m = (ma.squeeze() - mb.squeeze()).abs().mean() / num_stats
+                loss_s = (sa.squeeze() - sb.squeeze()).abs().mean() / num_stats
             else:  # multiple features
-                loss_m = (ma.squeeze() - mb.squeeze()).norm(dim=1).mean()
-                loss_s = (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
+                loss_m = (ma.squeeze() - mb.squeeze()
+                          ).norm(dim=1).mean() / num_stats
+                loss_s = (sa.squeeze() - sb.squeeze()
+                          ).norm(dim=1).mean() / num_stats
         if num_stats > 1:
             info[f'[stats losses means] {i}'] = loss_m.item()
             info[f'[stats losses vars] {i}'] = loss_s.item()
@@ -355,11 +361,6 @@ def loss_stats(stats_a, stats_b):
             info[f'[stats losses] var'] = loss_s.item()
         loss += loss_m + loss_s
     return loss, info
-
-
-f_crit = args.f_crit
-f_reg = args.f_reg
-f_stats = args.f_stats
 
 
 def loss_fn_wrapper(name, project, class_conditional):
@@ -416,7 +417,7 @@ def criterion_only(data):
     outputs = net(inputs)
 
     loss_reg = f_reg * regularization(inputs)
-    loss_crit = f_crit * criterion(net(inputs), labels)
+    loss_crit = f_crit * criterion(outputs, labels)
 
     loss = loss_reg + loss_crit
 
@@ -559,7 +560,18 @@ for method, loss_fn in methods:
     accuracy = utility.net_accuracy(net, DATA)
     print(f"\tnn accuracy: {accuracy * 100:.1f} %")
 
+    metrics[method]['acc'] = accuracy
+
     if verifier_net:
-        accuracy_ver = utility.net_accuracy(
-            verifier_net, DATA)
+        accuracy_ver = utility.net_accuracy(verifier_net, DATA)
         print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
+        metrics[method]['acc(ver)'] = accuracy_ver
+print("\n# Summary")
+print("=========\n")
+
+utility.print_tabular(metrics, row_name="method")
+
+
+def plot_metrics(method, plot_range=None):
+    print(f"\n## {method}")
+    utility.plot_metrics(plots[method], plot_range=plot_range)
