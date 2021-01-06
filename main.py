@@ -446,7 +446,7 @@ def criterion_only(data):
     outputs = net(inputs)
 
     loss_reg = f_reg * regularization(inputs)
-    loss_crit = f_crit * criterion(net(inputs), labels)
+    loss_crit = f_crit * criterion(outputs, labels)
 
     loss = loss_reg + loss_crit
 
