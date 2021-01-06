@@ -370,11 +370,13 @@ def loss_stats(stats_a, stats_b):
             loss_s = (sa.squeeze() - sb.squeeze()).norm()
         else:   # class conditional
             if np.prod(ma.shape) == ma.shape[0] or np.prod(mb.shape) == mb.shape[0]:
-                loss_m = (ma.squeeze() - mb.squeeze()).abs().mean()
-                loss_s = (sa.squeeze() - sb.squeeze()).abs().mean()
+                loss_m = (ma.squeeze() - mb.squeeze()).abs().mean() / num_stats
+                loss_s = (sa.squeeze() - sb.squeeze()).abs().mean() / num_stats
             else:  # multiple features
-                loss_m = (ma.squeeze() - mb.squeeze()).norm(dim=1).mean()
-                loss_s = (sa.squeeze() - sb.squeeze()).norm(dim=1).mean()
+                loss_m = (ma.squeeze() - mb.squeeze()
+                          ).norm(dim=1).mean() / num_stats
+                loss_s = (sa.squeeze() - sb.squeeze()
+                          ).norm(dim=1).mean() / num_stats
         if num_stats > 1:
             info[f'[stats losses means] {i}'] = loss_m.item()
             info[f'[stats losses vars] {i}'] = loss_s.item()
