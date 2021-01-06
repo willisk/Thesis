@@ -490,7 +490,7 @@ def im_show(batch):
     plt.show()
 
 
-test_batch = next(iter(DATA_B))[0].to(DEVICE)
+test_data = next(iter(DATA_B))
 # ======= Optimize =======
 metrics = defaultdict(dict)
 plots = {}
@@ -526,7 +526,7 @@ for method, loss_fn in methods:
             global ideal_value
             if ideal_value is None:
                 with torch.no_grad():
-                    ideal_value = loss_fn(test_batch)['loss'].item()
+                    ideal_value = loss_fn(test_data)['loss'].item()
             info[':--: ideal'] = ideal_value
         return info
 
