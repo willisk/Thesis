@@ -586,7 +586,7 @@ def plot_metrics(metrics, title='metrics', step_start=1, plot_range=None, smooth
     y_min = max(vals.min(), min(vals_m.squeeze() - vals_s))
 
     plt.figure(figsize=(28, 6))
-    plt.figure(**kwargs)
+    # plt.figure(**kwargs)
     num_plots = len(metrics)
     if num_plots > 10:
         colors = jet(np.linspace(0, 1, num_plots))
