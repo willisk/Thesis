@@ -18,7 +18,7 @@ import torch.optim as optim
 # import torch.utils.data
 import torch.nn.functional as F
 import torchvision
-import torchvision.transforms as transforms
+import torchvision.transforms as T
 import torchvision.utils as vutils
 
 import numpy as np

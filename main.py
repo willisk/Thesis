@@ -50,12 +50,6 @@ parser = argparse.ArgumentParser(description="Reconstruction Tests")
 parser.add_argument(
     "-dataset", choices=['CIFAR10', 'MNIST'], required=True)
 parser.add_argument("-seed", type=int, default=0)
-parser.add_argument("--nn_resume_train", action="store_true")
-parser.add_argument("--nn_reset_train", action="store_true")
-parser.add_argument("--use_amp", action="store_true")
-parser.add_argument("--use_std", action="store_true")
-parser.add_argument("--use_jitter", action="store_true")
-parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
 parser.add_argument("-batch_size", type=int, default=64)
@@ -67,8 +61,15 @@ parser.add_argument("-f_crit", type=float, default=1)
 parser.add_argument("-f_stats", type=float, default=10)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
-parser.add_argument("-show_after", type=int, default=20)
+parser.add_argument("-show_after", type=int, default=50)
 parser.add_argument("-distort_level", type=float, default=0.3)
+parser.add_argument("--nn_resume_train", action="store_true")
+parser.add_argument("--nn_reset_train", action="store_true")
+parser.add_argument("--use_amp", action="store_true")
+parser.add_argument("--use_std", action="store_true")
+parser.add_argument("--use_jitter", action="store_true")
+parser.add_argument("--plot_ideal", action="store_true")
+parser.add_argument("--scale_each", action="store_true")
 
 # # GMM
 # parser.add_argument("-g_modes", type=int, default=3)
@@ -77,13 +78,8 @@ parser.add_argument("-distort_level", type=float, default=0.3)
 # parser.add_argument("-g_mean_shift", type=float, default=0)
 
 if 'ipykernel_launcher' in sys.argv[0]:
-    # args = parser.parse_args('-dataset GMM'.split())
-    # args.nn_steps = 500
-    # args.inv_steps = 500
-    # args.batch_size = -1
-
-    # args = parser.parse_args('-dataset CIFAR10'.split())
-    args = parser.parse_args('-dataset MNIST'.split())
+    args = parser.parse_args('-dataset CIFAR10'.split())
+    # args = parser.parse_args('-dataset MNIST'.split())
     # args.nn_steps = 5
     args.inv_steps = 3
     args.distort_level = 0.1
@@ -94,9 +90,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args.f_stats = 0.001
     # args.distort_level = 0.5
 
-    # args.inv_steps = 1
-    # args.batch_size = 64
-    args.seed = -1
+    args.seed = 0
 
     args.size_B = 64
     args.plot_ideal = True
@@ -153,19 +147,6 @@ print(f"Running on '{DEVICE}'\n")
 
 # ======= Create Dataset =======
 
-
-# if args.dataset == 'GMM':
-#     dataset = datasets.MULTIGMM(
-#         input_shape=(20,),
-#         n_classes=3,
-#         n_modes=args.g_modes,
-#         scale_mean=args.g_scale_mean,
-#         scale_cov=args.g_scale_cov,
-#         mean_shift=args.g_mean_shift,
-#         n_samples_A=1000,
-#         n_samples_B=100,
-#         n_samples_B_val=100,
-#     )
 if args.dataset == 'CIFAR10':
     dataset = datasets.CIFAR10()
 elif args.dataset == 'MNIST':
@@ -580,11 +561,11 @@ class ReconstructionModel(nn.Module):
 
 
 @torch.no_grad()
-def im_show(batch):
+def im_show(im_batch):
     s = 1.6
     img_grid = torchvision.utils.make_grid(
-        batch.cpu(), nrow=10, normalize=True, scale_each=False)
-    plt.figure(figsize=(s * 10, s * len(batch)))
+        im_batch.cpu(), nrow=10, normalize=True, scale_each=args.scale_each)
+    plt.figure(figsize=(s * 10, s * len(im_batch)))
     plt.imshow(img_grid.permute(1, 2, 0))
     plt.show()
 

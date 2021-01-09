@@ -205,3 +205,10 @@ class ConvNet(Net):
         x = nn.Flatten()(x)
         x = self.layers[-1](x)
         return x
+
+
+class ResNet34(_resnet34):
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 64, )

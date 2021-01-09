@@ -210,15 +210,15 @@ class DatasetDigits(Dataset):
 
 
 import torchvision
-import torchvision.transforms as transforms
+import torchvision.transforms as T
 
 
 class DatasetCifar10(torchvision.datasets.CIFAR10, Dataset):
     def __init__(self, load_dataset=True):
 
-        self.transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        self.transform = T.Compose([
+            T.ToTensor(),
+            T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
         if load_dataset:
             super().__init__(root=DATADIR, train=True, download=True, transform=self.transform)

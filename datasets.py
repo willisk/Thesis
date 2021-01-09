@@ -11,10 +11,11 @@ import numpy as np
 import torch
 import torchvision
 from torch.utils.data import random_split, DataLoader, TensorDataset, Subset
-import torchvision.transforms as transforms
+import torchvision.transforms as T
 
 # https://github.com/huyvnphan/PyTorch_CIFAR10
 from ext.cifar10pretrained.cifar10_models import resnet34 as ResNet34, resnet50 as ResNet50
+from torchvision.models import resnet34 as ResNet34, resnet50 as ResNet50
 # from ext.cifar10pretrained.cifar10_download import main as download_resnet
 # download_resnet()
 import utility
@@ -68,10 +69,10 @@ class Dataset():
 
 class CIFAR10(Dataset):
     def __init__(self, load_data=True):
-        transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465),
-                                 (0.2023, 0.1994, 0.2010))
+        transform = T.Compose([
+            T.ToTensor(),
+            T.Normalize((0.4914, 0.4822, 0.4465),
+                        (0.2023, 0.1994, 0.2010))
         ])
         if load_data:
             train_set = torchvision.datasets.CIFAR10(
@@ -96,6 +97,9 @@ class CIFAR10(Dataset):
 
     def net(self):
         resnet = ResNet34()
+        # adapt ImageNet to CIFAR10
+        resnet.conv1 = nn.
+
         model_path = os.path.join(self.data_dir, "net_resnet34.pt")
         return model_path, resnet
 
@@ -107,9 +111,9 @@ class CIFAR10(Dataset):
 
 class MNIST(Dataset):
     def __init__(self):
-        transform = torchvision.transforms.Compose([
-            torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize((0.1307,), (0.3081,))
+        transform = torchvision.T.Compose([
+            torchvision.T.ToTensor(),
+            torchvision.T.Normalize((0.1307,), (0.3081,))
         ])
         train_set = torchvision.datasets.MNIST(
             root=DATADIR, train=True, download=True, transform=transform)
@@ -145,6 +149,18 @@ from scipy.special import logsumexp
 from scipy.stats import multivariate_normal, ortho_group
 
 
+# if args.dataset == 'GMM':
+#     dataset = datasets.MULTIGMM(
+#         input_shape=(20,),
+#         n_classes=3,
+#         n_modes=args.g_modes,
+#         scale_mean=args.g_scale_mean,
+#         scale_cov=args.g_scale_cov,
+#         mean_shift=args.g_mean_shift,
+#         n_samples_A=1000,
+#         n_samples_B=100,
+#         n_samples_B_val=100,
+#     )
 class MULTIGMM(Dataset):
 
     def __init__(self, input_shape=20, n_classes=10, n_modes=8,

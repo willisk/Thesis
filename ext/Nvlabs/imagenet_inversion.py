@@ -19,7 +19,7 @@ import random
 import torch.nn as nn
 import torch.nn.parallel
 import torch.utils.data
-from torchvision import datasets, transforms
+from torchvision import datasets, T
 
 import numpy as np
 from apex import amp
@@ -57,13 +57,15 @@ def validate_one(input, target, model):
 
 def run(args):
     torch.manual_seed(args.local_rank)
-    device = torch.device('cuda' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available()
+                          and not args.no_cuda else 'cpu')
 
     if args.arch_name == "resnet50v15":
         from models.resnetv15 import build_resnet
         net = build_resnet("resnet50", "classic")
     else:
-        print("loading torchvision model for inversion with the name: {}".format(args.arch_name))
+        print("loading torchvision model for inversion with the name: {}".format(
+            args.arch_name))
         net = models.__dict__[args.arch_name](pretrained=True)
 
     net = net.to(device)
@@ -74,10 +76,11 @@ def run(args):
 
     print('==> Resuming from checkpoint..')
 
-    ### load models
-    if args.arch_name=="resnet50v15":
+    # load models
+    if args.arch_name == "resnet50v15":
         path_to_model = "./models/resnet50v15/model_best.pth.tar"
-        load_model_pytorch(net, path_to_model, gpu_n=torch.cuda.current_device())
+        load_model_pytorch(net, path_to_model,
+                           gpu_n=torch.cuda.current_device())
 
     net.to(device)
     net.eval()
@@ -88,7 +91,8 @@ def run(args):
         # if multiple GPUs are used then we can change code to load different verifiers to different GPUs
         if args.local_rank == 0:
             print("loading verifier: ", args.verifier_arch)
-            net_verifier = models.__dict__[args.verifier_arch](pretrained=True).to(device)
+            net_verifier = models.__dict__[
+                args.verifier_arch](pretrained=True).to(device)
             net_verifier.eval()
 
             if use_fp16:
@@ -96,7 +100,8 @@ def run(args):
 
     if args.adi_scale != 0.0:
         student_arch = "resnet18"
-        net_verifier = models.__dict__[student_arch](pretrained=True).to(device)
+        net_verifier = models.__dict__[
+            student_arch](pretrained=True).to(device)
         net_verifier.eval()
 
         if use_fp16:
@@ -114,9 +119,9 @@ def run(args):
 
     exp_name = args.exp_name
     # final images will be stored here:
-    adi_data_path = "./final_images/%s"%exp_name
+    adi_data_path = "./final_images/%s" % exp_name
     # temporal data and generations will be stored here
-    exp_name = "generations/%s"%exp_name
+    exp_name = "generations/%s" % exp_name
 
     args.iterations = 2000
     args.start_noise = True
@@ -149,11 +154,11 @@ def run(args):
     coefficients["main_loss_multiplier"] = args.main_loss_multiplier
     coefficients["adi_scale"] = args.adi_scale
 
-    network_output_function = lambda x: x
+    def network_output_function(x): return x
 
     # check accuracy of verifier
     if args.verifier:
-        hook_for_display = lambda x,y: validate_one(x, y, net_verifier)
+        def hook_for_display(x, y): return validate_one(x, y, net_verifier)
     else:
         hook_for_display = None
 
@@ -162,48 +167,68 @@ def run(args):
                                              path=exp_name,
                                              parameters=parameters,
                                              setting_id=args.setting_id,
-                                             bs = bs,
-                                             use_fp16 = args.fp16,
-                                             jitter = jitter,
+                                             bs=bs,
+                                             use_fp16=args.fp16,
+                                             jitter=jitter,
                                              criterion=criterion,
-                                             coefficients = coefficients,
-                                             network_output_function = network_output_function,
-                                             hook_for_display = hook_for_display)
-    net_student=None
+                                             coefficients=coefficients,
+                                             network_output_function=network_output_function,
+                                             hook_for_display=hook_for_display)
+    net_student = None
     if args.adi_scale != 0:
         net_student = net_verifier
     DeepInversionEngine.generate_batch(net_student=net_student)
 
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--worldsize', type=int, default=1, help='Number of processes participating in the job.')
-    parser.add_argument('--local_rank', '--rank', type=int, default=0, help='Rank of the current process.')
-    parser.add_argument('--adi_scale', type=float, default=0.0, help='Coefficient for Adaptive Deep Inversion')
+    parser.add_argument('-s', '--worldsize', type=int, default=1,
+                        help='Number of processes participating in the job.')
+    parser.add_argument('--local_rank', '--rank', type=int,
+                        default=0, help='Rank of the current process.')
+    parser.add_argument('--adi_scale', type=float, default=0.0,
+                        help='Coefficient for Adaptive Deep Inversion')
     parser.add_argument('--no-cuda', action='store_true')
 
     parser.add_argument('--epochs', default=20000, type=int, help='batch size')
-    parser.add_argument('--setting_id', default=0, type=int, help='settings for optimization: 0 - multi resolution, 1 - 2k iterations, 2 - 20k iterations')
+    parser.add_argument('--setting_id', default=0, type=int,
+                        help='settings for optimization: 0 - multi resolution, 1 - 2k iterations, 2 - 20k iterations')
     parser.add_argument('--bs', default=64, type=int, help='batch size')
     parser.add_argument('--jitter', default=30, type=int, help='batch size')
     parser.add_argument('--comment', default='', type=str, help='batch size')
-    parser.add_argument('--arch_name', default='resnet50', type=str, help='model name from torchvision or resnet50v15')
+    parser.add_argument('--arch_name', default='resnet50', type=str,
+                        help='model name from torchvision or resnet50v15')
 
-    parser.add_argument('--fp16', action='store_true', help='use FP16 for optimization')
-    parser.add_argument('--exp_name', type=str, default='test', help='where to store experimental data')
+    parser.add_argument('--fp16', action='store_true',
+                        help='use FP16 for optimization')
+    parser.add_argument('--exp_name', type=str, default='test',
+                        help='where to store experimental data')
 
-    parser.add_argument('--verifier', action='store_true', help='evaluate batch with another model')
-    parser.add_argument('--verifier_arch', type=str, default='mobilenet_v2', help = "arch name from torchvision models to act as a verifier")
+    parser.add_argument('--verifier', action='store_true',
+                        help='evaluate batch with another model')
+    parser.add_argument('--verifier_arch', type=str, default='mobilenet_v2',
+                        help="arch name from torchvision models to act as a verifier")
 
-    parser.add_argument('--do_flip', action='store_true', help='apply flip during model inversion')
-    parser.add_argument('--random_label', action='store_true', help='generate random label for optimization')
-    parser.add_argument('--r_feature', type=float, default=0.05, help='coefficient for feature distribution regularization')
-    parser.add_argument('--first_bn_multiplier', type=float, default=10., help='additional multiplier on first bn layer of R_feature')
-    parser.add_argument('--tv_l1', type=float, default=0.0, help='coefficient for total variation L1 loss')
-    parser.add_argument('--tv_l2', type=float, default=0.0001, help='coefficient for total variation L2 loss')
-    parser.add_argument('--lr', type=float, default=0.2, help='learning rate for optimization')
-    parser.add_argument('--l2', type=float, default=0.00001, help='l2 loss on the image')
-    parser.add_argument('--main_loss_multiplier', type=float, default=1.0, help='coefficient for the main loss in optimization')
-    parser.add_argument('--store_best_images', action='store_true', help='save best images as separate files')
+    parser.add_argument('--do_flip', action='store_true',
+                        help='apply flip during model inversion')
+    parser.add_argument('--random_label', action='store_true',
+                        help='generate random label for optimization')
+    parser.add_argument('--r_feature', type=float, default=0.05,
+                        help='coefficient for feature distribution regularization')
+    parser.add_argument('--first_bn_multiplier', type=float, default=10.,
+                        help='additional multiplier on first bn layer of R_feature')
+    parser.add_argument('--tv_l1', type=float, default=0.0,
+                        help='coefficient for total variation L1 loss')
+    parser.add_argument('--tv_l2', type=float, default=0.0001,
+                        help='coefficient for total variation L2 loss')
+    parser.add_argument('--lr', type=float, default=0.2,
+                        help='learning rate for optimization')
+    parser.add_argument('--l2', type=float, default=0.00001,
+                        help='l2 loss on the image')
+    parser.add_argument('--main_loss_multiplier', type=float, default=1.0,
+                        help='coefficient for the main loss in optimization')
+    parser.add_argument('--store_best_images', action='store_true',
+                        help='save best images as separate files')
 
     args = parser.parse_args()
     print(args)
