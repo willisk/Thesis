@@ -609,6 +609,7 @@ for method, loss_fn in methods:
         data_inv = (invert_fn(inputs), labels)
         info = loss_fn(data_inv)
         info[':mean: psnr'] = utility.average_psnr([data], invert_fn)
+        info['min c'] = labels.long().bincount().min().item()
         if args.plot_ideal:
             with torch.no_grad():
                 info['ideal'] = loss_fn(data)['loss'].item()

@@ -2,6 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# from torchvision.models import resnet34 as _resnet34, resnet50 as ResNet50
+from torchvision.models.resnet import ResNet, BasicBlock, Bottleneck
+# import torchvision.models as models
+
 
 class Net(nn.Module):
     def __init__(self):
@@ -13,7 +17,7 @@ class Net(nn.Module):
         return torch.argmax(self(x), dim=1)
 
 
-class ResNet(Net):
+class tResNet(Net):
     def __init__(self, in_channels, n_classes, block_depth):
         super().__init__()
 
@@ -57,12 +61,12 @@ class ResNet(Net):
         return nn.Sequential(*layers)
 
 
-class ResNet9(ResNet):
+class ResNet9(tResNet):
     def __init__(self, in_channels, n_classes):
         super().__init__(in_channels, n_classes, [2, 2, 0])
 
 
-class ResNet20(ResNet):
+class ResNet20(tResNet):
     def __init__(self, in_channels, n_classes):
         super().__init__(in_channels, n_classes, [3, 3, 3])
 
@@ -207,8 +211,21 @@ class ConvNet(Net):
         return x
 
 
-class ResNet34(_resnet34):
+def resnet34():
 
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(3, 64, )
+    resnet = ResNet(BasicBlock, [3, 4, 6, 3], num_classes=10)
+
+    # adapting for pretrained CIFAR10
+    resnet.conv1 = nn.Conv2d(
+        3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+    return resnet
+
+
+def resnet50():
+
+    resnet = ResNet(Bottleneck, [3, 4, 6, 3], num_classes=10)
+
+    # adapting for pretrained CIFAR10
+    resnet.conv1 = nn.Conv2d(
+        3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+    return resnet
