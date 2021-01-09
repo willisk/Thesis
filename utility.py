@@ -191,17 +191,17 @@ def batch_feature_stats(X, std=False, keepdim=False):
     dims_collapse.remove(1)
     assert dims_collapse != [], "dims to collapse are empty"
     mean = X.mean(dim=dims_collapse, keepdim=keepdim)
-    valid_mean = len(X) > 0
-    valid_var = len(X) > 3
-    if not valid_mean:
-        mean = torch.zeros_like(mean)
-    if not valid_var:
-        var = torch.zeros_like(mean)
+    # valid_mean = len(X) > 0
+    # valid_var = len(X) > 1
+    # if not valid_mean:
+    #     mean = torch.zeros_like(mean)
+    # if not valid_var:
+    #     var = torch.zeros_like(mean)
+    # else:
+    if std:
+        var = X.std(dim=dims_collapse, unbiased=False, keepdim=keepdim)
     else:
-        if std:
-            var = X.std(dim=dims_collapse, unbiased=False, keepdim=keepdim)
-        else:
-            var = X.var(dim=dims_collapse, unbiased=False, keepdim=keepdim)
+        var = X.var(dim=dims_collapse, unbiased=False, keepdim=keepdim)
     return mean, var
 
 

@@ -368,7 +368,10 @@ def loss_stats(stats_a, stats_b):
         else:
             info[f'[stats losses] mean'] = loss_m.item() * f_stats
             info[f'[stats losses] var'] = loss_s.item() * f_stats
-        loss += loss_m + loss_s
+        if loss_m.isfinite():
+            loss += loss_m
+        if loss_s.isfinite():
+            loss += loss_s
     return loss, info
 
 
@@ -732,6 +735,6 @@ print("\nReconstruction methods:")
 utility.print_tabular(metrics, row_name="method")
 
 
-def plot_metrics(method, plot_range=None):
+def plot_metrics(method, plot_range=None, **kwargs):
     print(f"\n## {method}")
-    utility.plot_metrics(plots[method], plot_range=plot_range)
+    utility.plot_metrics(plots[method], plot_range=plot_range, **kwargs)
