@@ -608,7 +608,7 @@ for method, loss_fn in methods:
             inputs = jitter(inputs)
         data_inv = (invert_fn(inputs), labels)
         info = loss_fn(data_inv)
-        info[':mean: psnr'] = utility.average_psnr([data], invert_fn)
+        # info[':mean: psnr'] = utility.average_psnr([data], invert_fn)
         info['min c'] = labels.long().bincount().min().item()
         if args.plot_ideal:
             with torch.no_grad():
@@ -634,6 +634,7 @@ for method, loss_fn in methods:
                             #    grad_norm_fn=grad_norm_fn,
                             callback_fn=callback_fn,
                             track_grad_norm=True,
+                            track_per_batch=True,
                             )
     plots[method] = info
 
