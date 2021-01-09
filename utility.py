@@ -192,7 +192,7 @@ def batch_feature_stats(X, std=False, keepdim=False):
     assert dims_collapse != [], "dims to collapse are empty"
     mean = X.mean(dim=dims_collapse, keepdim=keepdim)
     valid_mean = len(X) > 0
-    valid_var = len(X) > 1
+    valid_var = len(X) > 3
     if not valid_mean:
         mean = torch.zeros_like(mean)
     if not valid_var:
@@ -548,7 +548,7 @@ def smoothen(values, weight):
 jet = plt.cm.brg
 
 
-def plot_metrics(metrics, title='metrics', step_start=1, plot_range=None, smoothing=0):
+def plot_metrics(metrics, title='metrics', step_start=1, plot_range=None, smoothing=0, **kwargs):
     if 'step' in metrics:
         steps = metrics['step']
     else:
@@ -585,7 +585,8 @@ def plot_metrics(metrics, title='metrics', step_start=1, plot_range=None, smooth
     y_max = min(vals.max(), max(vals_m.squeeze() + vals_s))
     y_min = max(vals.min(), min(vals_m.squeeze() - vals_s))
 
-    plt.figure(figsize=(24, 6))
+    plt.figure(figsize=(28, 6))
+    plt.figure(**kwargs)
     num_plots = len(metrics)
     if num_plots > 10:
         colors = jet(np.linspace(0, 1, num_plots))
@@ -619,7 +620,8 @@ def plot_metrics(metrics, title='metrics', step_start=1, plot_range=None, smooth
 
     if grouped:
         for group, metrics in sorted(grouped.items()):
-            plot_metrics(metrics, group, step_start, plot_range, smoothing)
+            plot_metrics(metrics, group, step_start,
+                         plot_range, smoothing, **kwargs)
 
 
 def scatter_matrix(data, labels,
