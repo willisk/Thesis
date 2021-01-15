@@ -341,13 +341,13 @@ def loss_stats(stats_a, stats_b):
             loss_s = (sa - sb).norm()
         else:   # class conditional
             if np.prod(ma.shape) == ma.shape[0] or np.prod(mb.shape) == mb.shape[0]:
-                loss_m = (ma - mb).abs().sum()
-                loss_s = (sa - sb).abs().sum()
+                loss_m = (ma - mb).abs().mean()
+                loss_s = (sa - sb).abs().mean()
             else:  # multiple features
-                loss_m = (ma - mb).norm(dim=1).sum()
-                loss_s = (sa - sb).norm(dim=1).sum()
-        loss_m /= ma.numel() * num_maps
-        loss_s /= ma.numel() * num_maps
+                loss_m = (ma - mb).norm(dim=1).mean()
+                loss_s = (sa - sb).norm(dim=1).mean()
+        loss_m /= num_maps
+        loss_s /= num_maps
         if num_maps > 1:
             info[f'[stats losses means] {i}'] = loss_m.item() * f_stats
             info[f'[stats losses vars] {i}'] = loss_s.item() * f_stats

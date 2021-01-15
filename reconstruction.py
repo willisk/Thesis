@@ -363,11 +363,11 @@ def loss_stats(stats_a, stats_b):
                 loss_s = (sa.squeeze() - sb.squeeze()).abs().sum()
             else:  # multiple features
                 loss_m = (ma.squeeze() - mb.squeeze()
-                          ).norm(dim=1).sum()
+                          ).norm(dim=1).mean()
                 loss_s = (sa.squeeze() - sb.squeeze()
-                          ).norm(dim=1).sum()
-        loss_m /= ma.numel() * num_maps
-        loss_s /= ma.numel() * num_maps
+                          ).norm(dim=1).mean()
+        loss_m /= num_maps
+        loss_s /= num_maps
         if num_maps > 1:
             info[f'[stats losses means] {i}'] = loss_m.item() * f_stats
             info[f'[stats losses vars] {i}'] = loss_s.item() * f_stats
