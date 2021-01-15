@@ -355,17 +355,19 @@ def loss_stats(stats_a, stats_b):
     info = {}
     for i, ((ma, sa), (mb, sb)) in enumerate(zip(stats_a, stats_b)):
         if ma.ndim == 1:
-            loss_m = (ma.squeeze() - mb.squeeze()).norm() / num_maps
-            loss_s = (sa.squeeze() - sb.squeeze()).norm() / num_maps
+            loss_m = (ma.squeeze() - mb.squeeze()).norm()
+            loss_s = (sa.squeeze() - sb.squeeze()).norm()
         else:   # class conditional
             if np.prod(ma.shape) == ma.shape[0] or np.prod(mb.shape) == mb.shape[0]:
-                loss_m = (ma.squeeze() - mb.squeeze()).abs().mean() / num_maps
-                loss_s = (sa.squeeze() - sb.squeeze()).abs().mean() / num_maps
+                loss_m = (ma.squeeze() - mb.squeeze()).abs().sum()
+                loss_s = (sa.squeeze() - sb.squeeze()).abs().sum()
             else:  # multiple features
                 loss_m = (ma.squeeze() - mb.squeeze()
-                          ).norm(dim=1).mean() / num_maps
+                          ).norm(dim=1).sum()
                 loss_s = (sa.squeeze() - sb.squeeze()
-                          ).norm(dim=1).mean() / num_maps
+                          ).norm(dim=1).sum()
+        loss_m /= ma.numel() * num_maps
+        loss_s /= ma.numel() * num_maps
         if num_maps > 1:
             info[f'[stats losses means] {i}'] = loss_m.item() * f_stats
             info[f'[stats losses vars] {i}'] = loss_s.item() * f_stats
