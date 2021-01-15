@@ -573,7 +573,7 @@ class ReconstructionModel(nn.Module):
                 n_chan,
                 args.r_block_width,
                 noise_level=1 / np.sqrt(n + 1),
-                relu_out=n < depth - 1,
+                relu_out=n < args.r_block_depth - 1,
                 bias=bias,
             ) for n in range(args.r_block_depth)
         ])
