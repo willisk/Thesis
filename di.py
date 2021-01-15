@@ -346,8 +346,8 @@ def loss_stats(stats_a, stats_b):
     info = {}
     for i, ((ma, sa), (mb, sb)) in enumerate(zip(stats_a, stats_b)):
         if ma.ndim == 1:
-            loss_m = (ma.squeeze() - mb.squeeze()).norm()
-            loss_s = (sa.squeeze() - sb.squeeze()).norm()
+            loss_m = (ma.squeeze() - mb.squeeze()).norm() / num_stats
+            loss_s = (sa.squeeze() - sb.squeeze()).norm() / num_stats
         else:   # class conditional
             if np.prod(ma.shape) == ma.shape[0] or np.prod(mb.shape) == mb.shape[0]:
                 loss_m = (ma.squeeze() - mb.squeeze()).abs().mean() / num_stats
@@ -367,6 +367,8 @@ def loss_stats(stats_a, stats_b):
             loss += loss_m
         if loss_s.isfinite():
             loss += loss_s
+    loss *= f_stats
+    info['[losses] stats'] = loss.item()
     return loss, info
 
 
@@ -398,9 +400,7 @@ def loss_fn_wrapper(name, project, class_conditional):
             stats = utility.get_stats(
                 outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
             cost_stats, info_stats = loss_stats(stats_A, stats)
-            cost_stats *= f_stats
             info = {**info, **info_stats}
-            info['[losses] stats'] = cost_stats.item()
             loss += cost_stats
 
         if f_crit:
