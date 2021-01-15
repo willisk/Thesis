@@ -71,23 +71,12 @@ parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("--scale_each", action="store_true")
 
 if 'ipykernel_launcher' in sys.argv[0]:
-    # args = parser.parse_args('-dataset GMM'.split())
-    # args.nn_steps = 500
-    # args.inv_steps = 500
-    # args.batch_size = -1
-
     # args = parser.parse_args('-dataset MNIST'.split())
-    # args.inv_steps = 2
-    # args.size_B = 128
-    # args.inv_lr = 0.01
-
     args = parser.parse_args('-dataset CIFAR10'.split())
     args.inv_steps = 2
+    args.size_A = 16
     args.size_B = 8
-    # args.batch_size = 256
-
-    # args.n_random_projections = 1024
-    # args.use_var = True
+    args.batch_size = 8
 else:
     args = parser.parse_args()
 
@@ -345,18 +334,18 @@ def loss_stats(stats_a, stats_b):
     loss = torch.tensor(0).float().to(DEVICE)
     info = {}
     for i, ((ma, sa), (mb, sb)) in enumerate(zip(stats_a, stats_b)):
+        ma, sa = ma.squeeze(), sa.squeeze()
+        mb, sb = mb.squeeze(), sb.squeeze()
         if ma.ndim == 1:
-            loss_m = (ma.squeeze() - mb.squeeze()).norm()
-            loss_s = (sa.squeeze() - sb.squeeze()).norm()
+            loss_m = (ma - mb).norm()
+            loss_s = (sa - sb).norm()
         else:   # class conditional
             if np.prod(ma.shape) == ma.shape[0] or np.prod(mb.shape) == mb.shape[0]:
-                loss_m = (ma.squeeze() - mb.squeeze()).abs().sum()
-                loss_s = (sa.squeeze() - sb.squeeze()).abs().sum()
+                loss_m = (ma - mb).abs().sum()
+                loss_s = (sa - sb).abs().sum()
             else:  # multiple features
-                loss_m = (ma.squeeze() - mb.squeeze()
-                          ).norm(dim=1).sum()
-                loss_s = (sa.squeeze() - sb.squeeze()
-                          ).norm(dim=1).sum()
+                loss_m = (ma - mb).norm(dim=1).sum()
+                loss_s = (sa - sb).norm(dim=1).sum()
         loss_m /= ma.numel() * num_maps
         loss_s /= ma.numel() * num_maps
         if num_maps > 1:

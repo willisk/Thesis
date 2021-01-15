@@ -158,10 +158,11 @@ def exp_av_mean_var(m_a, v_a, m_b, v_b, gamma):
 
 
 def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, cap_gamma=1):
-    m_a[n_a == 0] = 0
-    v_a[n_a == 0] = 0
-    m_b[n_b == 0] = 0
-    v_b[n_b == 0] = 0
+    if n_a.numel() > 1:  # class conditional
+        m_a[n_a == 0] = 0
+        v_a[n_a == 0] = 0
+        m_b[n_b == 0] = 0
+        v_b[n_b == 0] = 0
     n = n_a + n_b
     gamma = expand_as_r(torch.clamp(n_a / n, max=cap_gamma), m_a)
     mean, var = exp_av_mean_var(m_a, v_a, m_b, v_b, gamma)
