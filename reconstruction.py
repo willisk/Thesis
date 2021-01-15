@@ -338,10 +338,10 @@ def regularization(x):
     diff3 = x[:, :, 1:, :-1] - x[:, :, :-1, 1:]
     diff4 = x[:, :, :-1, :-1] - x[:, :, 1:, 1:]
     return (
-        torch.norm(diff1, dim=(1, 2, 3))
-        + torch.norm(diff2, dim=(1, 2, 3))
-        + torch.norm(diff3, dim=(1, 2, 3))
-        + torch.norm(diff4, dim=(1, 2, 3))
+        torch.norm(diff1.reshape(len(x), -1), dim=1)
+        + torch.norm(diff2.reshape(len(x), -1), dim=1)
+        + torch.norm(diff3.reshape(len(x), -1), dim=1)
+        + torch.norm(diff4.reshape(len(x), -1), dim=1)
     ).mean()  # / (x.prod)
 
 
