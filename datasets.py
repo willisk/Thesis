@@ -108,9 +108,9 @@ class CIFAR10(Dataset):
 
 class MNIST(Dataset):
     def __init__(self):
-        transform = torchvision.T.Compose([
-            torchvision.T.ToTensor(),
-            torchvision.T.Normalize((0.1307,), (0.3081,))
+        transform = T.Compose([
+            T.ToTensor(),
+            T.Normalize((0.1307,), (0.3081,))
         ])
         train_set = torchvision.datasets.MNIST(
             root=DATADIR, train=True, download=True, transform=transform)
