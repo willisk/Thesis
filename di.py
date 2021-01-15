@@ -340,7 +340,7 @@ def loss_stats(stats_a, stats_b):
             loss_m = (ma - mb).norm()
             loss_s = (sa - sb).norm()
         else:   # class conditional
-            if np.prod(ma.shape) == ma.shape[0] or np.prod(mb.shape) == mb.shape[0]:
+            if ma.ndim == 1:
                 loss_m = (ma - mb).abs().mean()
                 loss_s = (sa - sb).abs().mean()
             else:  # multiple features
