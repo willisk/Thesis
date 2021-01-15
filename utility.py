@@ -328,13 +328,32 @@ def collect_data(data_loader, data_fn, accumulate_fn, final_fn=None):
     return out
 
 
+(0.2126 * R + 0.7152 * G + 0.0722 * B)
+
+
+def to_zero_one(x):
+    return (x - x.min()) / (x.max() - x.min())
+
+
+def rbg_to_luminance(x):
+    # x = to_zero_one(x)
+    return (
+        x[:, 0, None, :, :] * 0.2126 +
+        x[:, 1, None, :, :] * 0.7152 +
+        x[:, 2, None, :, :] * 0.0722)
+
+
 @torch.no_grad()
-def psnr(x_gt, x_approx, x_max=None):
-    x_gt = x_gt.reshape(len(x_gt), -1)
-    x_approx = x_approx.reshape(len(x_approx), -1)
-    if x_max is None:
-        x_max = x_gt.max(dim=1)[0]
-    return 20 * x_max.log10() - 10 * ((x_gt - x_approx)**2).mean(dim=1).log10()
+def psnr(x, y):
+    assert x.ndim == 4
+    x = to_zero_one(x)
+    y = to_zero_one(y)
+    if x.shape[1] == 3:
+        x = rbg_to_luminance(x)
+        y = rbg_to_luminance(y)
+    x = x.reshape(len(x), -1)
+    y = y.reshape(len(x), -1)
+    return - 10 * torch.log10(((x - y)**2).mean(dim=1))
 
 
 def average_psnr(data_loader, invert_fn, x_max=None):
