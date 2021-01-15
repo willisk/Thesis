@@ -454,21 +454,21 @@ methods = [
     #     project=project_NN,
     #     class_conditional=False,
     # ),
-    loss_fn_wrapper(
-        name="NN CC",
-        project=project_NN,
-        class_conditional=True,
-    ),
     # loss_fn_wrapper(
-    #     name="NN ALL",
-    #     project=project_NN_all,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL CC",
-    #     project=project_NN_all,
+    #     name="NN CC",
+    #     project=project_NN,
     #     class_conditional=True,
     # ),
+    loss_fn_wrapper(
+        name="NN ALL",
+        project=project_NN_all,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="NN ALL CC",
+        project=project_NN_all,
+        class_conditional=True,
+    ),
     # loss_fn_wrapper(
     #     name="RP",
     #     project=project_RP,
