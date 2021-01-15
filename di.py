@@ -93,20 +93,22 @@ print(utility.dict_to_str(vars(args), '\n'), '\n')
 # ======= Set Seeds =======
 
 
-def set_seed(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+def set_seed():
+    if args.seed == -1:
+        return
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
     torch.backends.cudnn.enabled = False
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
-    os.environ['PYTHONHASHSEED'] = str(seed)
+    os.environ['PYTHONHASHSEED'] = str(args.seed)
 
 
-if args.seed != -1:
-    set_seed(args.seed)
+set_seed()
+
 
 # Neural Network
 nn_lr = args.nn_lr
@@ -461,16 +463,16 @@ methods = [
         project=project_RP_CC,
         class_conditional=True,
     ),
-    loss_fn_wrapper(
-        name="RP ReLU",
-        project=project_RP_relu,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="RP ReLU CC",
-        project=project_RP_relu_CC,
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="RP ReLU",
+    #     project=project_RP_relu,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP ReLU CC",
+    #     project=project_RP_relu_CC,
+    #     class_conditional=True,
+    # ),
     loss_fn_wrapper(
         name="NN ALL + RP CC",
         project=combine(project_NN_all, project_RP_CC),

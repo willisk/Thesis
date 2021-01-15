@@ -115,20 +115,22 @@ print(utility.dict_to_str(vars(args), '\n'), '\n')
 # ======= Set Seeds =======
 
 
-def set_seed(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+def set_seed():
+    if args.seed == -1:
+        return
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
     torch.backends.cudnn.enabled = False
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
-    os.environ['PYTHONHASHSEED'] = str(seed)
+    os.environ['PYTHONHASHSEED'] = str(args.seed)
 
 
-if args.seed != -1:
-    set_seed(args.seed)
+set_seed()
+
 
 # Neural Network
 nn_lr = args.nn_lr
@@ -563,6 +565,8 @@ def conv1x1Id(n_chan):
 class ReconstructionModel(nn.Module):
     def __init__(self, relu_out=False, bias=True):
         super().__init__()
+
+        set_seed()
 
         n_chan = input_shape[0]
         self.conv1x1 = conv1x1Id(n_chan)
