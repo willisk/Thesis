@@ -330,10 +330,10 @@ def collect_data(data_loader, data_fn, accumulate_fn, final_fn=None):
 
 @torch.no_grad()
 def psnr(x_gt, x_approx, x_max=None):
+    x_gt = x_gt.reshape(len(x_gt), -1)
+    x_approx = x_approx.reshape(len(x_approx), -1)
     if x_max is None:
         x_max = x_gt.max(dim=1)[0]
-    x_approx = x_approx.reshape(len(x_approx), -1)
-    x_gt = x_gt.reshape(len(x_gt), -1)
     return 20 * x_max.log10() - 10 * ((x_gt - x_approx)**2).mean(dim=1).log10()
 
 
