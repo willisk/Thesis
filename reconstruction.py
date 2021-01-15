@@ -62,6 +62,7 @@ parser.add_argument("-f_stats", type=float, default=10)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
 parser.add_argument("-show_after", type=int, default=50)
+parser.add_argument("-distort_level", type=float, default=0.3)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
@@ -70,24 +71,32 @@ parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("--scale_each", action="store_true")
 
+# # GMM
+# parser.add_argument("-g_modes", type=int, default=3)
+# parser.add_argument("-g_scale_mean", type=float, default=2)
+# parser.add_argument("-g_scale_cov", type=float, default=20)
+# parser.add_argument("-g_mean_shift", type=float, default=0)
+
 if 'ipykernel_launcher' in sys.argv[0]:
-    # args = parser.parse_args('-dataset GMM'.split())
-    # args.nn_steps = 500
-    # args.inv_steps = 500
-    # args.batch_size = -1
-
-    # args = parser.parse_args('-dataset MNIST'.split())
-    # args.inv_steps = 2
-    # args.size_B = 128
-    # args.inv_lr = 0.01
-
     args = parser.parse_args('-dataset CIFAR10'.split())
-    args.inv_steps = 2
-    args.size_B = 8
-    # args.batch_size = 256
+    # args = parser.parse_args('-dataset MNIST'.split())
+    # args.nn_steps = 5
+    args.inv_steps = 3
+    args.distort_level = 0.1
+    # args.batch_size = 64
+    # # args.size_B = 10
+    # # args.n_random_projections = 1024
+    args.inv_lr = 0.01
+    args.f_stats = 0.001
+    # args.distort_level = 0.5
 
-    # args.n_random_projections = 1024
-    # args.use_var = True
+    args.seed = 0
+
+    args.size_B = 64
+    args.plot_ideal = True
+    # args.nn_resume_train = True
+    # args.nn_reset_train = True
+    # args.use_std = True
 else:
     args = parser.parse_args()
 
@@ -150,10 +159,10 @@ A, B, B_val = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B)
 
 DATA_A = utility.DataL(
     A, batch_size=args.batch_size, shuffle=True, device=DEVICE)
-if args.plot_ideal:
-    test_data = utility.DataL(
-        B, batch_size=-1, shuffle=True, device=DEVICE)
-    ideal_data = next(iter(test_data))
+DATA_B = utility.DataL(
+    B, batch_size=args.batch_size, shuffle=True, device=DEVICE)
+DATA_B_val = utility.DataL(
+    B_val, batch_size=args.batch_size, shuffle=True, device=DEVICE)
 
 input_shape = dataset.input_shape
 n_dims = dataset.n_dims
@@ -329,11 +338,11 @@ def regularization(x):
     diff3 = x[:, :, 1:, :-1] - x[:, :, :-1, 1:]
     diff4 = x[:, :, :-1, :-1] - x[:, :, 1:, 1:]
     return (
-        torch.norm(diff1, dim=(1, 2, 3)) 
-        + torch.norm(diff2, dim=(1, 2, 3)) 
-        + torch.norm(diff3, dim=(1, 2, 3)) 
+        torch.norm(diff1, dim=(1, 2, 3))
+        + torch.norm(diff2, dim=(1, 2, 3))
+        + torch.norm(diff3, dim=(1, 2, 3))
         + torch.norm(diff4, dim=(1, 2, 3))
-        ).mean()# / (x.prod)
+    ).mean()  # / (x.prod)
 
 
 # @debug
@@ -439,53 +448,139 @@ def criterion_only(data):
 
 
 methods = [
-    ("CRITERION", criterion_only),
-    loss_fn_wrapper(
-        name="NN",
-        project=project_NN,
-        class_conditional=False,
-    ),
+    # ("CRITERION", criterion_only),
+    # loss_fn_wrapper(
+    #     name="NN",
+    #     project=project_NN,
+    #     class_conditional=False,
+    # ),
     loss_fn_wrapper(
         name="NN CC",
         project=project_NN,
         class_conditional=True,
     ),
-    loss_fn_wrapper(
-        name="NN ALL",
-        project=project_NN_all,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="NN ALL CC",
-        project=project_NN_all,
-        class_conditional=True,
-    ),
-    loss_fn_wrapper(
-        name="RP",
-        project=project_RP,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="RP CC",
-        project=project_RP_CC,
-        class_conditional=True,
-    ),
     # loss_fn_wrapper(
-    #     name="RP ReLU",
-    #     project=project_RP_relu,
+    #     name="NN ALL",
+    #     project=project_NN_all,
     #     class_conditional=False,
     # ),
     # loss_fn_wrapper(
-    #     name="RP ReLU CC",
-    #     project=project_RP_relu_CC,
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
     #     class_conditional=True,
     # ),
-    loss_fn_wrapper(
-        name="NN ALL + RP CC",
-        project=combine(project_NN_all, project_RP_CC),
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="RP",
+    #     project=project_RP,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP CC",
+    #     project=project_RP_CC,
+    #     class_conditional=True,
+    # ),
+    # # loss_fn_wrapper(
+    # #     name="RP ReLU",
+    # #     project=project_RP_relu,
+    # #     class_conditional=False,
+    # # ),
+    # # loss_fn_wrapper(
+    # #     name="RP ReLU CC",
+    # #     project=project_RP_relu_CC,
+    # #     class_conditional=True,
+    # # ),
+    # loss_fn_wrapper(
+    #     name="NN ALL + RP CC",
+    #     project=combine(project_NN_all, project_RP_CC),
+    #     class_conditional=True,
+    # ),
 ]
+
+# ======= Distortation =======
+
+
+class DistortionModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        kernel_size = 3
+        nch = input_shape[0]
+        lambd = args.distort_level
+
+        self.conv1 = nn.Conv2d(nch, nch, kernel_size,
+                               padding=1, padding_mode='reflect')
+        self.conv2 = nn.Conv2d(nch, nch, kernel_size,
+                               padding=1, padding_mode='reflect')
+        self.noise = nn.Parameter(
+            torch.randn(input_shape).unsqueeze(0))
+
+        self.conv1.weight.data.normal_()
+        self.conv2.weight.data.normal_()
+        self.conv1.weight.data *= lambd
+        self.conv2.weight.data *= lambd
+        for f in range(nch):
+            self.conv1.weight.data[f][f][1][1] += 1
+            self.conv2.weight.data[f][f][1][1] += 1
+
+        self.conv1.bias.data.normal_()
+        self.conv2.bias.data.normal_()
+        self.conv1.bias.data *= lambd
+        self.conv2.bias.data *= lambd
+
+        self.noise.data *= lambd
+
+    @torch.no_grad()
+    def forward(self, inputs):
+        outputs = inputs
+        outputs = outputs + self.noise
+        outputs = self.conv1(outputs)
+        outputs = self.conv2(outputs)
+        return outputs
+
+
+distort = DistortionModel()
+distort.eval()
+distort.to(DEVICE)
+
+# ======= Reconstruction Model =======
+
+
+def conv1x1Id(n_chan):
+    conv = nn.Conv2d(n_chan, n_chan,
+                     kernel_size=1,
+                     bias=False,
+                     )
+    conv.weight.data.fill_(0)
+    for i in range(n_chan):
+        conv.weight.data[i, i, 0, 0] = 1
+    return conv
+
+
+class ReconstructionModel(nn.Module):
+    def __init__(self, relu_out=False, bias=True):
+        super().__init__()
+
+        n_chan = input_shape[0]
+        n_hidden = 4
+        depth = 4
+        self.conv1x1 = conv1x1Id(n_chan)
+        self.bn = nn.BatchNorm2d(n_chan)
+
+        self.invert_block = nn.Sequential(*[
+            nets.InvertBlock(
+                n_chan,
+                n_hidden,
+                noise_level=1 / np.sqrt(n + 1),
+                relu_out=n < depth - 1,
+                bias=bias,
+            ) for n in range(depth)
+        ])
+
+    def forward(self, inputs):
+        outputs = self.conv1x1(inputs)
+        outputs = self.invert_block(outputs)
+        outputs = self.bn(outputs)
+        return outputs
 
 
 @torch.no_grad()
@@ -500,6 +595,14 @@ def im_show(im_batch):
     plt.show()
     print(flush=True)
 
+
+show_batch = next(iter(DATA_B))[0][:256].to(DEVICE)
+
+print("\nground truth:", flush=True)
+im_show(show_batch[:10])
+
+print("\ndistorted:")
+im_show(distort(show_batch[:10]))
 
 # ======= Optimize =======
 metrics = defaultdict(dict)
@@ -518,34 +621,31 @@ def grad_norm_fn(x):
 for method, loss_fn in methods:
     print("\n\n\n## Method:", method)
 
-    batch = torch.randn((args.size_B, *input_shape),
-                        requires_grad=True, device=DEVICE)
-    targets = torch.LongTensor(
-        range(args.size_B)).to(DEVICE) % n_classes
-    DATA_B = [(batch, targets)]
+    reconstruct = ReconstructionModel()
+    reconstruct.train()
+    reconstruct.to(DEVICE)
 
-    ideal_value = None
+    def invert_fn(inputs):
+        return reconstruct(distort(inputs))
 
     def data_loss_fn(data):
         inputs, labels = data
         if args.use_jitter:
             inputs = jitter(inputs)
-            data = (inputs, labels)
-        info = loss_fn(data)
+        data_inv = (invert_fn(inputs), labels)
+        info = loss_fn(data_inv)
+        info[':mean: psnr'] = utility.average_psnr([data], invert_fn)
         if args.plot_ideal:
-            global ideal_value
-            if ideal_value is None:
-                with torch.no_grad():
-                    ideal_value = loss_fn(ideal_data)['loss'].item()
-            info[':--: ideal'] = ideal_value
+            with torch.no_grad():
+                info['ideal'] = loss_fn(data)['loss'].item()
         return info
 
     def callback_fn(epoch, metrics):
         if epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
-            im_show(batch[:10])
+            im_show(invert_fn(show_batch[:10]))
 
-    optimizer = torch.optim.Adam([batch], lr=inv_lr)
+    optimizer = torch.optim.Adam(reconstruct.parameters(), lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
     info = inversion.invert(DATA_B,
@@ -558,25 +658,100 @@ for method, loss_fn in methods:
                             #    grad_norm_fn=grad_norm_fn,
                             callback_fn=callback_fn,
                             track_grad_norm=True,
+                            # track_per_batch=True,
                             )
     plots[method] = info
 
     # ======= Result =======
-    print("Inverted:")
-    im_show(batch)
+    reconstruct.eval()
 
-    accuracy = utility.net_accuracy(net, DATA_B)
+    print("Inverted:")
+    if len(show_batch) != len(B):
+        print(f"{len(show_batch)} / {len(B)} ")
+    im_show(invert_fn(show_batch))
+
+    print("Results:")
+
+    # Loss
+    loss = info['loss'][-1]
+    print(f"\tloss: {loss:.3f}")
+
+    # PSNR
+    psnr = utility.average_psnr(DATA_B, invert_fn)
+    psnr_distort = utility.average_psnr(DATA_B, distort)
+    print(f"\taverage PSNR: {psnr:.3f} | {psnr_distort:.3f}")
+
+    # L2 Reconstruction Error
+    Id = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
+    l2_err = (invert_fn(Id) - Id).norm().item() / Id.norm().item()
+    l2_err_distort = (distort(Id) - Id).norm().item() / Id.norm().item()
+    print(
+        f"\trel. l2 reconstruction error: {l2_err:.3f} | {l2_err_distort:.3f}")
+
+    # NN Accuracy
+    accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=invert_fn)
+    accuracy_val = utility.net_accuracy(
+        net, DATA_B_val, inputs_pre_fn=invert_fn)
     print(f"\tnn accuracy: {accuracy * 100:.1f} %")
 
+    print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
+
     metrics[method]['acc'] = accuracy
+    metrics[method]['acc(val)'] = accuracy_val
 
     if verifier_net:
-        accuracy_ver = utility.net_accuracy(verifier_net, DATA_B)
+        accuracy_ver = utility.net_accuracy(
+            verifier_net, DATA_B, inputs_pre_fn=invert_fn)
         print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
         metrics[method]['acc(ver)'] = accuracy_ver
+    metrics[method]['av. PSNR'] = psnr
+    metrics[method]['l2-err'] = l2_err
+    # metrics[method]['loss'] = loss
+
+baseline = defaultdict(dict)
+
+
+accuracy_A = utility.net_accuracy(net, DATA_A)
+accuracy_B = utility.net_accuracy(net, DATA_B)
+accuracy_B_val = utility.net_accuracy(
+    net, DATA_B_val)
+
+accuracy_B_pert = utility.net_accuracy(
+    net, DATA_B, inputs_pre_fn=distort)
+accuracy_B_val_pert = utility.net_accuracy(
+    net, DATA_B_val, inputs_pre_fn=distort)
+
+if verifier_net:
+    accuracy_A_ver = utility.net_accuracy(
+        verifier_net, DATA_A)
+    accuracy_B_ver = utility.net_accuracy(
+        verifier_net, DATA_B)
+    accuracy_B_pert_ver = utility.net_accuracy(
+        verifier_net, DATA_B, inputs_pre_fn=distort)
+
+baseline['B (original)']['acc'] = accuracy_B
+baseline['B (original)']['acc(val)'] = accuracy_B_val
+
+baseline['B (distorted)']['acc'] = accuracy_B_pert
+baseline['B (distorted)']['acc(val)'] = accuracy_B_val_pert
+
+baseline['A']['acc'] = accuracy_A
+
+if verifier_net:
+    baseline['B (distorted)']['acc(ver)'] = accuracy_B_pert_ver
+    baseline['B (original)']['acc(ver)'] = accuracy_B_ver
+    baseline['A']['acc(ver)'] = accuracy_A_ver
+
+baseline['B (distorted)']['av. PSNR'] = psnr_distort
+baseline['B (distorted)']['l2-err'] = l2_err_distort
+
 
 print("\n# Summary")
 print("=========\n")
+
+utility.print_tabular(baseline, row_name="baseline")
+
+print("\nReconstruction methods:")
 
 utility.print_tabular(metrics, row_name="method")
 

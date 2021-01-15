@@ -148,13 +148,20 @@ def print_net_accuracy_batch(net, inputs, labels):
 
 def exp_av_mean_var(m_a, v_a, m_b, v_b, gamma):
     mean = gamma * m_a + (1 - gamma) * m_b
-    var = (gamma * v_a
-           + (1 - gamma) * v_b
-           + gamma * (1 - gamma) * (m_a - m_b)**2)
+    var = gamma * v_a + (1 - gamma) * v_b
+    # Note: changed to standard exp av,
+    # since BATCH variance should be used and not individual variance
+    # var = (gamma * v_a
+    #        + (1 - gamma) * v_b
+    #        + gamma * (1 - gamma) * (m_a - m_b)**2)
     return mean, var
 
 
 def combine_mean_var(m_a, v_a, n_a, m_b, v_b, n_b, cap_gamma=1):
+    m_a[n_a == 0] = 0
+    v_a[n_a == 0] = 0
+    m_b[n_b == 0] = 0
+    v_b[n_b == 0] = 0
     n = n_a + n_b
     gamma = expand_as_r(torch.clamp(n_a / n, max=cap_gamma), m_a)
     mean, var = exp_av_mean_var(m_a, v_a, m_b, v_b, gamma)
@@ -321,11 +328,12 @@ def collect_data(data_loader, data_fn, accumulate_fn, final_fn=None):
     return out
 
 
+@torch.no_grad()
 def psnr(x_gt, x_approx, x_max=None):
     if x_max is None:
-        x_max = x_gt.max()
-    with torch.no_grad():
-        return 20 * x_max.log10() - 10 * (((x_gt - x_approx)**2).mean((1, 2, 3))).log10()
+        x_max = x_gt.max(dim=1)[0]
+    x_approx = x_approx.reshape(len(x_approx), -1)
+    return 20 * x_max.log10() - 10 * ((x_gt - x_approx)**2).mean(dim=1).log10()
 
 
 def average_psnr(data_loader, invert_fn, x_max=None):
@@ -585,8 +593,7 @@ def plot_metrics(metrics, title='metrics', step_start=1, plot_range=None, smooth
     y_max = min(vals.max(), max(vals_m.squeeze() + vals_s))
     y_min = max(vals.min(), min(vals_m.squeeze() - vals_s))
 
-    plt.figure(figsize=(28, 6))
-    # plt.figure(**kwargs)
+    plt.figure(**kwargs)
     num_plots = len(metrics)
     if num_plots > 10:
         colors = jet(np.linspace(0, 1, num_plots))

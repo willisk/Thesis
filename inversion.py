@@ -57,6 +57,9 @@ def invert(data_loader, loss_fn, optimizer,
 
     print(flush=True)
 
+    if callback_fn:
+        callback_fn(0, None)
+
     with tqdmEpoch(steps, len(data_loader)) as pbar:
         for epoch in range(steps):
             for batch_i, data in enumerate(data_loader):
@@ -122,7 +125,7 @@ def invert(data_loader, loss_fn, optimizer,
                         metrics[k][-1] /= num_batches
 
             if callback_fn:
-                callback_fn(epoch, metrics)
+                callback_fn(epoch + 1, metrics)
             # epoch end
 
     print(flush=True)
