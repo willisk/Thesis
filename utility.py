@@ -328,9 +328,6 @@ def collect_data(data_loader, data_fn, accumulate_fn, final_fn=None):
     return out
 
 
-(0.2126 * R + 0.7152 * G + 0.0722 * B)
-
-
 def to_zero_one(x):
     return (x - x.min()) / (x.max() - x.min())
 
