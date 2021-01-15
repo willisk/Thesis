@@ -353,10 +353,10 @@ def psnr(x, y):
     return - 10 * torch.log10(((x - y)**2).mean(dim=1))
 
 
-def average_psnr(data_loader, invert_fn, x_max=None):
+def average_psnr(data_loader, invert_fn):
     out = count = 0
     for inputs, labels in data_loader:
-        out += psnr(inputs, invert_fn(inputs), x_max=x_max).sum().item()
+        out += psnr(inputs, invert_fn(inputs)).sum().item()
         count += len(inputs)
     return out / count
 
