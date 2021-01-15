@@ -62,7 +62,9 @@ parser.add_argument("-f_stats", type=float, default=10)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
 parser.add_argument("-show_after", type=int, default=50)
-parser.add_argument("-distort_level", type=float, default=0.3)
+parser.add_argument("-r_distort_level", type=float, default=0.3)
+parser.add_argument("-r_block_depth", type=int, default=4)
+parser.add_argument("-r_block_width", type=int, default=4)
 parser.add_argument("--nn_resume_train", action="store_true")
 parser.add_argument("--nn_reset_train", action="store_true")
 parser.add_argument("--use_amp", action="store_true")
@@ -82,7 +84,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset MNIST'.split())
     # args.nn_steps = 5
     args.inv_steps = 3
-    args.distort_level = 0.1
+    args.r_distort_level = 0.1
     # args.batch_size = 64
     # # args.size_B = 10
     # # args.n_random_projections = 1024
@@ -450,17 +452,17 @@ def criterion_only(data):
 
 
 methods = [
-    # ("CRITERION", criterion_only),
-    # loss_fn_wrapper(
-    #     name="NN",
-    #     project=project_NN,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN CC",
-    #     project=project_NN,
-    #     class_conditional=True,
-    # ),
+    ("CRITERION", criterion_only),
+    loss_fn_wrapper(
+        name="NN",
+        project=project_NN,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="NN CC",
+        project=project_NN,
+        class_conditional=True,
+    ),
     loss_fn_wrapper(
         name="NN ALL",
         project=project_NN_all,
@@ -476,11 +478,11 @@ methods = [
         project=project_RP,
         class_conditional=False,
     ),
-    # loss_fn_wrapper(
-    #     name="RP CC",
-    #     project=project_RP_CC,
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="RP CC",
+        project=project_RP_CC,
+        class_conditional=True,
+    ),
     # # loss_fn_wrapper(
     # #     name="RP ReLU",
     # #     project=project_RP_relu,
@@ -491,11 +493,11 @@ methods = [
     # #     project=project_RP_relu_CC,
     # #     class_conditional=True,
     # # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL + RP CC",
-    #     project=combine(project_NN_all, project_RP_CC),
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="NN ALL + RP CC",
+        project=combine(project_NN_all, project_RP_CC),
+        class_conditional=True,
+    ),
 ]
 
 # ======= Distortation =======
@@ -507,7 +509,7 @@ class DistortionModel(nn.Module):
 
         kernel_size = 3
         nch = input_shape[0]
-        lambd = args.distort_level
+        lambd = args.r_distort_level
 
         self.conv1 = nn.Conv2d(nch, nch, kernel_size,
                                padding=1, padding_mode='reflect')
@@ -563,19 +565,17 @@ class ReconstructionModel(nn.Module):
         super().__init__()
 
         n_chan = input_shape[0]
-        n_hidden = 4
-        depth = 4
         self.conv1x1 = conv1x1Id(n_chan)
         self.bn = nn.BatchNorm2d(n_chan)
 
         self.invert_block = nn.Sequential(*[
             nets.InvertBlock(
                 n_chan,
-                n_hidden,
+                args.r_block_width,
                 noise_level=1 / np.sqrt(n + 1),
                 relu_out=n < depth - 1,
                 bias=bias,
-            ) for n in range(depth)
+            ) for n in range(args.r_block_depth)
         ])
 
     def forward(self, inputs):
