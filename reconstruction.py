@@ -350,23 +350,23 @@ def loss_stats(stats_a, stats_b):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
     assert len(stats_a) == len(stats_b), "lists need to be of same length"
-    num_stats = len(stats_a)
+    num_maps = len(stats_a)
     loss = torch.tensor(0).float().to(DEVICE)
     info = {}
     for i, ((ma, sa), (mb, sb)) in enumerate(zip(stats_a, stats_b)):
         if ma.ndim == 1:
-            loss_m = (ma.squeeze() - mb.squeeze()).norm() / num_stats
-            loss_s = (sa.squeeze() - sb.squeeze()).norm() / num_stats
+            loss_m = (ma.squeeze() - mb.squeeze()).norm() / num_maps
+            loss_s = (sa.squeeze() - sb.squeeze()).norm() / num_maps
         else:   # class conditional
             if np.prod(ma.shape) == ma.shape[0] or np.prod(mb.shape) == mb.shape[0]:
-                loss_m = (ma.squeeze() - mb.squeeze()).abs().mean() / num_stats
-                loss_s = (sa.squeeze() - sb.squeeze()).abs().mean() / num_stats
+                loss_m = (ma.squeeze() - mb.squeeze()).abs().mean() / num_maps
+                loss_s = (sa.squeeze() - sb.squeeze()).abs().mean() / num_maps
             else:  # multiple features
                 loss_m = (ma.squeeze() - mb.squeeze()
-                          ).norm(dim=1).mean() / num_stats
+                          ).norm(dim=1).mean() / num_maps
                 loss_s = (sa.squeeze() - sb.squeeze()
-                          ).norm(dim=1).mean() / num_stats
-        if num_stats > 1:
+                          ).norm(dim=1).mean() / num_maps
+        if num_maps > 1:
             info[f'[stats losses means] {i}'] = loss_m.item() * f_stats
             info[f'[stats losses vars] {i}'] = loss_s.item() * f_stats
         else:
@@ -679,14 +679,14 @@ for method, loss_fn in methods:
     # PSNR
     psnr = utility.average_psnr(DATA_B, invert_fn)
     psnr_distort = utility.average_psnr(DATA_B, distort)
-    print(f"\taverage PSNR: {psnr:.3f} | {psnr_distort:.3f}")
+    print(f"\taverage PSNR: {psnr:.3f} | (distorted: {psnr_distort:.3f})")
 
     # L2 Reconstruction Error
     Id = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
     l2_err = (invert_fn(Id) - Id).norm().item() / Id.norm().item()
     l2_err_distort = (distort(Id) - Id).norm().item() / Id.norm().item()
     print(
-        f"\trel. l2 reconstruction error: {l2_err:.3f} | {l2_err_distort:.3f}")
+        f"\trel. l2 reconstruction error: {l2_err:.3f} | (distorted: {l2_err_distort:.3f})")
 
     # NN Accuracy
     accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=invert_fn)
