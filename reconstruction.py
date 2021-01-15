@@ -354,18 +354,18 @@ def loss_stats(stats_a, stats_b):
     loss = torch.tensor(0).float().to(DEVICE)
     info = {}
     for i, ((ma, sa), (mb, sb)) in enumerate(zip(stats_a, stats_b)):
+        ma, sa = ma.squeeze(), sa.squeeze()
+        mb, sb = mb.squeeze(), sb.squeeze()
         if ma.ndim == 1:
-            loss_m = (ma.squeeze() - mb.squeeze()).norm()
-            loss_s = (sa.squeeze() - sb.squeeze()).norm()
+            loss_m = (ma - mb).norm()
+            loss_s = (sa - sb).norm()
         else:   # class conditional
             if np.prod(ma.shape) == ma.shape[0] or np.prod(mb.shape) == mb.shape[0]:
-                loss_m = (ma.squeeze() - mb.squeeze()).abs().sum()
-                loss_s = (sa.squeeze() - sb.squeeze()).abs().sum()
+                loss_m = (ma - mb).abs().mean()
+                loss_s = (sa - sb).abs().mean()
             else:  # multiple features
-                loss_m = (ma.squeeze() - mb.squeeze()
-                          ).norm(dim=1).mean()
-                loss_s = (sa.squeeze() - sb.squeeze()
-                          ).norm(dim=1).mean()
+                loss_m = (ma - mb).norm(dim=1).mean()
+                loss_s = (sa - sb).norm(dim=1).mean()
         loss_m /= num_maps
         loss_s /= num_maps
         if num_maps > 1:
