@@ -446,16 +446,16 @@ methods = [
         project=project_NN_all,
         class_conditional=False,
     ),
-    loss_fn_wrapper(
-        name="NN ALL CC",
-        project=project_NN_all,
-        class_conditional=True,
-    ),
     # loss_fn_wrapper(
-    #     name="RP",
-    #     project=project_RP,
-    #     class_conditional=False,
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
+    #     class_conditional=True,
     # ),
+    loss_fn_wrapper(
+        name="RP",
+        project=project_RP,
+        class_conditional=False,
+    ),
     # loss_fn_wrapper(
     #     name="RP CC",
     #     project=project_RP_CC,
