@@ -417,7 +417,7 @@ def loss_fn_wrapper(name, project, class_conditional, f_stats_scale=1):
             cost_stats, info_stats = loss_stats(stats_A, stats)
             for k, v in info_stats.items():
                 info[k] = f_stats * f_stats_scale * v
-            loss += f_stats * cost_stats
+            loss += f_stats * f_stats_scale * cost_stats
 
         if f_crit:
             if net_last_outputs is None:
