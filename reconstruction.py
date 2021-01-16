@@ -456,54 +456,54 @@ def criterion_only(data):
 
 
 methods = [
-    # ("CRITERION", criterion_only),
-    # loss_fn_wrapper(
-    #     name="NN",
-    #     project=project_NN,
-    #     class_conditional=False,
-    # ),
-    # loss_fn_wrapper(
-    #     name="NN CC",
-    #     project=project_NN,
-    #     class_conditional=True,
-    # ),
+    ("CRITERION", criterion_only),
+    loss_fn_wrapper(
+        name="NN",
+        project=project_NN,
+        class_conditional=False,
+    ),
+    loss_fn_wrapper(
+        name="NN CC",
+        project=project_NN,
+        class_conditional=True,
+    ),
     loss_fn_wrapper(
         name="NN ALL",
         project=project_NN_all,
         class_conditional=False,
     ),
-    # loss_fn_wrapper(
-    #     name="NN ALL CC",
-    #     project=project_NN_all,
-    #     class_conditional=True,
-    # ),
-    # loss_fn_wrapper(
-    #     name="RP",
-    #     project=project_RP,
-    #     class_conditional=False,
-    #     # f_stats_scale=1 / 20,
-    # ),
-    # loss_fn_wrapper(
-    #     name="RP CC",
-    #     project=project_RP_CC,
-    #     class_conditional=True,
-    #     # f_stats_scale=1 / 20,
-    # ),
-    # # # loss_fn_wrapper(
-    # # #     name="RP ReLU",
-    # # #     project=project_RP_relu,
-    # # #     class_conditional=False,
-    # # # ),
-    # # # loss_fn_wrapper(
-    # # #     name="RP ReLU CC",
-    # # #     project=project_RP_relu_CC,
-    # # #     class_conditional=True,
-    # # # ),
-    # loss_fn_wrapper(
-    #     name="NN ALL + RP CC",
-    #     project=combine(project_NN_all, project_RP_CC),
-    #     class_conditional=True,
-    # ),
+    loss_fn_wrapper(
+        name="NN ALL CC",
+        project=project_NN_all,
+        class_conditional=True,
+    ),
+    loss_fn_wrapper(
+        name="RP",
+        project=project_RP,
+        class_conditional=False,
+        # f_stats_scale=1 / 20,
+    ),
+    loss_fn_wrapper(
+        name="RP CC",
+        project=project_RP_CC,
+        class_conditional=True,
+        # f_stats_scale=1 / 20,
+    ),
+    # # loss_fn_wrapper(
+    # #     name="RP ReLU",
+    # #     project=project_RP_relu,
+    # #     class_conditional=False,
+    # # ),
+    # # loss_fn_wrapper(
+    # #     name="RP ReLU CC",
+    # #     project=project_RP_relu_CC,
+    # #     class_conditional=True,
+    # # ),
+    loss_fn_wrapper(
+        name="NN ALL + RP CC",
+        project=combine(project_NN_all, project_RP_CC),
+        class_conditional=True,
+    ),
 ]
 
 # ======= Distortation =======
