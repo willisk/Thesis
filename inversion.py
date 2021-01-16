@@ -542,17 +542,17 @@ for method, loss_fn in methods:
     optimizer = torch.optim.Adam([batch], lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    info = inversion.invert(DATA_B,
-                            data_loss_fn,
-                            optimizer,
-                            #    scheduler=scheduler,
-                            steps=inv_steps,
-                            plot=True,
-                            use_amp=args.use_amp,
-                            #    grad_norm_fn=grad_norm_fn,
-                            callback_fn=callback_fn,
-                            track_grad_norm=True,
-                            )
+    info = utility.invert(DATA_B,
+                          data_loss_fn,
+                          optimizer,
+                          #    scheduler=scheduler,
+                          steps=inv_steps,
+                          plot=True,
+                          use_amp=args.use_amp,
+                          #    grad_norm_fn=grad_norm_fn,
+                          callback_fn=callback_fn,
+                          track_grad_norm=True,
+                          )
     plots[method] = info
 
     # ======= Result =======
