@@ -101,8 +101,8 @@ class CIFAR10(Dataset):
         return model_path, resnet
 
     def verifier_net(self):
-        resnet = nets.resnet50()
-        model_path = os.path.join(self.data_dir, "net_resnet50.pt")
+        resnet = nets.resnet18()
+        model_path = os.path.join(self.data_dir, "net_resnet18.pt")
         return model_path, resnet
 
 

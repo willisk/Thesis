@@ -211,21 +211,22 @@ class ConvNet(Net):
         return x
 
 
+def resnet18():
+    resnet = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=10)
+    resnet.conv1 = nn.Conv2d(
+        3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+    return resnet
+
+
 def resnet34():
-
     resnet = ResNet(BasicBlock, [3, 4, 6, 3], num_classes=10)
-
-    # adapting for pretrained CIFAR10
     resnet.conv1 = nn.Conv2d(
         3, 64, kernel_size=3, stride=1, padding=1, bias=False)
     return resnet
 
 
 def resnet50():
-
     resnet = ResNet(Bottleneck, [3, 4, 6, 3], num_classes=10)
-
-    # adapting for pretrained CIFAR10
     resnet.conv1 = nn.Conv2d(
         3, 64, kernel_size=3, stride=1, padding=1, bias=False)
     return resnet
