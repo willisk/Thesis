@@ -2,8 +2,6 @@
 import os
 import sys
 
-import random
-
 import argparse
 from collections import defaultdict
 
@@ -92,21 +90,7 @@ print(utility.dict_to_str(vars(args), '\n'), '\n')
 # ======= Set Seeds =======
 
 
-def set_seed():
-    if args.seed == -1:
-        return
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
-    torch.cuda.manual_seed_all(args.seed)
-    torch.backends.cudnn.enabled = False
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
-    os.environ['PYTHONHASHSEED'] = str(args.seed)
-
-
-set_seed()
+utility.seed_everything(args.seed)
 
 
 # Neural Network
@@ -170,7 +154,7 @@ utility.train(net, DATA_A, criterion, optimizer,
 net.eval()
 
 if not 'ipykernel_launcher' in sys.argv[0]:
-    utility.print_net_accuracy(net, DATA_A, estimate_epochs=20)
+    utility.print_net_accuracy(net, DATA_A, estimate_epochs=10)
 
 verifier_path, verifier_net = dataset.verifier_net()
 if verifier_net:
@@ -185,7 +169,7 @@ if verifier_net:
                   )
     if not 'ipykernel_launcher' in sys.argv[0]:
         print("verifier ", end='')
-        utility.print_net_accuracy(verifier_net, DATA_A, estimate_epochs=20)
+        utility.print_net_accuracy(verifier_net, DATA_A, estimate_epochs=10)
 print()
 
 # ======= NN Project =======
@@ -327,7 +311,7 @@ def regularization(x):
 
 
 # @debug
-def loss_stats(stats_a, stats_b):
+def loss_stats(stats_a, stats_b, class_conditional=False):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
     assert len(stats_a) == len(stats_b), "lists need to be of same length"
@@ -337,7 +321,7 @@ def loss_stats(stats_a, stats_b):
     for i, ((ma, sa), (mb, sb)) in enumerate(zip(stats_a, stats_b)):
         ma, sa = ma.squeeze(), sa.squeeze()
         mb, sb = mb.squeeze(), sb.squeeze()
-        if ma.ndim == 1:
+        if not class_conditional:
             loss_m = (ma - mb).norm()
             loss_s = (sa - sb).norm()
         else:   # class conditional
@@ -353,8 +337,8 @@ def loss_stats(stats_a, stats_b):
             info[f'[stats losses means] {i}'] = loss_m.item()
             info[f'[stats losses vars] {i}'] = loss_s.item()
         else:
-            info[f'[stats losses] mean'] = loss_m.item()
-            info[f'[stats losses] var'] = loss_s.item()
+            info['[stats losses] mean'] = loss_m.item()
+            info['[stats losses] var'] = loss_s.item()
         if loss_m.isfinite():   # mean, variance is nan if batch empty
             loss += loss_m
         if loss_s.isfinite():
@@ -381,21 +365,22 @@ def loss_fn_wrapper(name, project, class_conditional, f_stats_scale=1):
         info = {}
         loss = torch.tensor(0).float().to(DEVICE)
 
-        if f_reg:
+        if f_reg != 0:
             loss_reg = f_reg * regularization(inputs)
             info['[losses] reg'] = loss_reg.item()
             loss += loss_reg
 
-        if f_stats:
+        if f_stats != 0:
             outputs = project(data)
             stats = utility.get_stats(
                 outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
-            cost_stats, info_stats = loss_stats(stats_A, stats)
+            cost_stats, info_stats = loss_stats(
+                stats_A, stats, class_conditional=class_conditional)
             for k, v in info_stats.items():
                 info[k] = f_stats * f_stats_scale * v
             loss += f_stats * f_stats_scale * cost_stats
 
-        if f_crit:
+        if f_crit != 0:
             if net_last_outputs is None:
                 net_last_outputs = net(inputs)
             loss_crit = f_crit * criterion(net_last_outputs, labels)
