@@ -326,7 +326,7 @@ def store_data(func):
         out = func(*args, **kwargs)
 
         if save_path:
-            print(f"Saving data to {save_path}.", flush=True)
+            print(f"\nSaving data to {save_path}.", flush=True)
             torch.save(out, save_path)
         return out
     return _func
