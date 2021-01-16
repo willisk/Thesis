@@ -72,6 +72,7 @@ parser.add_argument("--use_std", action="store_true")
 parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("--scale_each", action="store_true")
+parser.add_argument("--reset_stats", action="store_true")
 
 # # GMM
 # parser.add_argument("-g_modes", type=int, default=3)
@@ -267,10 +268,10 @@ def get_input(data):
 
 mean_A, std_A = utility.collect_stats(
     DATA_A, get_input, n_classes, class_conditional=False, std=True, keepdim=True,
-    path=stats_path.format('inputs'), device=DEVICE, use_drive=USE_DRIVE)
+    path=stats_path.format('inputs'), device=DEVICE, use_drive=USE_DRIVE, reset=args.reset_stats)
 mean_A_C, std_A_C = utility.collect_stats(
     DATA_A, get_input, n_classes, class_conditional=True, std=True, keepdim=True,
-    path=stats_path.format('inputs-CC'), device=DEVICE, use_drive=USE_DRIVE)
+    path=stats_path.format('inputs-CC'), device=DEVICE, use_drive=USE_DRIVE, reset=args.reset_stats)
 
 # min_A, max_A = utility.collect_min_max(
 #     DATA_A, path=stats_path.format('min-max'), device=DEVICE, use_drive=USE_DRIVE)
@@ -296,10 +297,10 @@ def project_RP_CC(data):
 
 mean_RP_A, std_RP_A = utility.collect_stats(
     DATA_A, project_RP, n_classes, class_conditional=False, std=True, keepdim=True,
-    path=stats_path.format(f"RP-{rp_hash}"), device=DEVICE, use_drive=USE_DRIVE)
+    path=stats_path.format(f"RP-{rp_hash}"), device=DEVICE, use_drive=USE_DRIVE, reset=args.reset_stats)
 mean_RP_A_C, std_RP_A_C = utility.collect_stats(
     DATA_A, project_RP_CC, n_classes, class_conditional=True, std=True, keepdim=True,
-    path=stats_path.format(f"RP-CC-{rp_hash}"), device=DEVICE, use_drive=USE_DRIVE)
+    path=stats_path.format(f"RP-CC-{rp_hash}"), device=DEVICE, use_drive=USE_DRIVE, reset=args.reset_stats)
 
 # Random ReLU Projections
 f_rp_relu = 1 / 2
@@ -394,7 +395,7 @@ def loss_fn_wrapper(name, project, class_conditional):
 
     stats_A = utility.collect_stats(
         DATA_A, project, n_classes, class_conditional,
-        std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE)
+        std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE, reset=args.reset_stats)
 
     def _loss_fn(data, project=project, class_conditional=class_conditional):
         global net_last_outputs

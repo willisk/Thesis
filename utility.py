@@ -270,7 +270,7 @@ def collect_min_max(data_loader, device='cpu', path=None, use_drive=True):
 # @debug
 def collect_stats(data_loader, projection, n_classes, class_conditional,
                   std=False, keepdim=False,
-                  device='cpu', path=None, use_drive=True):
+                  device='cpu', path=None, use_drive=True, reset=False):
 
     def data_fn(inputs, labels):
         outputs = projection((inputs, labels))
@@ -284,7 +284,7 @@ def collect_stats(data_loader, projection, n_classes, class_conditional,
         return combine_mean_var(*old, *new)
 
     stats = collect_data(data_loader, data_fn, update_fn,
-                         map_location=device, path=path, use_drive=use_drive)
+                         map_location=device, path=path, use_drive=use_drive, reset=reset)
 
     if isinstance(stats, list):
         return [(m.float(), v.sqrt().float() if std else v.float()) for m, v, _ in stats]
@@ -293,11 +293,11 @@ def collect_stats(data_loader, projection, n_classes, class_conditional,
 
 def store_data(func):
     @wraps(func)
-    def _func(*args, map_location='cpu', path=None, use_drive=True, **kwargs):
+    def _func(*args, map_location='cpu', path=None, use_drive=True, reset=False, **kwargs):
 
         save_path, load_path = save_load_path(path, use_drive=use_drive)
 
-        if load_path and os.path.exists(load_path):
+        if not reset and load_path and os.path.exists(load_path):
             print(f"Loading data from {load_path}.", flush=True)
             return torch.load(load_path, map_location=map_location)
 

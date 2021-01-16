@@ -35,10 +35,10 @@ def invert(data_loader, loss_fn, optimizer,
     assert utility.valid_data_loader(
         data_loader), f"invalid data_loader: {data_loader}"
 
-    params = [(p_group['params']
-               for p_group in optimizer.param_groups)]
-    lrs = [(p_group['lr']
-            for p_group in optimizer.param_groups)]
+    params = sum((p_group['params']
+                  for p_group in optimizer.param_groups), [])
+    lrs = [p_group['lr']
+           for p_group in optimizer.param_groups]
     device = params[0].device
     USE_AMP = (device.type == 'cuda') and use_amp
     if USE_AMP:
