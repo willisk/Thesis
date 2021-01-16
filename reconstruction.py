@@ -605,7 +605,7 @@ def im_show(im_batch):
     print(flush=True)
 
 
-show_batch = next(iter(DATA_B))[0][:256].to(DEVICE)
+show_batch = next(iter(DATA_B))[0][:50].to(DEVICE)
 
 print("\nground truth:", flush=True)
 im_show(show_batch[:10])

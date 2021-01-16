@@ -246,10 +246,10 @@ def get_input(data):
 
 mean_A, std_A = utility.collect_stats(
     DATA_A, get_input, n_classes, class_conditional=False, std=True, keepdim=True,
-    path=stats_path.format('inputs'), device=DEVICE, use_drive=USE_DRIVE)
+    path=stats_path.format('inputs'), device=DEVICE, use_drive=USE_DRIVE, reset=args.reset_stats)
 mean_A_C, std_A_C = utility.collect_stats(
     DATA_A, get_input, n_classes, class_conditional=True, std=True, keepdim=True,
-    path=stats_path.format('inputs-CC'), device=DEVICE, use_drive=USE_DRIVE)
+    path=stats_path.format('inputs-CC'), device=DEVICE, use_drive=USE_DRIVE, reset=args.reset_stats)
 
 # min_A, max_A = utility.collect_min_max(
 #     DATA_A, path=stats_path.format('min-max'), device=DEVICE, use_drive=USE_DRIVE)
@@ -275,10 +275,10 @@ def project_RP_CC(data):
 
 mean_RP_A, std_RP_A = utility.collect_stats(
     DATA_A, project_RP, n_classes, class_conditional=False, std=True, keepdim=True,
-    path=stats_path.format(f"RP-{rp_hash}"), device=DEVICE, use_drive=USE_DRIVE)
+    path=stats_path.format(f"RP-{rp_hash}"), device=DEVICE, use_drive=USE_DRIVE, reset=args.reset_stats)
 mean_RP_A_C, std_RP_A_C = utility.collect_stats(
     DATA_A, project_RP_CC, n_classes, class_conditional=True, std=True, keepdim=True,
-    path=stats_path.format(f"RP-CC-{rp_hash}"), device=DEVICE, use_drive=USE_DRIVE)
+    path=stats_path.format(f"RP-CC-{rp_hash}"), device=DEVICE, use_drive=USE_DRIVE, reset=args.reset_stats)
 
 # Random ReLU Projections
 f_rp_relu = 1 / 2
@@ -352,30 +352,29 @@ def loss_stats(stats_a, stats_b):
         loss_m /= num_maps
         loss_s /= num_maps
         if num_maps > 1:
-            info[f'[stats losses means] {i}'] = loss_m.item() * f_stats
-            info[f'[stats losses vars] {i}'] = loss_s.item() * f_stats
+            info[f'[stats losses means] {i}'] = loss_m.item()
+            info[f'[stats losses vars] {i}'] = loss_s.item()
         else:
-            info[f'[stats losses] mean'] = loss_m.item() * f_stats
-            info[f'[stats losses] var'] = loss_s.item() * f_stats
-        if loss_m.isfinite():
+            info[f'[stats losses] mean'] = loss_m.item()
+            info[f'[stats losses] var'] = loss_s.item()
+        if loss_m.isfinite():   # mean, variance is nan if batch empty
             loss += loss_m
         if loss_s.isfinite():
             loss += loss_s
-    loss *= f_stats
     info['[losses] stats'] = loss.item()
     return loss, info
 
 
-def loss_fn_wrapper(name, project, class_conditional):
+def loss_fn_wrapper(name, project, class_conditional, f_stats_scale=1):
     _name = name.replace(' ', '-')
     if "RP" in _name:
         _name = f"{_name}-{rp_hash}"
 
     stats_A = utility.collect_stats(
         DATA_A, project, n_classes, class_conditional,
-        std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE)
+        std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE, reset=args.reset_stats)
 
-    def _loss_fn(data, project=project, class_conditional=class_conditional):
+    def _loss_fn(data, project=project, class_conditional=class_conditional, f_stats_scale=f_stats_scale):
         global net_last_outputs
         net_last_outputs = None
 
@@ -394,8 +393,9 @@ def loss_fn_wrapper(name, project, class_conditional):
             stats = utility.get_stats(
                 outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
             cost_stats, info_stats = loss_stats(stats_A, stats)
-            info = {**info, **info_stats}
-            loss += cost_stats
+            for k, v in info_stats.items():
+                info[k] = f_stats * f_stats_scale * v
+            loss += f_stats * f_stats_scale * cost_stats
 
         if f_crit:
             if net_last_outputs is None:
