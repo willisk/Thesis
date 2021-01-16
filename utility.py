@@ -117,21 +117,23 @@ def expand_as_r(a, b):
 
 
 @torch.no_grad()
-def net_accuracy(net, data_loader, inputs_pre_fn=None):
+def net_accuracy(net, data_loader, inputs_pre_fn=None, estimate_epochs=-1):
     total_count = 0.0
     total_correct = 0.0
     device = next(iter(net.parameters())).device
-    for inputs, labels in data_loader:
+    for i, (inputs, labels) in enumerate(data_loader):
         if inputs_pre_fn:
             inputs = inputs_pre_fn(inputs)
         outputs = net(inputs)
         total_count += len(inputs)
         total_correct += count_correct(outputs, labels)
+        if estimate_epochs > 0 and i >= estimate_epochs:
+            break
     return total_correct / total_count
 
 
-def print_net_accuracy(net, data_loader):
-    accuracy = net_accuracy(net, data_loader)
+def print_net_accuracy(net, data_loader, estimate_epochs=-1):
+    accuracy = net_accuracy(net, data_loader, estimate_epochs=estimate_epochs)
     print(f"net accuracy: {accuracy * 100:.1f}%")
 
 

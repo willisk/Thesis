@@ -171,8 +171,8 @@ optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
 #               )
 # net.eval()
 
-if not 'ipykernel_launcher' in sys.argv[0]:
-    utility.print_net_accuracy(net, DATA_A)
+# if not 'ipykernel_launcher' in sys.argv[0]:
+# utility.print_net_accuracy(net, DATA_A)
 
 verifier_path, verifier_net = dataset.verifier_net()
 if verifier_net:
