@@ -35,8 +35,10 @@ def invert(data_loader, loss_fn, optimizer,
     assert utility.valid_data_loader(
         data_loader), f"invalid data_loader: {data_loader}"
 
-    params = sum((p_group['params']
-                  for p_group in optimizer.param_groups), [])
+    params = [(p_group['params']
+               for p_group in optimizer.param_groups)]
+    lrs = [(p_group['lr']
+            for p_group in optimizer.param_groups)]
     device = params[0].device
     USE_AMP = (device.type == 'cuda') and use_amp
     if USE_AMP:
@@ -93,8 +95,10 @@ def invert(data_loader, loss_fn, optimizer,
                     scheduler.step(loss)
 
                 if track_grad_norm or grad_norm_fn:
+                    # XXX: probably shouldn't multiply with lr
                     total_norm = torch.norm(torch.stack(
-                        [p.grad.detach().norm() / grad_scale for p in params])).item()
+                        [p.grad.detach().norm() / grad_scale * lr
+                            for p, lr in zip(params, lrs)])).item()
 
                     if grad_norm_fn:
                         rescale_coef = grad_norm_fn(total_norm) / total_norm
