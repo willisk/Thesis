@@ -22,7 +22,6 @@ PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
 
 import utility
-import inversion
 import datasets
 import debug
 import nets
@@ -37,7 +36,6 @@ except:
 if interactive_notebook:
     import importlib
     importlib.reload(utility)
-    importlib.reload(inversion)
     importlib.reload(datasets)
     importlib.reload(debug)
     importlib.reload(nets)
