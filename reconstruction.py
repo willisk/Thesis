@@ -480,13 +480,13 @@ methods = [
         name="RP",
         project=project_RP,
         class_conditional=False,
-        f_stats_scale=1 / 20,
+        # f_stats_scale=1 / 20,
     ),
     loss_fn_wrapper(
         name="RP CC",
         project=project_RP_CC,
         class_conditional=True,
-        f_stats_scale=1 / 20,
+        # f_stats_scale=1 / 20,
     ),
     # # loss_fn_wrapper(
     # #     name="RP ReLU",
