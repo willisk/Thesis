@@ -81,14 +81,14 @@ parser.add_argument("--reset_stats", action="store_true")
 # parser.add_argument("-g_mean_shift", type=float, default=0)
 
 if 'ipykernel_launcher' in sys.argv[0]:
-    args = parser.parse_args('-dataset CIFAR10'.split())
-    # args = parser.parse_args('-dataset MNIST'.split())
+    # args = parser.parse_args('-dataset CIFAR10'.split())
+    args = parser.parse_args('-dataset MNIST'.split())
     # args.nn_steps = 5
     args.inv_steps = 3
     args.r_distort_level = 0.1
     # args.batch_size = 64
     # # args.size_B = 10
-    # # args.n_random_projections = 1024
+    args.n_random_projections = 512
     args.inv_lr = 0.01
     args.f_stats = 0.001
     # args.distort_level = 0.5
@@ -351,7 +351,7 @@ def regularization(x):
 
 
 # @debug
-def loss_stats(stats_a, stats_b):
+def loss_stats(stats_a, stats_b, class_conditional=False):
     if not isinstance(stats_a, list):
         stats_a, stats_b = [stats_a], [stats_b]
     assert len(stats_a) == len(stats_b), "lists need to be of same length"
@@ -361,7 +361,7 @@ def loss_stats(stats_a, stats_b):
     for i, ((ma, sa), (mb, sb)) in enumerate(zip(stats_a, stats_b)):
         ma, sa = ma.squeeze(), sa.squeeze()
         mb, sb = mb.squeeze(), sb.squeeze()
-        if ma.ndim == 1:
+        if not class_conditional:
             loss_m = (ma - mb).norm()
             loss_s = (sa - sb).norm()
         else:   # class conditional
@@ -377,8 +377,8 @@ def loss_stats(stats_a, stats_b):
             info[f'[stats losses means] {i}'] = loss_m.item()
             info[f'[stats losses vars] {i}'] = loss_s.item()
         else:
-            info[f'[stats losses] mean'] = loss_m.item()
-            info[f'[stats losses] var'] = loss_s.item()
+            info['[stats losses] mean'] = loss_m.item()
+            info['[stats losses] var'] = loss_s.item()
         if loss_m.isfinite():   # mean, variance is nan if batch empty
             loss += loss_m
         if loss_s.isfinite():
@@ -414,7 +414,8 @@ def loss_fn_wrapper(name, project, class_conditional, f_stats_scale=1):
             outputs = project(data)
             stats = utility.get_stats(
                 outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
-            cost_stats, info_stats = loss_stats(stats_A, stats)
+            cost_stats, info_stats = loss_stats(
+                stats_A, stats, class_conditional=class_conditional)
             for k, v in info_stats.items():
                 info[k] = f_stats * f_stats_scale * v
             loss += f_stats * f_stats_scale * cost_stats
@@ -455,54 +456,54 @@ def criterion_only(data):
 
 
 methods = [
-    ("CRITERION", criterion_only),
-    loss_fn_wrapper(
-        name="NN",
-        project=project_NN,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="NN CC",
-        project=project_NN,
-        class_conditional=True,
-    ),
+    # ("CRITERION", criterion_only),
+    # loss_fn_wrapper(
+    #     name="NN",
+    #     project=project_NN,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN CC",
+    #     project=project_NN,
+    #     class_conditional=True,
+    # ),
     loss_fn_wrapper(
         name="NN ALL",
         project=project_NN_all,
         class_conditional=False,
     ),
-    loss_fn_wrapper(
-        name="NN ALL CC",
-        project=project_NN_all,
-        class_conditional=True,
-    ),
-    loss_fn_wrapper(
-        name="RP",
-        project=project_RP,
-        class_conditional=False,
-        # f_stats_scale=1 / 20,
-    ),
-    loss_fn_wrapper(
-        name="RP CC",
-        project=project_RP_CC,
-        class_conditional=True,
-        # f_stats_scale=1 / 20,
-    ),
-    # # loss_fn_wrapper(
-    # #     name="RP ReLU",
-    # #     project=project_RP_relu,
-    # #     class_conditional=False,
-    # # ),
-    # # loss_fn_wrapper(
-    # #     name="RP ReLU CC",
-    # #     project=project_RP_relu_CC,
-    # #     class_conditional=True,
-    # # ),
-    loss_fn_wrapper(
-        name="NN ALL + RP CC",
-        project=combine(project_NN_all, project_RP_CC),
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
+    #     class_conditional=True,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP",
+    #     project=project_RP,
+    #     class_conditional=False,
+    #     # f_stats_scale=1 / 20,
+    # ),
+    # loss_fn_wrapper(
+    #     name="RP CC",
+    #     project=project_RP_CC,
+    #     class_conditional=True,
+    #     # f_stats_scale=1 / 20,
+    # ),
+    # # # loss_fn_wrapper(
+    # # #     name="RP ReLU",
+    # # #     project=project_RP_relu,
+    # # #     class_conditional=False,
+    # # # ),
+    # # # loss_fn_wrapper(
+    # # #     name="RP ReLU CC",
+    # # #     project=project_RP_relu_CC,
+    # # #     class_conditional=True,
+    # # # ),
+    # loss_fn_wrapper(
+    #     name="NN ALL + RP CC",
+    #     project=combine(project_NN_all, project_RP_CC),
+    #     class_conditional=True,
+    # ),
 ]
 
 # ======= Distortation =======

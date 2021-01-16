@@ -36,7 +36,7 @@ def tensor_repr(t, assert_all=False):
     shape = tuple(t.shape)
     single_entry = shape == () or shape == (1,)
     if single_entry:
-        info.append(f"{t.item():.4f}")
+        info.append(f"[{t.item():.4f}]")
     else:
         info.append(f"({', '.join(map(repr, shape))})")
     invalid_sum = (~t.isfinite()).sum().item()
