@@ -2,8 +2,6 @@
 import os
 import sys
 
-import random
-
 import argparse
 from collections import defaultdict
 
@@ -116,21 +114,7 @@ print(utility.dict_to_str(vars(args), '\n'), '\n')
 # ======= Set Seeds =======
 
 
-def set_seed():
-    if args.seed == -1:
-        return
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
-    torch.cuda.manual_seed_all(args.seed)
-    torch.backends.cudnn.enabled = False
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
-    os.environ['PYTHONHASHSEED'] = str(args.seed)
-
-
-set_seed()
+utility.seed_everything(args.seed)
 
 
 # Neural Network
@@ -159,15 +143,15 @@ elif args.dataset == 'MNIST':
 
 MODELDIR = dataset.data_dir
 
-A, B, B_val = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B)
+A, B, C = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B)
 
 
 DATA_A = utility.DataL(
     A, batch_size=args.batch_size, shuffle=True, device=DEVICE)
 DATA_B = utility.DataL(
     B, batch_size=args.batch_size, shuffle=True, device=DEVICE)
-DATA_B_val = utility.DataL(
-    B_val, batch_size=args.batch_size, shuffle=True, device=DEVICE)
+DATA_C = utility.DataL(
+    C, batch_size=args.batch_size, shuffle=True, device=DEVICE)
 
 input_shape = dataset.input_shape
 n_dims = dataset.n_dims
@@ -570,7 +554,7 @@ class ReconstructionModel(nn.Module):
     def __init__(self, relu_out=False, bias=True):
         super().__init__()
 
-        set_seed()
+        utility.seed_everything(args.seed)
 
         n_chan = input_shape[0]
         self.conv1x1 = conv1x1Id(n_chan)
@@ -701,7 +685,7 @@ for method, loss_fn in methods:
     # NN Accuracy
     accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=invert_fn)
     accuracy_val = utility.net_accuracy(
-        net, DATA_B_val, inputs_pre_fn=invert_fn)
+        net, DATA_C, inputs_pre_fn=invert_fn)
     print(f"\tnn accuracy: {accuracy * 100:.1f} %")
 
     print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
@@ -723,13 +707,13 @@ baseline = defaultdict(dict)
 
 accuracy_A = utility.net_accuracy(net, DATA_A)
 accuracy_B = utility.net_accuracy(net, DATA_B)
-accuracy_B_val = utility.net_accuracy(
-    net, DATA_B_val)
+accuracy_C = utility.net_accuracy(
+    net, DATA_C)
 
 accuracy_B_pert = utility.net_accuracy(
     net, DATA_B, inputs_pre_fn=distort)
-accuracy_B_val_pert = utility.net_accuracy(
-    net, DATA_B_val, inputs_pre_fn=distort)
+accuracy_C_pert = utility.net_accuracy(
+    net, DATA_C, inputs_pre_fn=distort)
 
 if verifier_net:
     accuracy_A_ver = utility.net_accuracy(
@@ -740,10 +724,10 @@ if verifier_net:
         verifier_net, DATA_B, inputs_pre_fn=distort)
 
 baseline['B (original)']['acc'] = accuracy_B
-baseline['B (original)']['acc(val)'] = accuracy_B_val
+baseline['B (original)']['acc(val)'] = accuracy_C
 
 baseline['B (distorted)']['acc'] = accuracy_B_pert
-baseline['B (distorted)']['acc(val)'] = accuracy_B_val_pert
+baseline['B (distorted)']['acc(val)'] = accuracy_C_pert
 
 baseline['A']['acc'] = accuracy_A
 

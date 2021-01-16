@@ -137,7 +137,7 @@ elif args.dataset == 'MNIST':
 
 MODELDIR = dataset.data_dir
 
-A, B, B_val = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B)
+A, B, C = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B)
 
 
 DATA_A = utility.DataL(

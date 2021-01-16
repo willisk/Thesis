@@ -33,12 +33,15 @@ def split_dataset(dataset, split=0.8):
     return random_split(dataset, (n_a, n_b))
 
 
+random_split(range(10), [3, 7], )
+
+
 class Dataset():
-    def __init__(self, input_shape, n_classes, A, B, B_val=None,
+    def __init__(self, input_shape, n_classes, A, B, C=None,
                  data_dir=MODELDIR, transform=None):
         self.A = A
         self.B = B
-        self.B_val = B_val
+        self.C = C
 
         self.data_dir = data_dir
 
@@ -48,17 +51,15 @@ class Dataset():
 
         self.transform = transform
 
-    def get_datasets(self, size_A=-1, size_B=-1, size_B_val=-1):
+    def get_datasets(self, size_A=-1, size_B=-1, size_C=-1):
         size_A = min(size_A, len(self.A)) if size_A != -1 else len(self.A)
         size_B = min(size_B, len(self.B)) if size_B != -1 else len(self.B)
-        size_B_val = min(size_B_val, len(self.B_val)
-                         ) if size_B_val != -1 else len(self.B_val)
+        size_C = min(size_C, len(self.C)) if size_C != -1 else len(self.C)
 
         A = Subset(self.A, torch.randperm(len(self.A))[:size_A])
         B = Subset(self.B, torch.randperm(len(self.B))[:size_B])
-        B_val = Subset(self.B_val, torch.randperm(
-            len(self.B_val))[:size_B_val])
-        return A, B, B_val
+        C = Subset(self.C, torch.randperm(len(self.C))[:size_C])
+        return A, B, C
 
     def net(self):
         return None, None
@@ -81,9 +82,9 @@ class CIFAR10(Dataset):
                 root=DATADIR, train=False, download=True, transform=transform)
 
             A, B = split_dataset(train_set, split=0.8)
-            B_val = test_set
+            C = test_set
         else:
-            A, B, B_val = None, None, None
+            A, B, C = None, None, None
 
         data_dir = os.path.join(MODELDIR, "CIFAR10")
 
@@ -91,7 +92,7 @@ class CIFAR10(Dataset):
                          n_classes=10,
                          A=A,
                          B=B,
-                         B_val=B_val,
+                         C=C,
                          data_dir=data_dir,
                          transform=transform)
 
@@ -118,7 +119,7 @@ class MNIST(Dataset):
             root=DATADIR, train=False, download=True, transform=transform)
 
         A, B = split_dataset(train_set, split=0.8)
-        B_val = test_set
+        C = test_set
 
         data_dir = os.path.join(MODELDIR, "MNIST")
 
@@ -126,7 +127,7 @@ class MNIST(Dataset):
                          n_classes=10,
                          A=A,
                          B=B,
-                         B_val=B_val,
+                         C=C,
                          data_dir=data_dir,
                          transform=transform)
 
@@ -156,7 +157,7 @@ from scipy.stats import multivariate_normal, ortho_group
 #         mean_shift=args.g_mean_shift,
 #         n_samples_A=1000,
 #         n_samples_B=100,
-#         n_samples_B_val=100,
+#         n_samples_C=100,
 #     )
 class MULTIGMM(Dataset):
 
@@ -164,7 +165,7 @@ class MULTIGMM(Dataset):
                  scale_mean=1, scale_cov=1, mean_shift=0,
                  n_samples_A=1000,
                  n_samples_B=1000,
-                 n_samples_B_val=1000,
+                 n_samples_C=1000,
                  device='cpu', weights=None):
 
         # # using equal weights for now
@@ -180,15 +181,15 @@ class MULTIGMM(Dataset):
 
         A = self.sample(int(n_samples_A / n_classes))
         B = self.sample(int(n_samples_B / n_classes))
-        B_val = self.sample(int(n_samples_B_val / n_classes))
+        C = self.sample(int(n_samples_C / n_classes))
 
         # A = (A[0].reshape(-1, 2, 5, 2), A[1])
         # B = (B[0].reshape(-1, 2, 5, 2), B[1])
-        # B_val = (B_val[0].reshape(-1, 2, 5, 2), B_val[1])
+        # C = (C[0].reshape(-1, 2, 5, 2), C[1])
 
         A = TensorDataset(*A)
         B = TensorDataset(*B)
-        B_val = TensorDataset(*B_val)
+        C = TensorDataset(*C)
 
         data_dir = os.path.join(MODELDIR, "GMM")
 
@@ -196,7 +197,7 @@ class MULTIGMM(Dataset):
                          n_classes=n_classes,
                          A=A,
                          B=B,
-                         B_val=B_val,
+                         C=C,
                          data_dir=data_dir,
                          transform=None)
 
