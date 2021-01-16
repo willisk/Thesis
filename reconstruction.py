@@ -374,21 +374,20 @@ def loss_stats(stats_a, stats_b):
         loss_m /= num_maps
         loss_s /= num_maps
         if num_maps > 1:
-            info[f'[stats losses means] {i}'] = loss_m.item() * f_stats
-            info[f'[stats losses vars] {i}'] = loss_s.item() * f_stats
+            info[f'[stats losses means] {i}'] = loss_m.item()
+            info[f'[stats losses vars] {i}'] = loss_s.item()
         else:
-            info[f'[stats losses] mean'] = loss_m.item() * f_stats
-            info[f'[stats losses] var'] = loss_s.item() * f_stats
-        if loss_m.isfinite():
+            info[f'[stats losses] mean'] = loss_m.item()
+            info[f'[stats losses] var'] = loss_s.item()
+        if loss_m.isfinite():   # mean, variance is nan if batch empty
             loss += loss_m
         if loss_s.isfinite():
             loss += loss_s
-    loss *= f_stats
     info['[losses] stats'] = loss.item()
     return loss, info
 
 
-def loss_fn_wrapper(name, project, class_conditional):
+def loss_fn_wrapper(name, project, class_conditional, f_stats_scale=1):
     _name = name.replace(' ', '-')
     if "RP" in _name:
         _name = f"{_name}-{rp_hash}"
@@ -416,8 +415,10 @@ def loss_fn_wrapper(name, project, class_conditional):
             stats = utility.get_stats(
                 outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
             cost_stats, info_stats = loss_stats(stats_A, stats)
+            for k, v in info_stats.items():
+                info_stats[k] = f_stats * f_stats_scale * v
+            loss += f_stats * cost_stats
             info = {**info, **info_stats}
-            loss += cost_stats
 
         if f_crit:
             if net_last_outputs is None:
@@ -455,36 +456,38 @@ def criterion_only(data):
 
 
 methods = [
-    ("CRITERION", criterion_only),
-    loss_fn_wrapper(
-        name="NN",
-        project=project_NN,
-        class_conditional=False,
-    ),
-    loss_fn_wrapper(
-        name="NN CC",
-        project=project_NN,
-        class_conditional=True,
-    ),
+    # ("CRITERION", criterion_only),
+    # loss_fn_wrapper(
+    #     name="NN",
+    #     project=project_NN,
+    #     class_conditional=False,
+    # ),
+    # loss_fn_wrapper(
+    #     name="NN CC",
+    #     project=project_NN,
+    #     class_conditional=True,
+    # ),
     loss_fn_wrapper(
         name="NN ALL",
         project=project_NN_all,
         class_conditional=False,
     ),
-    loss_fn_wrapper(
-        name="NN ALL CC",
-        project=project_NN_all,
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN ALL CC",
+    #     project=project_NN_all,
+    #     class_conditional=True,
+    # ),
     loss_fn_wrapper(
         name="RP",
         project=project_RP,
         class_conditional=False,
+        f_stats_scale=1 / 50,
     ),
     loss_fn_wrapper(
         name="RP CC",
         project=project_RP_CC,
         class_conditional=True,
+        f_stats_scale=1 / 50,
     ),
     # # loss_fn_wrapper(
     # #     name="RP ReLU",
@@ -496,11 +499,11 @@ methods = [
     # #     project=project_RP_relu_CC,
     # #     class_conditional=True,
     # # ),
-    loss_fn_wrapper(
-        name="NN ALL + RP CC",
-        project=combine(project_NN_all, project_RP_CC),
-        class_conditional=True,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN ALL + RP CC",
+    #     project=combine(project_NN_all, project_RP_CC),
+    #     class_conditional=True,
+    # ),
 ]
 
 # ======= Distortation =======
