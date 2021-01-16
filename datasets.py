@@ -14,7 +14,7 @@ from torch.utils.data import random_split, DataLoader, TensorDataset, Subset
 import torchvision.transforms as T
 
 # https://github.com/huyvnphan/PyTorch_CIFAR10
-from ext.cifar10pretrained.cifar10_models import resnet34, resnet50
+# from ext.cifar10pretrained.cifar10_models import resnet34, resnet50
 # from torchvision.models import resnet34 as ResNet34, resnet50 as ResNet50
 # from ext.cifar10pretrained.cifar10_download import main as download_resnet
 # download_resnet()
