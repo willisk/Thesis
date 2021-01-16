@@ -194,7 +194,7 @@ utility.train(net, DATA_A, criterion, optimizer,
 net.eval()
 
 if not 'ipykernel_launcher' in sys.argv[0]:
-    utility.print_net_accuracy(net, DATA_A, estimate_epochs=20)
+    utility.print_net_accuracy(net, DATA_A, estimate_epochs=10)
 
 verifier_path, verifier_net = dataset.verifier_net()
 if verifier_net:
@@ -209,7 +209,7 @@ if verifier_net:
                   )
     if not 'ipykernel_launcher' in sys.argv[0]:
         print("verifier ", end='')
-        utility.print_net_accuracy(verifier_net, DATA_A, estimate_epochs=20)
+        utility.print_net_accuracy(verifier_net, DATA_A, estimate_epochs=10)
 print()
 
 # ======= NN Project =======
