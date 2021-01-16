@@ -299,12 +299,12 @@ def store_data(func):
 
         save_path, load_path = save_load_path(path, use_drive=use_drive)
 
-        if not reset and load_path and os.path.exists(load_path):
-            print(f"Loading data from {load_path}.", flush=True)
-            return torch.load(load_path, map_location=map_location)
-        else:
-            if not reset and load_path:
-            print(f"No data found at {load_path}.")
+        if not reset and load_path:
+            if os.path.exists(load_path):
+                print(f"Loading data from {load_path}.", flush=True)
+                return torch.load(load_path, map_location=map_location)
+            else:
+                print(f"No data found at {load_path}.")
 
         out = func(*args, **kwargs)
 
