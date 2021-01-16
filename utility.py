@@ -302,6 +302,9 @@ def store_data(func):
         if not reset and load_path and os.path.exists(load_path):
             print(f"Loading data from {load_path}.", flush=True)
             return torch.load(load_path, map_location=map_location)
+        else:
+            if not reset and load_path:
+            print(f"No data found at {load_path}.")
 
         out = func(*args, **kwargs)
 
@@ -326,7 +329,7 @@ def collect_data(data_loader, data_fn, accumulate_fn, final_fn=None):
     if final_fn:
         out = final_fn(out)
 
-    print(flush=True)
+    print(flush=True, end='')
 
     return out
 

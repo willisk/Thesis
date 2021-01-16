@@ -405,12 +405,12 @@ def loss_fn_wrapper(name, project, class_conditional, f_stats_scale=1):
         info = {}
         loss = torch.tensor(0).float().to(DEVICE)
 
-        if f_reg:
+        if f_reg != 0:
             loss_reg = f_reg * regularization(inputs)
             info['[losses] reg'] = loss_reg.item()
             loss += loss_reg
 
-        if f_stats:
+        if f_stats != 0:
             outputs = project(data)
             stats = utility.get_stats(
                 outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
@@ -419,7 +419,7 @@ def loss_fn_wrapper(name, project, class_conditional, f_stats_scale=1):
                 info[k] = f_stats * f_stats_scale * v
             loss += f_stats * f_stats_scale * cost_stats
 
-        if f_crit:
+        if f_crit != 0:
             if net_last_outputs is None:
                 net_last_outputs = net(inputs)
             loss_crit = f_crit * criterion(net_last_outputs, labels)
