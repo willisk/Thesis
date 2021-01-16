@@ -396,7 +396,7 @@ def loss_fn_wrapper(name, project, class_conditional, f_stats_scale=1):
         DATA_A, project, n_classes, class_conditional,
         std=STD, path=stats_path.format(_name), device=DEVICE, use_drive=USE_DRIVE, reset=args.reset_stats)
 
-    def _loss_fn(data, project=project, class_conditional=class_conditional):
+    def _loss_fn(data, project=project, class_conditional=class_conditional, f_stats_scale=f_stats_scale):
         global net_last_outputs
         net_last_outputs = None
 
@@ -480,13 +480,13 @@ methods = [
         name="RP",
         project=project_RP,
         class_conditional=False,
-        f_stats_scale=1 / 100,
+        f_stats_scale=1 / 20,
     ),
     loss_fn_wrapper(
         name="RP CC",
         project=project_RP_CC,
         class_conditional=True,
-        f_stats_scale=1 / 100,
+        f_stats_scale=1 / 20,
     ),
     # # loss_fn_wrapper(
     # #     name="RP ReLU",
