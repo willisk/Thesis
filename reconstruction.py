@@ -416,9 +416,8 @@ def loss_fn_wrapper(name, project, class_conditional, f_stats_scale=1):
                 outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
             cost_stats, info_stats = loss_stats(stats_A, stats)
             for k, v in info_stats.items():
-                info_stats[k] = f_stats * f_stats_scale * v
+                info[k] = f_stats * f_stats_scale * v
             loss += f_stats * cost_stats
-            info = {**info, **info_stats}
 
         if f_crit:
             if net_last_outputs is None:
@@ -467,11 +466,11 @@ methods = [
     #     project=project_NN,
     #     class_conditional=True,
     # ),
-    loss_fn_wrapper(
-        name="NN ALL",
-        project=project_NN_all,
-        class_conditional=False,
-    ),
+    # loss_fn_wrapper(
+    #     name="NN ALL",
+    #     project=project_NN_all,
+    #     class_conditional=False,
+    # ),
     # loss_fn_wrapper(
     #     name="NN ALL CC",
     #     project=project_NN_all,
@@ -481,13 +480,13 @@ methods = [
         name="RP",
         project=project_RP,
         class_conditional=False,
-        f_stats_scale=1 / 20,
+        f_stats_scale=1 / 100,
     ),
     loss_fn_wrapper(
         name="RP CC",
         project=project_RP_CC,
         class_conditional=True,
-        f_stats_scale=1 / 20,
+        f_stats_scale=1 / 100,
     ),
     # # loss_fn_wrapper(
     # #     name="RP ReLU",
