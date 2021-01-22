@@ -922,7 +922,7 @@ def _plot_random_projections(RP, X_proj, mean, color='r', marker='o', scatter=Tr
     #     plt.plot(*list(zip(mean, mean + rp * 3)), c='black')
 
 
-def print_tabular(data, row_name="", spacing=2):
+def make_table(data, out=None, row_name="", spacing=2):
     print()
     headers = list(dict.fromkeys([k for d in data.values() for k in d.keys()]))
     row_data = ([[row_name] + headers] +
@@ -935,6 +935,10 @@ def print_tabular(data, row_name="", spacing=2):
         print(line)
         if i == 0:
             print('-' * len(line))
+    if out:
+        table = '\n'.join(','.join(rd) for rd in row_data)
+        with open(out, 'w') as f:
+            f.write(table)
 
 
 def get_child_modules(net):
