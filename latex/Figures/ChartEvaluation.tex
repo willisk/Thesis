@@ -1,0 +1,59 @@
+\begin{tikzpicture}[node distance=1cm and 1.7cm, auto]
+
+\node (A) [node, fill=red!7] {\textbf{Target} \\ $\set A$};
+\node (B) [node, below= of A] {\textbf{Source} \\ $\set B$};
+\node (C) [node, below= 2.2cm of B, fill=blue!0] {\textbf{Validation} \\ $\set C$};
+
+\node (Bp) [node, right= of B, fill=blue!2] {\textbf{perturbed} \\ $\widetilde {\set B} = \delta (\set B)$};
+\node (Br) [node, right= of Bp, fill=blue!7] {\textbf{reconstructed} \\ $\widehat {\set B} = \rho^* (\widetilde {\set B})$};
+
+
+\draw [arrow, dashed, thin] (B) -- (Bp) node (Pert) [midway, function, dashed] {$\delta$};
+\draw [arrow] (Bp) -- (Br) node (Rec) [midway, function] {$\rho^*$};
+\node [fill=white, below= 0cm of Pert] {\footnotesize \textit{unknown}};
+\node [fill=white, below= 0cm of Rec] {\footnotesize \textit{learned}};
+
+
+\node (Net) [function, fill=gray!5, above= of Br] {Neural \\ Network};
+\node (vNet) [function, fill=gray!5, right= of Net] {verifier \\ Neural \\ Network};
+
+\draw [arrow, Mahogany, thin, bend left=20] (A) to (Net);
+\draw [arrow, Mahogany, thin, bend left=20] (A) to node[below] {\footnotesize trained} (vNet);
+\draw [arrow, Blue, thin] (Net.210) to[bend right=20] node [midway, above, sloped] {\footnotesize optimized} (Rec.north);
+
+\node (Cp) [node, right= of C, fill=blue!0] {\textbf{perturbed} \\ $\widetilde {\set C} = \delta(\set C)$};
+\node (Cr) [node, right= of Cp, fill=blue!0] {\textbf{reconstructed} \\ $\widehat {\set C} = \rho ^*(\widetilde {\set C})$};
+
+
+\draw [arrow, dashed, thin] (C) -- (Cp);
+\draw [arrow] (Cp) -- (Cr);
+
+\draw [arrow, dashed, thin] (C) -- (Cp) node (Pert) [midway, function, dashed] {$\delta$};
+\draw [arrow] (Cp) -- (Cr) node (Rec) [midway, function] {$\rho^*$};
+
+\draw [arrow, <->, thin, OliveGreen] (Br.south) to [rect connect h=-0.75cm] (B.south);
+\draw [arrow, <->, thin, OliveGreen] (Cr.north) to [rect connect h=0.75cm] (C.north);
+
+\path (Br.east) to [out=0, in=270]  node [near end, OliveGreen, xshift=0.1cm] {accuracy} (vNet.265);
+\draw [arrow, thin, OliveGreen] (Br.east) to [out=0, in=320] (Net.315);
+\draw [arrow, thin, OliveGreen] (Cr.east) to [out=0, in=320] (Net.325);
+\draw [arrow, thin, OliveGreen] (Cr.east) to [out=0, in=270] (vNet.south);
+
+
+\node [OliveGreen] at ($(Bp)!0.5!(Cp)$) {PSNR};
+
+\node [below= 1.5cm of Pert] (Id) {Id};
+\path (Id) -| node[anchor=center] (Idr) {$\hat {\Id}$} (Rec);
+\draw [arrow] (Id) -- 
+node[near start, xshift=0.2cm, function] {$\delta$} 
+node[near end, xshift=-0.2cm, function] {$\rho^*$} (Idr);
+\draw [arrow, <->, thin, OliveGreen] (Idr.south) to [rect connect h=-0.6cm] (Id.south);
+\node [OliveGreen, yshift=-1.2cm] at ($(Id)!0.5!(Idr)$) {rel. error};
+% \node [circle, fill=blue] at (Idr){};
+% \draw (0,0)|-node{mid}(2,3);
+% \node [below= 1cm of Rec] {};
+% \node (Cbelow) [below= of Cp] {EEE};
+% \draw [arrow, dashed, thin] (C) -- (Cp) node (Pert) [midway, function, dashed] {$\delta$};
+% \draw [arrow] (Cp) -- (Cr) node (Rec) [midway, function] {$\rho^*$};
+
+\end{tikzpicture}

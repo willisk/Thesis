@@ -1,0 +1,99 @@
+\chapter{Objective}
+\label{chap:Objective}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%  Section: Reconstruction   %%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Reconstruction}
+\label{sec:Reconstruction}
+
+\begin{figure}[h]
+    \input{Figures/ChartReconstruction}
+    \caption{Overview}
+    \centering
+\end{figure}
+
+This section describes the main objective of the task.
+The goal is to learn an inverse transformation to the unknown $\delta$.
+The way this is achieved is by maximizing similarity between the distributions of a source data set $\set B$
+and a target data set $\set A$ in an appropriate feature-space $\phi$.
+The goal of maximizing similarity in feature-space is addressed by formulating a loss function
+that minimizes simple statistics, such as the mean and variance of the dataset.
+
+Example application:
+A neural network might be well adjusted to a target distribution, 
+though under-perform when presented with samples that don't follow the original distribution
+and exhibit different statistics to which the neural network was not adjusted to.
+To combat this problem, a method for readjusting the inputs is introduced.
+The basic idea is that the data is mapped to a feature-representation.
+In this feature-space, simple statistics, such as the mean and variance are recorded
+for both, a source data set $\set B$ and a target data set $\set A$.
+Although, the source is first sent through a re-adjustment function $\rho$ that is
+then tuned to minimize the similarity-loss of the two data sets.
+This is done via a differentiable loss, or objective function that minimizes the difference in statistics.
+
+
+
+\subsection{Problem Formulation}
+Given: feature-map $\varphi$, target data set $\set A$ (or $\varphi(\set A)$ statistics), and a perturbed data set $\widetilde {\set B}$
+
+\[
+    \min_{\rho \in \mathcal{F}} \loss _\varphi (\set A, \rho(\widetilde{\set B})) \,,
+\]
+where $\mathcal F$ is a pre-defined set of functions.
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%   Section: Inversion    %%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Inversion}
+\label{sec:Inversion}
+
+\input{Figures/ChartInversion}
+
+The second part of this work is concerned about what kind of data may be recovered from 
+having knowledge of the statistics of a data set.
+For this task, the goal is to modify the source data set $\set B$ to more closely resemble
+the target data set $\set A$ only given the statistics of data set $\set A$.
+The source data set $\set B$ is in a first step, initialized by random noise.
+Then, by performing gradient descent on the loss function, the source itself is optimized.
+
+Furthermore, the original objective that was used in training the neural network - the \textbf{criterion} - can be used in order to further "push" the samples in a desired direction by specifying individual target labels.
+
+
+
+\subsection{Objective}
+Given: $\varphi$, $\set A$ (or $\varphi(\set A)$ statistics)
+\[
+    \min_{\set B \in \powerset Z} \loss _\varphi (\set A, \set B)
+\]
+    
+
+\subsection{Reconstruction Network}
+
+\begin{minipage}{0.5\textwidth}
+\input{Figures/ChartInvertblock}
+\end{minipage}
+\begin{minipage}{0.5\textwidth}
+\input{Figures/ChartInvertNet}
+\end{minipage}
+
+
+
+
+
+\subsection{Inversion Evaluation}
+The result of the optimization process can be evaluated by calculating the accuracy obtained by $\Phi$. 
+Though, since $\Phi$ was used in the optimization process, it will likely display heavy bias to what it believes is a correctly classified sample.
+For this sake, another neural network $\Phi_{\text{ver}}$ can be employed, which has been separately trained on either $\set A$ or another data set. Though, practice has shown that a very small portion of $\set A$ is only needed to obtain a close-enough guess at the true statistics of $\set A$.
+

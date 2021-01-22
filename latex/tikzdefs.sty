@@ -1,0 +1,101 @@
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.7}
+
+\usetikzlibrary{shapes.geometric, arrows}
+\usetikzlibrary{decorations.text}
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{positioning}
+\usetikzlibrary{calc}
+\usetikzlibrary{fit}
+
+
+
+\pgfmathdeclarefunction{gauss}{2}{\pgfmathparse{1/(#2*sqrt(2*pi))*exp(-((x-#1)^2)/(2*#2^2))}}
+
+\tikzstyle{line} = [thick, line width=1pt, rounded corners=0.4cm]
+\tikzstyle{lineshort} = [line, shorten <=3pt, shorten >=3pt]
+\tikzstyle{linestart} = [lineshort, shorten >=0pt]
+\tikzstyle{lineend} = [lineshort, shorten <=0pt]
+\tikzstyle{arrow} = [lineshort,->,>=stealth, arrows={->[length=5pt,width=5pt]}]
+\tikzstyle{arrowend} = [arrow, shorten <=0pt]
+\tikzstyle{node} = [rectangle, rounded corners=0.4cm, minimum width=2.3cm, minimum height=1.8cm, text centered, align=center, draw=black]
+\tikzstyle{function} = [anchor=mid, circle, minimum width=0.9cm, text centered, align=center, draw=black, fill=white]
+
+\tikzstyle{layer} = [rectangle, minimum width=3cm, text centered, align=center, draw=black]
+\tikzstyle{larrow} = [-{Latex[width=5pt, length=4pt]}, thick]
+
+\tikzstyle{distr} = [ellipse, draw=black]
+
+\def\distribution{
+    \begin{tikzpicture}
+    \begin{axis}[no markers, domain=-3:3, samples=30, axis x line*=bottom, axis line style={draw=none}, height=2.5cm, width=4cm, xtick=\empty, ytick=\empty]
+        \addplot [very thick,cyan!50!black] {gauss(0,1)};
+    \end{axis}
+        \draw (1.2,0.3) ellipse (1.2cm and 0.9cm);
+    \end{tikzpicture}
+}
+
+\def\noise{
+    \begin{tikzpicture}[samples=200, domain=0:360]
+        \begin{axis}[
+            width=4cm, height=2.5cm,
+            axis line style={draw=none}, xtick=\empty, hide y axis
+        ]
+        \addplot [no markers, smooth] {sin(5*x)+rand*2};
+        \end{axis}
+        \draw (1.2,0.3) ellipse (1.2cm and 0.9cm);
+    \end{tikzpicture}
+}
+
+
+% \newcommand\currentcoordinate{\the\tikz@lastxsaved,\the\tikz@lastysaved}
+% \tikzdeclarecoordinatesystem{+}{%
+%   \tikz@scan@one@point\pgfutil@firstofone+(#1)%
+% }
+\tikzset{
+    rect connect v/.style={
+        to path={
+            (\tikztostart)
+            -- ($(\tikztostart)+(#1,0)$)
+            -- (
+                perpendicular cs:
+                vertical line through={($(\tikztostart)+(#1,0)$)},
+                horizontal line through={(\tikztotarget)}
+            )
+            -- ($(\tikztotarget)+(0,0)$)
+        }
+    },
+    rect connect h/.style={
+        to path={
+            (\tikztostart)
+            -- ($(\tikztostart)+(0,#1)$)
+            -- (
+                perpendicular cs:
+                horizontal line through={($(\tikztostart)+(0,#1)$)},
+                vertical line through={(\tikztotarget)}
+            )
+            -- ($(\tikztotarget)+(0,0)$)
+        }
+    },
+    corner connect h/.style={
+        to path={
+            (\tikztostart)
+            -- ($(\tikztostart)+(0,#1)$)
+            -- (
+                perpendicular cs:
+                horizontal line through={($(\tikztostart)+(0,#1)$)},
+                vertical line through={(\tikztotarget)}
+            )
+        }
+    },
+    connect h/.style={
+        to path={ (\tikztostart) -- (\tikztostart-|\tikztotarget) }
+    },
+    connect v/.style={
+        to path={ (\tikztostart) -- (\tikztostart|-\tikztotarget) }
+    },
+    rect connect v/.default=1cm,
+    rect connect h/.default=1cm
+    corner connect h/.default=1cm
+}

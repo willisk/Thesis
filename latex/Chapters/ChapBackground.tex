@@ -1,0 +1,76 @@
+
+% Chapter Template
+
+\chapter{Background}
+\label{chap:Background}
+
+\section{Notation}
+
+A \textbf{sample} $\vec z$ is an observation drawn from a joint distribution over the domain $\set Z = \set X \times \set Y$. 
+It consists of a tuple $(\vec x, y)$ of an \textbf{input} $\vec x$ and a \textbf{label} $y$. 
+
+\noindent
+The input space $\set X$ typically is $\R^d$ and $\set Y$, the set of possible labels, is a set of integers $\{1, \dots, C\}$ for some whole number $C$, also known as the \textbf{number of classes}.
+
+\noindent
+A \textbf{data set}, is a \textit{finite} \textit{non-empty} set $\set A = \{\vec z^{(i)}\}_{i=1}^{| \set A |} = \{(\vec x^{(i)}, y^{(i)})\}_{i=1}^{| \set A |}$ that contains \textit{i.i.d.} (independent and identically distributed) samples drawn from some distribution over $\set Z$.
+A \textbf{sample batch} or simply \textbf{batch} is a \textit{non-empty} subset thereof.
+
+\noindent
+$\mean$ and $\var$ are used to denote the empirical sample mean and variance of the input.
+\begin{align*}
+    \mean ({\set A}) &= \frac 1 {\lvert \set A \rvert} \sum _{i=1}^{\lvert \set A \rvert} \vec x^{(i)} \; \in \set X \\
+    \var ({\set A}) &= \frac 1 {\lvert \set A \rvert} \sum _{i=1}^{\lvert \set A \rvert} (\vec x^{(i)} - \mean ({\set A}))^2 \; \in \set X
+\end{align*}
+
+
+Given a sample batch $\set A$, the set $\set A|_c = \{(\vec x, y) \in \set A \mid y = c\}$ is the subset of $\set A$ \textbf{constrained} to samples of label $c$.
+
+
+A \textbf{feature-mapping} is any function from input space $\R^d$ to $\R^m$ for some $m$.
+A data set to data set mapping is obtained by applying a feature-mapping $\varphi$ to every input. Given a data set $\set A$, and a feature-mapping $\varphi$:
+\[
+    \varphi(\set A) := \{(\varphi(\vec x), y) \mid (\vec x, y) \in \set A\} \;
+    \in \powerset Z
+\]
+
+
+
+\section{Loss function}
+Given two data sets $\set A, \set B$, a \textbf{loss function} or \textbf{objective function} is a function $\loss : \powerset Z \times \powerset Z \to \R$ that is \textit{piecewise continuously differentiable} with regard to its inputs.
+I. e. where 
+\[
+    \loss (\set A, \set B) = \loss (
+    \,\{(\vec x^{(i)}_{\set A}, y^{(i)}_{\set A})\}_{i=0}^{|\set A|}\,,
+    \,\{(\vec x^{(j)}_{\set B}, y^{(j)}_{\set B})\}_{j=0}^{|\set B|}\,) \,,
+\]
+is piecewise $\mathcal C^1$ with regard to $\vec x^{(i)}_{\set A}$
+for all $i=1, \dots, |\set A|$, and $\vec x^{(j)}_{\set B}$ for all $j=1, \dots, |\set B|$.
+
+For a given feature-mapping $\varphi$ that is piecewise $\mathcal C ^1$, it can be defined as follows:
+% 
+\[
+    \loss _{\varphi} (\set A, \set B) = 
+    \|\mean ({\varphi (\set A)}) - \mean ({\varphi (\set B)})\| +
+    \|\var ({\varphi (\set A)}) - \var ({\varphi (\set B)})\|
+\]
+% 
+A \textbf{class-dependent} loss can be obtained as follows:
+\[
+    \loss _\varphi ^{\mathcal C} (\set A, \set B) =
+    \sum _{\substack{c = 1 \dots C \\ \set A_c ,\, \set B_c \neq \emptyset}} 
+    \|\mean ({\varphi (\set A|_c)}) - \mean({\varphi (\set B|_c)})\|
+    + \|\var ({\varphi (\set A|_c)}) - \var ({\varphi (\set B|_c)})\| 
+\]
+
+\subsection{Combinations}
+% 
+This notion can be extended to a collection of feature-maps [$\varphi_0, \dots, \varphi_n$].
+A \textbf{collection} is used to refer to a \textit{non-empty finite} set.
+\begin{align*}
+    \loss_{[\varphi_1, \dots, \varphi_n]} (\set A, \set B) &= 
+    \sum_{i=1}^n \loss_{\varphi_i} (\set A, \set B) \\
+    %
+    \loss_{[\varphi_1, \dots, \varphi_n]}^{\mathcal C} (\set A, \set B) &= 
+    \sum_{i=1}^n \loss_{\varphi_i}^{\mathcal C} (\set A, \set B)
+\end{align*}

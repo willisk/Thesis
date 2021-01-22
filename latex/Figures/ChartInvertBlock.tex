@@ -1,0 +1,34 @@
+
+\begin{tikzpicture}[node distance=0.3cm and 1.7cm, auto]
+
+\node [] (input) {Input};
+\node [layer, below= 1cm of input, fill=Dandelion!9] (conv1) {Conv3x3};
+\node [layer, below= of conv1, fill=Blue!5] (bn1) {BatchNorm};
+\node [layer, below= of bn1, fill=Mahogany!7] (relu) {ReLU};
+\node [layer, below= of relu, fill=Dandelion!9] (conv2) {Conv3x3};
+\node [layer, below= of conv2, fill=Blue!5] (bn2) {BatchNorm};
+\node [below= 1.5cm of bn2] (output) {Output};
+
+\path (input) -- node[anchor=center] (branch) {} (conv1);
+\path (bn2) -- node[circle, draw, minimum size=0.6cm, anchor=center] (plus) {} (output);
+\node at (plus) {+};
+
+\node [right= 1.6cm of branch] (dummy) {};
+\node [draw, dashed, inner xsep=0.3cm, fit=(plus) (dummy) (conv1)] {};
+
+\draw [larrow, rect connect v=2cm] (branch.center) to (plus.east);
+
+\draw [larrow] (input) to (conv1);
+\draw [larrow] (conv1) to (bn1);
+\draw [larrow] (bn1) to (relu);
+\draw [larrow] (relu) to (conv2);
+\draw [larrow] (conv2) to (bn2);
+\draw [larrow] (bn2) to (plus);
+\draw [larrow] (plus) to (output);
+
+% \draw[red,thick,dotted] ($(J.north west)+(-0.3,0.6)$)  rectangle ($(L.south east)+(0.3,-0.6)$);
+
+% \node [right= 4cm of input] (input2) {Input};
+% \node [layer, below= 1cm of input2] (input2) {Residual Layer};
+
+\end{tikzpicture}

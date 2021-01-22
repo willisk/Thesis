@@ -1,0 +1,36 @@
+\begin{tikzpicture}[node distance=0.58cm and 1.7cm, auto]
+
+\node [] (input) {Input};
+\node [layer, below= 1cm of input] (res1) {Residual Layer};
+\node [layer, below= of res1] (res2) {Residual Layer};
+\node [below= of res2, minimum height=0.8cm] (res3) {\dots};
+\node [layer, below= of res3] (res4) {Residual Layer};
+% \node [layer, below= 1cm of input, fill=Dandelion!9] (conv1) {Conv3x3};
+% \node [layer, below= of conv1, fill=Blue!5] (bn1) {BatchNorm};
+% \node [layer, below= of bn1, fill=Mahogany!7] (relu) {ReLU};
+% \node [layer, below= of relu, fill=Dandelion!9] (conv2) {Conv3x3};
+% \node [layer, below= of conv2, fill=Blue!5] (bn2) {BatchNorm};
+\node [below= 1cm of res4] (output) {Output};
+
+% \path (input) -- node[anchor=center] (branch) {} (conv1);
+% \path (bn2) -- node[circle, draw, minimum size=0.6cm, anchor=center] (plus) {} (output);
+% \node at (plus) {+};
+
+% \node [right= 1.6cm of branch] (dummy) {};
+\node [draw, dashed, inner sep=0.25cm, fit=(res1)] {};
+
+% \draw [larrow, rect connect v=2cm] (branch.center) to (plus.east);
+
+\draw [larrow] (input) to (res1);
+\draw [larrow] (res1) to (res2);
+\draw [larrow] (res2) to (res3);
+\draw [larrow] (res3) to (res4);
+\draw [larrow] (res4) to (output);
+% \draw [larrow] (bn1) to (relu);
+% \draw [larrow] (relu) to (conv2);
+% \draw [larrow] (conv2) to (bn2);
+% \draw [larrow] (bn2) to (plus);
+% \draw [larrow] (plus) to (output);
+
+
+\end{tikzpicture}

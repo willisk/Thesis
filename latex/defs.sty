@@ -1,0 +1,53 @@
+% \usepackage{bm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+\usepackage{ifluatex}
+% \usepackage{xcolor}
+% \usepackage[dvipsnames]{xcolor}
+
+\DeclareRobustCommand*{\drv}{\mathop{}\!\mathrm{d}}
+
+\renewcommand{\vec}{\mathbf}
+\renewcommand{\emptyset}{\text{\O}}
+\newcommand{\set}{\mathcal}
+\newcommand{\collection}{\mathscr}
+\newcommand{\powerset}[1]{\mathcal P(\set#1)}
+\newcommand{\indicator}[1]{\mathbb I _{\{#1\}}}
+\newcommand{\Id}{\textnormal{Id}}
+\newcommand{\loss}{\textit{L}}
+\newcommand{\Loss}[1]{\loss_{\textnormal{#1}}}
+
+\providecommand{\norm}[1]{\lVert #1 \rVert}
+\providecommand{\abs}[1]{\lvert #1 \rvert}
+\providecommand{\innerProd}[2]{\langle #1, #2\rangle}
+
+% \usepackage{unicode-math}
+% \newcommand\widebar[1]{\mathop{\overline{#1}}}
+
+% \usepackage{newtxmath,newtxtext}
+% \DeclareSymbolFont{boldlargesymbols}{LMX}{ntxexx}{it}{n}
+% \DeclareMathAccent{\thicktilde}{\mathord}{boldlargesymbols}{"65}
+% \DeclareMathAccent{\thickhat}{\mathord}{largesymbols}{"62}
+
+
+
+% \newcommand{\boldhat}{\bm\widehat}
+% \newcommand{\boldtilde}{\bm\widetilde}
+
+\newcommand{\R}{\mathbb{R}}
+
+\newcommand{\comma}[1]{\,, \; \text{#1} \;}
+\newcommand{\din}{{d_{\textit{in}}}}
+\newcommand{\dout}{{d_{\textit{out}}}}
+
+
+% \newcommand{\mean}[1]{{mean}(#1)}
+% \newcommand{\var}[1]{{var}(#1)}
+\DeclareMathOperator{\mean}{mean}
+\DeclareMathOperator{\var}{var}
+% \newcommand{\XXX}[1]{}
+\newcommand{\XXX}[1]{\textcolor{red}{\\XXX: #1\\}}
+
+\newcommand{\eqnref}[1]{(\ref{#1})}
+
