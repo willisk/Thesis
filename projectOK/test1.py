@@ -10,10 +10,11 @@ import matplotlib.pyplot as plt
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
 
-import inversion
+import utility
 
-print(__doc__)
+print('#', __doc__)
 
+cmaps = utility.categorical_colors(2)
 # ======= Set Seeds =======
 np.random.seed(3)
 torch.manual_seed(3)
@@ -32,16 +33,14 @@ def distort(X):
 # distorted Dataset B
 X_B = distort(X_A)
 
-plt.scatter(X_A[:, 0], X_A[:, 1], c='b', label="Data A")
-plt.scatter(X_B[:, 0], X_B[:, 1], c='r', label="Data B")
+plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="target data A")
+plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="source data B")
 plt.legend()
 plt.show()
 
 # ======= reconstruct Model =======
 A = torch.eye(2, requires_grad=True)
 b = torch.zeros((2), requires_grad=True)
-
-from utility import debug
 
 
 def reconstruct(X):
@@ -50,24 +49,28 @@ def reconstruct(X):
 
 # ======= Loss Function =======
 def loss_fn(X):
-    return ((X - X_A)**2).sum()
+    X = reconstruct(X)
+    return (X - X_A).norm()
 
 
-optimizer = torch.optim.Adam([A, b], lr=0.1)
+# ======= Optimize =======
+lr = 0.01
+steps = 200
+optimizer = torch.optim.Adam([A, b], lr=lr)
 
-inversion.deep_inversion([X_B],
-                         loss_fn,
-                         optimizer,
-                         steps=200,
-                         data_pre_fn=reconstruct,
-                         plot=True,
-                         )
+utility.invert([X_B],
+               loss_fn,
+               optimizer,
+               steps=steps,
+               plot=True,
+               track_grad_norm=True,
+               )
 
-print("After Pre-Processing:")
+print("After Reconstruction:")
 X_B_proc = reconstruct(X_B).detach()
-plt.scatter(X_A[:, 0], X_A[:, 1], c='b', label="Data A")
+plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="target data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-            c='r', label="reconstructed Data B")
+            c=cmaps[1], label="reconstructed data B")
 plt.legend()
 plt.show()
 

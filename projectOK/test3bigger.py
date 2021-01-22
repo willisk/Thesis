@@ -15,13 +15,11 @@ sys.path.append(PWD)
 
 import utility
 import datasets
-import inversion
 
 if 'ipykernel_launcher' in sys.argv:
     import importlib
     importlib.reload(utility)
     importlib.reload(datasets)
-    importlib.reload(inversion)
 
 print(__doc__)
 
@@ -70,12 +68,12 @@ RP = RP / RP.norm(2, dim=0)
 
 # plot random projections
 utility.plot_random_projections(RP, project(X_A), mean=mean_A)
-plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
+plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="target data A")
 plt.legend()
 plt.show()
 
 utility.plot_random_projections(RP, project(X_B), mean=mean_A)
-plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="distorted Data B")
+plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="distorted data B")
 plt.legend()
 plt.show()
 
@@ -107,6 +105,7 @@ A_proj_vars = X_A_proj.var(dim=0, keepdims=True)
 
 # ======= Loss Function =======
 def loss_fn(X):
+    X = reconstruct(X)
     X_proj = project(X)
     loss_mean = ((X_proj.mean(dim=0) - A_proj_means)**2).mean()
     loss_var = ((X_proj.var(dim=0) - A_proj_vars)**2).mean()
@@ -115,32 +114,30 @@ def loss_fn(X):
 
 # ======= Optimize =======
 lr = 0.1
-steps = 600
+steps = 300
 optimizer = torch.optim.Adam([A, b], lr=lr)
 
-inversion.deep_inversion([X_B],
-                         loss_fn,
-                         optimizer,
-                         steps=steps,
-                         data_pre_fn=reconstruct,
-                         #    track_history=True,
-                         #    track_history_every=10,
-                         plot=True,
-                         )
+utility.invert([X_B],
+               loss_fn,
+               optimizer,
+               steps=steps,
+               plot=True,
+               track_grad_norm=True,
+               )
 
 # for x, step in zip(*zip(*history)):
 #     utility.plot_stats(x, colors=['r'] * len(history))
 # ======= Result =======
 X_B_proc = reconstruct(X_B).detach()
-print("After Pre-Processing:")
+print("After Reconstruction:")
 print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc).item())
 print("Cross Entropy of undistorted B:",
       dataset.cross_entropy(X_B_orig).item())
-plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
+plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="target data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-            c=cmaps[1], label="reconstructed Data B")
+            c=cmaps[1], label="reconstructed data B")
 plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
-            c='orange', label="undistorted Data B", alpha=0.4)
+            c='orange', label="undistorted data B", alpha=0.4)
 utility.plot_stats([X_A[Y_A == 0], X_B_proc[Y_B == 0]])
 utility.plot_stats([X_A[Y_A == 1], X_B_proc[Y_B == 1]])
 plt.legend()
@@ -148,19 +145,19 @@ plt.show()
 
 
 utility.plot_random_projections(
-    RP, project(X_A), mean=mean_A, color=cmaps[0], scatter=False)
+    RP, project(X_A), mean=mean_A, color=cmaps[0], scatter=True)
 plt.scatter(X_A[:, 0], X_A[:, 1],
-            c=cmaps[0], label="Data A")
+            c=cmaps[0], label="target data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-            c=cmaps[1], label="distorted Data B", alpha=0.4)
-plt.legend()
+            c=cmaps[1], label="distorted data B")
+plt.legend(loc="lower right")
 plt.show()
 utility.plot_random_projections(
-    RP, project(X_B_proc), mean=mean_A, color=cmaps[1], scatter=False)
+    RP, project(X_B_proc), mean=mean_A, color=cmaps[1], scatter=True)
 plt.scatter(X_A[:, 0], X_A[:, 1],
-            c=cmaps[0], label="Data A", alpha=0.4)
+            c=cmaps[0], label="target data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-            c=cmaps[1], label="distorted Data B")
+            c=cmaps[1], label="distorted data B")
 plt.legend()
 plt.show()
 

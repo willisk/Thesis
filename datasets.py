@@ -161,7 +161,7 @@ from scipy.stats import multivariate_normal, ortho_group
 #     )
 class MULTIGMM(Dataset):
 
-    def __init__(self, input_shape=20, n_classes=10, n_modes=8,
+    def __init__(self, n_dims=20, n_classes=10, n_modes=8,
                  scale_mean=1, scale_cov=1, mean_shift=0,
                  n_samples_A=1000,
                  n_samples_B=1000,
@@ -193,7 +193,7 @@ class MULTIGMM(Dataset):
 
         data_dir = os.path.join(MODELDIR, "GMM")
 
-        super().__init__(n_dims=n_dims,
+        super().__init__(input_shape=(n_dims,),
                          n_classes=n_classes,
                          A=A,
                          B=B,
@@ -265,7 +265,7 @@ class MULTIGMM(Dataset):
                 if len(X_c) == 0:
                     continue
             # estimated class prob, should use equal?
-            p_c = (Y == c).sum().item() / len(Y)
+            p_c = 1 / n_class
             n_modes, n_c = len(gmm.means), len(X_c)
             b[c] = gmm.weights.reshape(n_modes, -1) * p_c
             a[c] = torch.empty((n_modes, n_c))

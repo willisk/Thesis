@@ -15,23 +15,14 @@ sys.path.append(PWD)
 
 import utility
 import datasets
-import deepinversion
-import shared
 
 if 'ipykernel_launcher' in sys.argv:
     import importlib
     importlib.reload(utility)
     importlib.reload(datasets)
-    importlib.reload(deepinversion)
-    importlib.reload(shared)
 
 print(__doc__)
 cmaps = utility.categorical_colors(2)
-
-# Tensorboard
-LOGDIR = os.path.join(PWD, "projectOK/runs")
-shared.init_summary_writer(log_dir=LOGDIR)
-# writer = shared.get_summary_writer("test4")
 
 
 # ======= Set Seeds =======
@@ -42,13 +33,13 @@ torch.manual_seed(3)
 # Gaussian Mixture Model
 
 n_classes = 2
-dataset = datasets.DatasetGMM(
+dataset = datasets.MULTIGMM(
     n_dims=2,
+    n_classes=n_classes,
     n_modes=5,
     scale_mean=6,
     scale_cov=3,
     mean_shift=20,
-    n_classes=n_classes,
     n_samples_per_class=100,
 )
 
@@ -71,13 +62,13 @@ X_B = distort(X_B_orig)
 # Y_B = Y_B * 0
 
 plt.scatter(X_A[Y_A == 0][:, 0], X_A[Y_A == 0][:, 1],
-            c=cmaps[0], marker='+', alpha=0.4, label="Data A cl 0")
+            c=cmaps[0], marker='+', alpha=0.4, label="target data A cl 0")
 plt.scatter(X_A[Y_A == 1][:, 0], X_A[Y_A == 1][:, 1],
-            c=cmaps[0], marker='d', alpha=0.4, label="Data A cl 1")
+            c=cmaps[0], marker='d', alpha=0.4, label="target data A cl 1")
 plt.scatter(X_B[Y_B == 0][:, 0], X_B[Y_B == 0][:, 1],
-            c=cmaps[1], marker='+', alpha=0.4, label="Data B cl 0")
+            c=cmaps[1], marker='+', alpha=0.4, label="data B cl 0")
 plt.scatter(X_B[Y_B == 1][:, 0], X_B[Y_B == 1][:, 1],
-            c=cmaps[1], marker='d', alpha=0.4, label="Data B cl 1")
+            c=cmaps[1], marker='d', alpha=0.4, label="data B cl 1")
 utility.plot_stats([X_A[Y_A == 0], X_B[Y_B == 0]])
 utility.plot_stats([X_A[Y_A == 1], X_B[Y_B == 1]])
 plt.legend()
@@ -137,16 +128,16 @@ optimizer = torch.optim.Adam([A, b], lr=lr)
 # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
 
-deepinversion.deep_inversion([X_B],
-                             loss_fn,
-                             optimizer,
-                             #    scheduler=scheduler,
-                             steps=steps,
-                             pre_fn=reconstruct,
-                             #    track_history=True,
-                             #    track_history_every=10,
-                             plot=True,
-                             )
+deeputility.invert([X_B],
+                   loss_fn,
+                   optimizer,
+                   #    scheduler=scheduler,
+                   steps=steps,
+                   pre_fn=reconstruct,
+                   #    track_history=True,
+                   #    track_history_every=10,
+                   plot=True,
+                   )
 
 # x_history, steps = zip(*history)
 # for x in x_history[30:]:
@@ -154,17 +145,17 @@ deepinversion.deep_inversion([X_B],
 
 # ======= Result =======
 X_B_proc = reconstruct(X_B).detach()
-print("After Pre-Processing:")
+print("After Reconstruction:")
 print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc).item())
 print("Cross Entropy of undistorted B:",
       dataset.cross_entropy(X_B_orig, Y_B).item())
 
-plt.title("Data A")
-plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], alpha=0.4, label="Data A")
+plt.title("target data A")
+plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], alpha=0.4, label="target data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-            c=cmaps[1], alpha=0.4, label="reconstructed Data B")
+            c=cmaps[1], alpha=0.4, label="reconstructed data B")
 plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
-            c='orange', alpha=0.4, label="undistorted Data B")
+            c='orange', alpha=0.4, label="undistorted data B")
 utility.plot_stats([X_A[Y_A == 0], X_B_proc[Y_B == 0]])
 utility.plot_stats([X_A[Y_A == 1], X_B_proc[Y_B == 1]])
 plt.legend()

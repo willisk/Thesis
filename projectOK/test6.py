@@ -155,29 +155,29 @@ steps = 400
 optimizer = torch.optim.Adam([A, b], lr=lr)
 # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-deepinversion.deep_inversion([X_B],
-                             loss_fn,
-                             optimizer,
-                             #    scheduler=scheduler,
-                             steps=steps,
-                             pre_fn=reconstruct,
-                             #    track_history=True,
-                             #    track_history_every=10,
-                             plot=True,
-                             )
+deeputility.invert([X_B],
+                   loss_fn,
+                   optimizer,
+                   #    scheduler=scheduler,
+                   steps=steps,
+                   pre_fn=reconstruct,
+                   #    track_history=True,
+                   #    track_history_every=10,
+                   plot=True,
+                   )
 
 # for x, step in zip(*zip(*history)):
 #     utility.plot_stats(x, colors=['r'] * len(history))
 # ======= Result =======
 X_B_proc = reconstruct(X_B).detach()
-print("After Pre-Processing:")
+print("After Reconstruction:")
 print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc, Y_B).item())
-plt.title("Data A")
-plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A", alpha=0.5)
+plt.title("target data A")
+plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="target data A", alpha=0.5)
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-            c=cmaps[1], label="reconstructed Data B", alpha=0.5)
+            c=cmaps[1], label="reconstructed data B", alpha=0.5)
 plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
-            c='orange', label="undistorted Data B", alpha=0.4)
+            c='orange', label="undistorted data B", alpha=0.4)
 for c in range(n_classes):
     utility.plot_stats([X_A[Y_A == c], X_B_proc[Y_B == c]])
 plt.legend()

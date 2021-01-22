@@ -15,13 +15,11 @@ sys.path.append(PWD)
 
 import datasets
 import utility
-import inversion
 
 if 'ipykernel_launcher' in sys.argv:
     import importlib
     importlib.reload(utility)
     importlib.reload(datasets)
-    importlib.reload(inversion)
 
 print(__doc__)
 
@@ -72,12 +70,12 @@ print("Before:")
 print("Cross Entropy of A:", gmm.cross_entropy(X_A).item())
 print("Cross Entropy of B:", gmm.cross_entropy(X_B).item())
 utility.plot_random_projections(RP, project(X_A), mean=mean_A)
-plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
+plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="target data A")
 plt.legend()
 plt.show()
 
 utility.plot_random_projections(RP, project(X_B), mean=mean_A)
-plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="distorted Data B")
+plt.scatter(X_B[:, 0], X_B[:, 1], c=cmaps[1], label="distorted data B")
 plt.legend()
 plt.show()
 
@@ -102,6 +100,7 @@ A_proj_vars = X_A_proj.var(dim=0, keepdims=True)
 
 # ======= Loss Function =======
 def loss_fn(X):
+    X = reconstruct(X)
     X_proj = project(X)
     loss_mean = ((X_proj.mean(dim=0) - A_proj_means)**2).mean()
     loss_var = ((X_proj.var(dim=0) - A_proj_vars)**2).mean()
@@ -110,36 +109,36 @@ def loss_fn(X):
 
 # ======= Optimize =======
 lr = 0.1
-steps = 400
+steps = 200
 optimizer = torch.optim.Adam([A, b], lr=lr)
 # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
 
 def grad_norm_fn(x):
     return max(x, 1)
-
-
     # return np.sqrt(x) if x > 1 else x
-inversion.deep_inversion([X_B],
-                         loss_fn,
-                         optimizer,
-                         #  scheduler=scheduler,
-                         steps=steps,
-                         data_pre_fn=reconstruct,
-                         #  grad_norm_fn=grad_norm_fn,
-                         plot=True,
-                         )
+
+
+utility.invert([X_B],
+               loss_fn,
+               optimizer,
+               #  scheduler=scheduler,
+               steps=steps,
+               #  grad_norm_fn=grad_norm_fn,
+               plot=True,
+               track_grad_norm=True,
+               )
 
 # ======= Result =======
 X_B_proc = reconstruct(X_B).detach()
-print("After Pre-Processing:")
+print("After Reconstruction:")
 print("Cross Entropy of B:", gmm.cross_entropy(X_B_proc).item())
 print("Cross Entropy of undistorted B:", gmm.cross_entropy(X_B_orig).item())
-plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
+plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="target data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-            c=cmaps[1], label="reconstructed Data B")
+            c=cmaps[1], label="reconstructed data B")
 plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
-            c='orange', label="undistorted Data B", alpha=0.4)
+            c='orange', label="undistorted data B", alpha=0.4)
 utility.plot_stats([X_A, X_B_proc])
 plt.legend()
 plt.show()

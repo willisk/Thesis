@@ -65,7 +65,7 @@ class timer():
         return False
 
 
-def seed_everything(seed):
+def seed_everything(seed, deterministic=False):
     if seed == -1:
         return
     random.seed(seed)
@@ -73,9 +73,10 @@ def seed_everything(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.enabled = False
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
+    if deterministic:
+        torch.backends.cudnn.enabled = False
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
     os.environ['PYTHONHASHSEED'] = str(seed)
 
 

@@ -91,23 +91,23 @@ def project_relu(X, Y):
 X_A_proj = project_relu(X_A, Y_A)
 
 
-plt.title("Data A")
+plt.title("target data A")
 utility.plot_random_projections(RP, X_A_proj, mean=means_A, Y=Y_A, marker='+')
 plt.scatter(X_A[Y_A == 0][:, 0], X_A[Y_A == 0][:, 1],
-            c=cmaps[0], marker='+', alpha=0.4, label="Data A cl 0")
+            c=cmaps[0], marker='+', alpha=0.4, label="target data A cl 0")
 plt.scatter(X_A[Y_A == 1][:, 0], X_A[Y_A == 1][:, 1],
-            c=cmaps[0], marker='d', alpha=0.4, label="Data A cl 1")
+            c=cmaps[0], marker='d', alpha=0.4, label="target data A cl 1")
 plt.axis('equal')
 plt.legend()
 plt.show()
 
-plt.title("distorted Data B")
+plt.title("distorted data B")
 utility.plot_random_projections(
     RP, project_relu(X_B, Y_B), mean=means_A, Y=Y_B)
 plt.scatter(X_B[Y_B == 0][:, 0], X_B[Y_B == 0][:, 1],
-            c=cmaps[1], marker='+', alpha=0.4, label="Data B cl 0")
+            c=cmaps[1], marker='+', alpha=0.4, label="data B cl 0")
 plt.scatter(X_B[Y_B == 1][:, 0], X_B[Y_B == 1][:, 1],
-            c=cmaps[1], marker='d', alpha=0.4, label="Data B cl 1")
+            c=cmaps[1], marker='d', alpha=0.4, label="data B cl 1")
 plt.legend()
 plt.axis('equal')
 plt.show()
@@ -163,32 +163,32 @@ lr = 0.1
 steps = 300
 optimizer = torch.optim.Adam([A, b], lr=lr)
 
-deepinversion.deep_inversion([X_B],
-                             loss_fn,
-                             optimizer,
-                             steps=steps,
-                             pre_fn=reconstruct,
-                             #    track_history=True,
-                             #    track_history_every=10,
-                             plot=True,
-                             )
+deeputility.invert([X_B],
+                   loss_fn,
+                   optimizer,
+                   steps=steps,
+                   pre_fn=reconstruct,
+                   #    track_history=True,
+                   #    track_history_every=10,
+                   plot=True,
+                   )
 
 # for x, step in zip(*zip(*history)):
 #     utility.plot_stats(x, colors=['r'] * len(history))
 
 # ======= Result =======
 X_B_proc = reconstruct(X_B).detach()
-print("After Pre-Processing:")
+print("After Reconstruction:")
 print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc).item())
 print("Cross Entropy of undistorted B:",
       dataset.cross_entropy(X_B_orig, Y_B).item())
 
-plt.title("Data A")
-plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="Data A")
+plt.title("target data A")
+plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="target data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-            c=cmaps[1], label="reconstructed Data B")
+            c=cmaps[1], label="reconstructed data B")
 plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
-            c='orange', label="undistorted Data B", alpha=0.4)
+            c='orange', label="undistorted data B", alpha=0.4)
 utility.plot_stats([X_A[Y_A == 0], X_B_proc[Y_B == 0]])
 utility.plot_stats([X_A[Y_A == 1], X_B_proc[Y_B == 1]])
 plt.legend()
