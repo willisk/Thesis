@@ -72,6 +72,7 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
     state_dict = random_net_state_dict(  # pylint: disable=unexpected-keyword-arg
         path=random_net_path, map_location=DEVICE, use_drive=USE_DRIVE)
     random_net.load_state_dict(state_dict)
+    random_net.to(DEVICE)
     random_net.eval()
 
     random_layer_activations = []
@@ -283,27 +284,27 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
         return info
 
     methods = [
-        ("CRITERION", criterion_only),
-        loss_fn_wrapper(
-            name="NN",
-            project=project_NN,
-            class_conditional=False,
-        ),
-        loss_fn_wrapper(
-            name="NN CC",
-            project=project_NN,
-            class_conditional=True,
-        ),
-        loss_fn_wrapper(
-            name="NN ALL",
-            project=project_NN_all,
-            class_conditional=False,
-        ),
-        loss_fn_wrapper(
-            name="NN ALL CC",
-            project=project_NN_all,
-            class_conditional=True,
-        ),
+        # ("CRITERION", criterion_only),
+        # loss_fn_wrapper(
+        #     name="NN",
+        #     project=project_NN,
+        #     class_conditional=False,
+        # ),
+        # loss_fn_wrapper(
+        #     name="NN CC",
+        #     project=project_NN,
+        #     class_conditional=True,
+        # ),
+        # loss_fn_wrapper(
+        #     name="NN ALL",
+        #     project=project_NN_all,
+        #     class_conditional=False,
+        # ),
+        # loss_fn_wrapper(
+        #     name="NN ALL CC",
+        #     project=project_NN_all,
+        #     class_conditional=True,
+        # ),
         loss_fn_wrapper(
             name="RANDOM NN",
             project=project_random_NN_all,
