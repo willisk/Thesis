@@ -1,6 +1,6 @@
 import os
 import sys
-import utility
+from . import utility
 
 import numpy as np
 

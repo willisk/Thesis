@@ -18,8 +18,8 @@ import torchvision.transforms as T
 # from torchvision.models import resnet34 as ResNet34, resnet50 as ResNet50
 # from ext.cifar10pretrained.cifar10_download import main as download_resnet
 # download_resnet()
-import utility
-import nets
+from . import utility
+from . import nets
 
 if 'ipykernel_launcher' in sys.argv or 'COLAB_GPU' in os.environ:
     import importlib

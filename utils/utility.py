@@ -23,7 +23,7 @@ from collections.abc import Iterable
 import time
 
 from functools import partial
-from debug import debug
+from .debug import debug
 
 from tqdm import tqdm
 
