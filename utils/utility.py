@@ -397,22 +397,24 @@ def psnr(x, y):
 
 @torch.no_grad()
 def average_psnr(data_loader, invert_fn):
-    out = 0
+    out = count = 0
     for inputs, labels in data_loader:
-        out += psnr(inputs, invert_fn(inputs)).sum().item() / len(inputs)
-    return out
+        out += psnr(inputs, invert_fn(inputs)).sum().item()
+        count += len(inputs)
+    return out / count
 
 
 @torch.no_grad()
 def average_haar_psi(data_loader, invert_fn):
-    out = 0
+    out = count = 0
     for inputs, labels in data_loader:
         images = inputs.detach().cpu().permute(0, 2, 3, 1).squeeze().numpy()
         distorted_images = invert_fn(
             inputs.detach()).cpu().permute(0, 2, 3, 1).squeeze().numpy()
         for image, distorted_image in zip(images, distorted_images):
             out += haar_psi_numpy(image, distorted_image)[0] / len(inputs)
-    return out
+        count += len(inputs)
+    return out / count
 
 
 def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
