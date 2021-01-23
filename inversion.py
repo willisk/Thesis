@@ -64,7 +64,6 @@ parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("--use_std", action="store_true")
 parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
-parser.add_argument("--scale_each", action="store_true")
 parser.add_argument("--reset_stats", action="store_true")
 parser.add_argument("--save_run", action="store_true")
 
@@ -213,7 +212,9 @@ for method, loss_fn in methods:
         if epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
             utility.im_show(batch[:10],
-                            fig_path_fmt(f"{args.dataset}_{method}_epoch_{epoch}"))
+                            fig_path_fmt(
+                                f"{args.dataset}_{method}_epoch_{epoch}"),
+                            scale_each=True)
 
     optimizer = torch.optim.Adam([batch], lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
@@ -237,7 +238,8 @@ for method, loss_fn in methods:
     # ======= Result =======
     print("Inverted:")
     utility.im_show(batch, fig_path_fmt(
-        f"{args.dataset}_{method}_epoch_{inv_steps}_full"))
+        f"{args.dataset}_{method}_epoch_{inv_steps}_full"),
+        scale_each=True)
 
     accuracy = utility.net_accuracy(net, DATA_B)
     print(f"\tnn accuracy: {accuracy * 100:.1f} %")

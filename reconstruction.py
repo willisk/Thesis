@@ -72,7 +72,6 @@ parser.add_argument("--use_amp", action="store_true")
 parser.add_argument("--use_std", action="store_true")
 parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
-parser.add_argument("--scale_each", action="store_true")
 parser.add_argument("--reset_stats", action="store_true")
 parser.add_argument("--save_run", action="store_true")
 
