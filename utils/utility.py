@@ -28,6 +28,7 @@ from .debug import debug
 from tqdm import tqdm
 
 from matplotlib.axes._axes import _log as matplotlib_axes_logger
+from utils.haarPsi import haar_psi_numpy
 
 
 class tqdmEpoch(tqdm):
@@ -401,17 +402,13 @@ def average_psnr(data_loader, invert_fn):
     return out
 
 
-from utils.haarPsi import haar_psi_numpy
-a = torch.randn((32, 32, 3))
-
-
 @torch.no_grad()
 def average_haar_psi(data_loader, invert_fn):
     out = 0
     for inputs, labels in data_loader:
         images = inputs.detach().cpu().permute(0, 2, 3, 1).squeeze().numpy()
         distorted_images = invert_fn(
-            inputs.detach().cpu()).permute(0, 2, 3, 1).squeeze().numpy()
+            inputs.detach()).cpu().permute(0, 2, 3, 1).squeeze().numpy()
         for image, distorted_image in zip(images, distorted_images):
             out += haar_psi_numpy(image, distorted_image)[0] / len(inputs)
     return out
