@@ -55,6 +55,7 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
     # ======= Random Net =======
 
     random_net_path, random_net = dataset.net()
+    random_net_path = '_init.'.join(random_net_path.split('.'))
 
     @utility.store_data
     def random_net_state_dict():
