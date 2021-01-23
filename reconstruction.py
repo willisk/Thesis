@@ -298,8 +298,8 @@ utility.im_show(distort(show_batch[:10]),
 inv_lr = args.inv_lr
 inv_steps = args.inv_steps
 
-metrics = defaultdict(dict)
-plots = {}
+# metrics = defaultdict(dict)
+# plots = {}
 
 
 def jitter(inputs):
