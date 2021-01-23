@@ -298,8 +298,8 @@ utility.im_show(distort(show_batch[:10]),
 inv_lr = args.inv_lr
 inv_steps = args.inv_steps
 
-# metrics = defaultdict(dict)
-# plots = {}
+metrics = defaultdict(dict)
+plots = {}
 
 
 def jitter(inputs):
@@ -311,7 +311,7 @@ def grad_norm_fn(x):
     return min(x, 10)  # torch.sqrt(x) if x > 1 else x
 
 
-for method, loss_fn in methods:
+for method, loss_fn in methods[6:]:
     print("\n\n\n## Method:", method)
 
     reconstruct = ReconstructionModel()
