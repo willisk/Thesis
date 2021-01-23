@@ -305,6 +305,7 @@ def collect_min_max(data_loader, device='cpu', path=None, use_drive=True):
 
 
 # @debug
+@torch.no_grad()
 def collect_stats(data_loader, projection, n_classes, class_conditional,
                   std=False, keepdim=False,
                   device='cpu', path=None, use_drive=True, reset=False):
