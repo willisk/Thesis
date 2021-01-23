@@ -13,16 +13,19 @@ import torchvision
 
 import matplotlib.pyplot as plt
 # plt.style.use('default')
-
 import numpy as np
 
-PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PWD = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(PWD)
 
-import utility
-import datasets
-import debug
-import nets
+USE_DRIVE = True
+
+from utils import utility
+from utils import methods
+from utils import datasets
+from utils import debug
+from utils import nets
+from utils.haarPsi import haar_psi_numpy
 
 try:
     get_ipython()   # pylint: disable=undefined-variable
@@ -39,7 +42,7 @@ if interactive_notebook:
     importlib.reload(debug)
     importlib.reload(nets)
 
-from debug import debug
+from utils.debug import debug
 
 
 # ======= Arg Parse =======
@@ -58,6 +61,7 @@ parser.add_argument("-f_crit", type=float, default=1)
 parser.add_argument("-f_stats", type=float, default=10)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
+parser.add_argument("-size_C", type=int, default=1024)
 parser.add_argument("-show_after", type=int, default=50)
 parser.add_argument("-r_distort_level", type=float, default=0.3)
 parser.add_argument("-r_block_depth", type=int, default=4)
@@ -70,6 +74,7 @@ parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("--scale_each", action="store_true")
 parser.add_argument("--reset_stats", action="store_true")
+parser.add_argument("--save_run", action="store_true")
 
 # # GMM
 # parser.add_argument("-g_modes", type=int, default=3)
@@ -78,25 +83,19 @@ parser.add_argument("--reset_stats", action="store_true")
 # parser.add_argument("-g_mean_shift", type=float, default=0)
 
 if 'ipykernel_launcher' in sys.argv[0]:
-    # args = parser.parse_args('-dataset CIFAR10'.split())
-    args = parser.parse_args('-dataset MNIST'.split())
-    # args.nn_steps = 5
-    args.inv_steps = 3
+    # args = parser.parse_args('-dataset MNIST'.split())
+    args = parser.parse_args('-dataset CIFAR10'.split())
+    args.inv_steps = 2
+    args.size_A = 16
+    args.size_B = 8
+    args.size_C = 8
+    args.batch_size = 8
     args.r_distort_level = 0.1
-    # args.batch_size = 64
-    # # args.size_B = 10
-    args.n_random_projections = 512
-    args.inv_lr = 0.01
-    args.f_stats = 0.001
-    # args.distort_level = 0.5
-
-    args.seed = 0
-
-    args.size_B = 64
     args.plot_ideal = True
     # args.nn_resume_train = True
     # args.nn_reset_train = True
     # args.use_std = True
+    # args.save_run = True
 else:
     args = parser.parse_args()
 
@@ -124,7 +123,8 @@ if args.dataset == 'CIFAR10':
 elif args.dataset == 'MNIST':
     dataset = datasets.MNIST()
 
-A, B, C = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B)
+A, B, C = dataset.get_datasets(
+    size_A=args.size_A, size_B=args.size_B, size_C=args.size_C)
 
 
 DATA_A = utility.DataL(
@@ -265,26 +265,35 @@ class ReconstructionModel(nn.Module):
         return outputs
 
 
-@torch.no_grad()
-def im_show(im_batch):
-    s = 1.6
-    img_grid = torchvision.utils.make_grid(
-        im_batch.cpu(), nrow=10, normalize=True, scale_each=args.scale_each)
-    plt.figure(figsize=(s * 10, s * len(im_batch)))
-    plt.axis('off')
-    plt.grid(b=None)
-    plt.imshow(img_grid.permute(1, 2, 0))
-    plt.show()
-    print(flush=True)
+methods = methods.get_methods(DATA_A, net, dataset, args, DEVICE)
+
+
+def fig_path_fmt(name, filetype="png"):
+    if args.save_run:
+        path = f"figures/reconstruction_{name}.{filetype}".replace(' ', '_')
+        save_path, _ = utility.search_drive(path, use_drive=USE_DRIVE)
+        return save_path
+    return None
 
 
 show_batch = next(iter(DATA_B))[0][:50].to(DEVICE)
 
+
+utility.im_show(show_batch,
+                fig_path_fmt(f"{args.dataset}_ground_truth_full"))
+utility.im_show(distort(show_batch),
+                fig_path_fmt(f"{args.dataset}_distorted_full"))
+
+
 print("\nground truth:", flush=True)
-im_show(show_batch[:10])
+utility.im_show(show_batch[:10],
+                fig_path_fmt(f"{args.dataset}_ground_truth"))
+
 
 print("\ndistorted:")
-im_show(distort(show_batch[:10]))
+utility.im_show(distort(show_batch[:10]),
+                fig_path_fmt(f"{args.dataset}_distorted"))
+
 
 # ======= Optimize =======
 inv_lr = args.inv_lr
@@ -303,7 +312,7 @@ def grad_norm_fn(x):
     return min(x, 10)  # torch.sqrt(x) if x > 1 else x
 
 
-for method, loss_fn in methods.get_methods(DATA_A, net, dataset, args, DEVICE):
+for method, loss_fn in methods:
     print("\n\n\n## Method:", method)
 
     reconstruct = ReconstructionModel()
@@ -319,7 +328,11 @@ for method, loss_fn in methods.get_methods(DATA_A, net, dataset, args, DEVICE):
             inputs = jitter(inputs)
         data_inv = (invert_fn(inputs), labels)
         info = loss_fn(data_inv)
-        info[':mean: psnr'] = utility.average_psnr([data], invert_fn)
+        info['[IQA metrics] :mean: accuracy'] = info[':mean: accuracy']
+        info['[IQA metrics] :mean: psnr'] = utility.average_psnr(
+            [data], invert_fn)
+        info['[IQA metrics] :mean: haarpsi'] = utility.average_haar_psi([
+                                                                        data], invert_fn)
         if args.plot_ideal:
             with torch.no_grad():
                 info['ideal'] = loss_fn(data)['loss'].item()
@@ -328,10 +341,13 @@ for method, loss_fn in methods.get_methods(DATA_A, net, dataset, args, DEVICE):
     def callback_fn(epoch, metrics):
         if epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
-            im_show(invert_fn(show_batch[:10]))
+            utility.im_show(show_batch[:10],
+                            fig_path_fmt(f"{args.dataset}_{method}_epoch_{epoch}"))
 
     optimizer = torch.optim.Adam(reconstruct.parameters(), lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
+
+    metrics_fig_path = fig_path_fmt(f"{args.dataset}_{method}", "pdf")
 
     info = utility.invert(DATA_B,
                           data_loss_fn,
@@ -343,7 +359,7 @@ for method, loss_fn in methods.get_methods(DATA_A, net, dataset, args, DEVICE):
                           #    grad_norm_fn=grad_norm_fn,
                           callback_fn=callback_fn,
                           track_grad_norm=True,
-                          # track_per_batch=True,
+                          fig_path=metrics_fig_path,
                           )
     plots[method] = info
 
@@ -353,7 +369,8 @@ for method, loss_fn in methods.get_methods(DATA_A, net, dataset, args, DEVICE):
     print("Inverted:")
     if len(show_batch) != len(B):
         print(f"{len(show_batch)} / {len(B)} ")
-    im_show(invert_fn(show_batch))
+    utility.im_show(invert_fn(show_batch), fig_path_fmt(
+        f"{args.dataset}_{method}_epoch_{inv_steps}_full"))
 
     print("Results:")
 
@@ -365,6 +382,12 @@ for method, loss_fn in methods.get_methods(DATA_A, net, dataset, args, DEVICE):
     psnr = utility.average_psnr(DATA_B, invert_fn)
     psnr_distort = utility.average_psnr(DATA_B, distort)
     print(f"\taverage PSNR: {psnr:.3f} | (distorted: {psnr_distort:.3f})")
+
+    # HaarPsi
+    haarpsi = utility.average_haar_psi(DATA_B, invert_fn)
+    haarpsi_distort = utility.average_haar_psi(DATA_B, distort)
+    print(
+        f"\taverage haarpsi: {haarpsi:.3f} | (distorted: {haarpsi_distort:.3f})")
 
     # L2 Reconstruction Error
     Id = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
@@ -390,6 +413,7 @@ for method, loss_fn in methods.get_methods(DATA_A, net, dataset, args, DEVICE):
         print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
         metrics[method]['acc(ver)'] = accuracy_ver
     metrics[method]['av. PSNR'] = psnr
+    metrics[method]['av. HaarPsi'] = haarpsi
     metrics[method]['l2-err'] = l2_err
     # metrics[method]['loss'] = loss
 
@@ -398,8 +422,7 @@ baseline = defaultdict(dict)
 
 accuracy_A = utility.net_accuracy(net, DATA_A)
 accuracy_B = utility.net_accuracy(net, DATA_B)
-accuracy_C = utility.net_accuracy(
-    net, DATA_C)
+accuracy_C = utility.net_accuracy(net, DATA_C)
 
 accuracy_B_pert = utility.net_accuracy(
     net, DATA_B, inputs_pre_fn=distort)
@@ -434,17 +457,14 @@ baseline['B (distorted)']['l2-err'] = l2_err_distort
 print("\n# Summary")
 print("=========\n")
 
-utility.make_table(
-    baseline,
-    row_name="baseline",
-    out="figures/table_reconstruction_baseline.csv")
+
+table_path = fig_path_fmt(f"baseline", "csv")
+utility.make_table(baseline, row_name="baseline", out=table_path)
 
 print("\nReconstruction methods:")
 
-utility.make_table(
-    metrics,
-    row_name="method",
-    out="figures/table_reconstruction_results.csv")
+table_path = fig_path_fmt(f"results", "csv")
+utility.make_table(metrics, row_name="method", out=table_path)
 
 
 def plot_metrics(method, **kwargs):

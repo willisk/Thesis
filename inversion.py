@@ -7,21 +7,21 @@ from collections import defaultdict
 
 import torch
 # from torch.optim.lr_scheduler import ReduceLROnPlateau
-import torchvision
 
 import matplotlib.pyplot as plt
 # plt.style.use('default')
 
-PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PWD = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(PWD)
 
 USE_DRIVE = True
 
-import utils.utility as utility
-import utils.methods as methods
-import utils.datasets as datasets
-import utils.debug as debug
-import utils.nets as nets
+from utils import utility
+from utils import methods
+from utils import datasets
+from utils import debug
+from utils import nets
+from utils.haarPsi import haar_psi_numpy
 
 try:
     get_ipython()   # pylint: disable=undefined-variable
@@ -66,6 +66,7 @@ parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("--scale_each", action="store_true")
 parser.add_argument("--reset_stats", action="store_true")
+parser.add_argument("--save_run", action="store_true")
 
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset MNIST'.split())
@@ -74,6 +75,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args.size_A = 16
     args.size_B = 8
     args.batch_size = 8
+    # args.save_run = True
 else:
     args = parser.parse_args()
 
@@ -154,19 +156,6 @@ if verifier_net:
 print()
 
 
-@torch.no_grad()
-def im_show(im_batch):
-    s = 1.6
-    img_grid = torchvision.utils.make_grid(
-        im_batch.cpu(), nrow=10, normalize=True, scale_each=args.scale_each)
-    plt.figure(figsize=(s * 10, s * len(im_batch)))
-    plt.axis('off')
-    plt.grid(b=None)
-    plt.imshow(img_grid.permute(1, 2, 0))
-    plt.show()
-    print(flush=True)
-
-
 # ======= Optimize =======
 inv_lr = args.inv_lr
 inv_steps = args.inv_steps
@@ -184,7 +173,18 @@ def grad_norm_fn(x):
     return min(x, 10)  # torch.sqrt(x) if x > 1 else x
 
 
-for method, loss_fn in methods.get_methods(DATA_A, net, dataset, args, DEVICE):
+def fig_path_fmt(name, filetype="png"):
+    if args.save_run:
+        path = f"figures/inversion_{name}.{filetype}".replace(' ', '_')
+        save_path, _ = utility.search_drive(path, use_drive=USE_DRIVE)
+        print(save_path)
+        return save_path
+    return None
+
+
+methods = methods.get_methods(DATA_A, net, dataset, args, DEVICE)
+
+for method, loss_fn in methods:
     print("\n\n\n## Method:", method)
 
     batch = torch.randn((args.size_B, *input_shape),
@@ -212,10 +212,13 @@ for method, loss_fn in methods.get_methods(DATA_A, net, dataset, args, DEVICE):
     def callback_fn(epoch, metrics):
         if epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
-            im_show(batch[:10])
+            utility.im_show(batch[:10],
+                            fig_path_fmt(f"{args.dataset}_{method}_epoch_{epoch}"))
 
     optimizer = torch.optim.Adam([batch], lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
+
+    metrics_fig_path = fig_path_fmt(f"{args.dataset}_{method}", "pdf")
 
     info = utility.invert(DATA_B,
                           data_loss_fn,
@@ -227,12 +230,14 @@ for method, loss_fn in methods.get_methods(DATA_A, net, dataset, args, DEVICE):
                           #    grad_norm_fn=grad_norm_fn,
                           callback_fn=callback_fn,
                           track_grad_norm=True,
+                          fig_path=metrics_fig_path,
                           )
     plots[method] = info
 
     # ======= Result =======
     print("Inverted:")
-    im_show(batch)
+    utility.im_show(batch, fig_path_fmt(
+        f"{args.dataset}_{method}_epoch_{inv_steps}_full"))
 
     accuracy = utility.net_accuracy(net, DATA_B)
     print(f"\tnn accuracy: {accuracy * 100:.1f} %")
@@ -247,10 +252,9 @@ for method, loss_fn in methods.get_methods(DATA_A, net, dataset, args, DEVICE):
 print("\n# Summary")
 print("=========\n")
 
-utility.make_table(
-    metrics,
-    row_name="method",
-    out="figures/table_inversion_results.csv")
+
+table_path = fig_path_fmt(f"results", "csv")
+utility.make_table(metrics, row_name="method", out=table_path)
 
 
 def plot_metrics(method, **kwargs):

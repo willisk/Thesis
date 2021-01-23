@@ -32,26 +32,57 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
     layer_activations = [None] * len(net_layers)
     net_last_outputs = None
 
-    def layer_hook_wrapper(idx):
+    def layer_hook_wrapper(activations, idx):
         def hook(_module, _inputs, outputs):
-            layer_activations[idx] = outputs
+            activations[idx] = outputs
         return hook
 
     for l, layer in enumerate(net_layers):
-        layer.register_forward_hook(layer_hook_wrapper(l))
+        layer.register_forward_hook(layer_hook_wrapper(layer_activations, l))
 
     def project_NN(data):
         nonlocal net_last_outputs
         inputs, labels = data
         net_last_outputs = net(inputs)
         return layer_activations[-1]
-        # return net_last_outputs
 
     def project_NN_all(data):
         nonlocal net_last_outputs
         inputs, labels = data
         net_last_outputs = net(inputs)
         return [inputs] + layer_activations
+
+    # ======= Random Net =======
+
+    random_net_path, random_net = dataset.net()
+
+    @utility.store_data
+    def random_net_state_dict():
+        # _, random_net = dataset.net()
+        random_net.to(DEVICE)
+        random_net.train()
+
+        with torch.no_grad():
+            for inputs, labels in DATA_A:
+                random_net(inputs)
+
+        return random_net.state_dict()
+
+    random_net.load_state_dict(random_net_state_dict(  # pylint: disable=unexpected-keyword-arg
+        path=random_net_path, map_location=DEVICE, use_drive=USE_DRIVE))
+    random_net.eval()
+
+    random_layer_activations = []
+
+    for l, layer in enumerate(utility.get_child_modules(random_net)[:-1]):
+        random_layer_activations.append(None)
+        layer.register_forward_hook(
+            layer_hook_wrapper(random_layer_activations, l))
+
+    def project_random_NN_all(data):
+        inputs, labels = data
+        random_net(inputs)
+        return [inputs] + random_layer_activations
 
     # ======= Random Projections =======
     rp_hash = f"{n_random_projections}"
@@ -272,6 +303,16 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
             class_conditional=True,
         ),
         loss_fn_wrapper(
+            name="RANDOM NN",
+            project=project_random_NN_all,
+            class_conditional=False,
+        ),
+        loss_fn_wrapper(
+            name="RANDOM NN CC",
+            project=project_random_NN_all,
+            class_conditional=True,
+        ),
+        loss_fn_wrapper(
             name="RP",
             project=project_RP,
             class_conditional=False,
@@ -292,7 +333,7 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
         #     class_conditional=True,
         # ),
         loss_fn_wrapper(
-            name="NN ALL + RP CC",
+            name="COMBINED CC",
             project=combine(project_NN_all, project_RP_CC),
             class_conditional=True,
         ),

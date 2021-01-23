@@ -9,6 +9,7 @@ from matplotlib import gridspec
 
 import torch
 import torch.nn as nn
+import torchvision
 from torch.cuda.amp import autocast, GradScaler
 from torch.utils.data import DataLoader
 
@@ -78,6 +79,21 @@ def seed_everything(seed, deterministic=False):
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
     os.environ['PYTHONHASHSEED'] = str(seed)
+
+
+@torch.no_grad()
+def im_show(im_batch, fig_path=None, scale_each=False):
+    s = 1.6
+    img_grid = torchvision.utils.make_grid(
+        im_batch.cpu(), nrow=10, normalize=True, scale_each=scale_each)
+    plt.figure(figsize=(s * 10, s * len(im_batch)))
+    plt.axis('off')
+    plt.grid(b=None)
+    plt.imshow(img_grid.permute(1, 2, 0))
+    if fig_path:
+        plt.savefig(fig_path, bbox_inches='tight')
+    plt.show()
+    print(flush=True)
 
 
 def timing(f):
@@ -315,7 +331,7 @@ def store_data(func):
     @wraps(func)
     def _func(*args, map_location='cpu', path=None, use_drive=True, reset=False, **kwargs):
 
-        save_path, load_path = save_load_path(path, use_drive=use_drive)
+        save_path, load_path = search_drive(path, use_drive=use_drive)
 
         if not reset and load_path:
             if os.path.exists(load_path):
@@ -377,12 +393,28 @@ def psnr(x, y):
     return - 10 * torch.log10(((x - y)**2).mean(dim=1))
 
 
+@torch.no_grad()
 def average_psnr(data_loader, invert_fn):
-    out = count = 0
+    out = 0
     for inputs, labels in data_loader:
-        out += psnr(inputs, invert_fn(inputs)).sum().item()
-        count += len(inputs)
-    return out / count
+        out += psnr(inputs, invert_fn(inputs)).sum().item() / len(inputs)
+    return out
+
+
+from utils.haarPsi import haar_psi_numpy
+a = torch.randn((32, 32, 3))
+
+
+@torch.no_grad()
+def average_haar_psi(data_loader, invert_fn):
+    out = 0
+    for inputs, labels in data_loader:
+        images = inputs.detach().cpu().permute(0, 2, 3, 1).squeeze().numpy()
+        distorted_images = invert_fn(
+            inputs.detach().cpu()).permute(0, 2, 3, 1).squeeze().numpy()
+        for image, distorted_image in zip(images, distorted_images):
+            out += haar_psi_numpy(image, distorted_image)[0] / len(inputs)
+    return out
 
 
 def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
@@ -414,10 +446,28 @@ def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var
     )
 
 
-def save_load_path(path, use_drive=True):
+def search_drive(path, use_drive=True):
+
+    pwd = 'Thesis'
+
     if path is not None:
         if use_drive:
-            save_path, load_path = search_drive(path)
+            if not path[0] == '/':
+                path = os.path.abspath(path)
+            drive_root = path.split(pwd)[0] + 'drive/My Drive/' + pwd
+            drive_path = path.replace(pwd, 'drive/My Drive/' + pwd)
+
+            save_path, load_path = path, path
+
+            if os.path.exists(drive_root):  # drive connected
+                save_path = drive_path
+                if os.path.exists(drive_path):
+                    load_path = drive_path
+
+            for path in [save_path, load_path]:  # make sure directories exist
+                _dir = os.path.dirname(path)
+                if not os.path.exists(_dir):
+                    os.makedirs(_dir)
         else:
             save_path, load_path = path, path
         save_dir = os.path.dirname(save_path)
@@ -425,27 +475,6 @@ def save_load_path(path, use_drive=True):
             os.makedirs(save_dir)
         return save_path, load_path
     return None, None
-
-
-def search_drive(path):
-    pwd = 'Thesis'
-
-    drive_root = path.split(pwd)[0] + 'drive/My Drive/' + pwd
-    drive_path = path.replace(pwd, 'drive/My Drive/' + pwd)
-
-    save_path, load_path = path, path
-
-    if os.path.exists(drive_root):  # drive connected
-        save_path = drive_path
-        if os.path.exists(drive_path):
-            load_path = drive_path
-
-    for path in [save_path, load_path]:  # make sure directories exist
-        _dir = os.path.dirname(path)
-        if not os.path.exists(_dir):
-            os.makedirs(_dir)
-
-    return save_path, load_path
 
 
 def valid_data_loader(data_loader):
@@ -461,16 +490,17 @@ def train(net, data_loader, criterion, optimizer,
 
     device = next(net.parameters()).device
 
-    save_path, load_path = save_load_path(model_path, use_drive)
+    save_path, load_path = search_drive(model_path, use_drive)
+
+    init_epoch = 0
 
     if load_path and os.path.exists(load_path) and not reset:
         checkpoint = torch.load(load_path, map_location=device)
         if 'net_state_dict' in checkpoint:
-            net.load_state_dict(checkpoint['net_state_dict'], strict=False)
-            init_epoch = checkpoint['epoch'] + 1
+            net.load_state_dict(checkpoint['net_state_dict'])
+            init_epoch = checkpoint['epoch']
         else:
             net.load_state_dict(checkpoint)
-            init_epoch = 1
         print("Training Checkpoint restored: " + load_path)
         if not resume_training:
             net.eval()
@@ -479,7 +509,6 @@ def train(net, data_loader, criterion, optimizer,
         print("No Checkpoint found / Reset.")
         if save_path:
             print("Path: " + save_path)
-        init_epoch = 1
 
     assert valid_data_loader(
         data_loader), f"invalid data_loader: {data_loader}"
@@ -498,7 +527,7 @@ def train(net, data_loader, criterion, optimizer,
 
     with tqdmEpoch(epochs, len(data_loader)) as pbar:
         saved_epoch = 0
-        for epoch in range(init_epoch, init_epoch + epochs):
+        for epoch in range(1 + init_epoch, 1 + init_epoch + epochs):
             total_count = 0.0
             total_loss = 0.0
             total_correct = 0.0
@@ -573,8 +602,8 @@ def train(net, data_loader, criterion, optimizer,
 
     if TRACKING:
         plot_metrics(TRACKING, step_start=init_epoch)
-        plt.xlabel('epochs')
-        plt.show()
+        # plt.xlabel('epochs')
+        # plt.show()
         return TRACKING
 
 
@@ -597,7 +626,7 @@ def smoothen(values, weight):
 jet = plt.cm.brg
 
 
-def plot_metrics(metrics, title='metrics', step_start=1, plot_range=None, smoothing=0, **kwargs):
+def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_range=None, smoothing=0, **kwargs):
     if 'step' in metrics:
         steps = metrics['step']
     else:
@@ -622,13 +651,14 @@ def plot_metrics(metrics, title='metrics', step_start=1, plot_range=None, smooth
     if all(k.isdigit() for k in metrics):
         sorted_items = sorted(metrics.items(), key=lambda e: int(e[0]))
     else:
-        kw_order = ['loss', 'accuracy', '|grad|', 'ideal']
+        kw_order = ['accuracy', 'loss', '|grad|', 'ideal']
         order = {key: str(i) for i, key in enumerate(kw_order)}
         sorted_items = sorted(metrics.items(),
                               key=lambda e: order[e[0]] if e[0] in order else e[0])
 
+    scaled = ['accuracy', 'haarpsi']
     vals = np.ma.masked_invalid(np.vstack(
-        [v[a:b] for v in metrics.values() if v != 'accuracy']))
+        [v[a:b] for v in metrics.values() if v not in scaled]))
     vals_m = sgm(vals, axis=1, keepdims=True)
     vals_s = np.sqrt(((vals - vals_m)**2).mean(axis=1))
     y_max = min(vals.max(), max(vals_m.squeeze() + vals_s))
@@ -643,13 +673,14 @@ def plot_metrics(metrics, title='metrics', step_start=1, plot_range=None, smooth
         if smoothing:
             values = smoothen(values, smoothing)
         dashed = ':--:' in key
-        if key == 'accuracy':
-            acc_scaled = [y_min + acc * (y_max - y_min) for acc in values]
-            plt.plot(steps[a:b], acc_scaled[a:b], label='accuracy')
+        label = key.replace(':--:', '').rstrip()
+        if key in scaled:
+            scaled_values = [y_min + v * (y_max - y_min) for v in values]
+            plt.plot(steps[a:b], scaled_values[a:b], label=label)
         else:
             plt.plot(steps[a:b], values[a:b],
                      '--' if dashed else '-',
-                     label=key.replace(':--:', '').rstrip(),
+                     label=label,
                      color=colors[i] if num_plots > 10 else None)
 
     buffer = 0.1 * (y_max - y_min)
@@ -664,11 +695,14 @@ def plot_metrics(metrics, title='metrics', step_start=1, plot_range=None, smooth
                    loc='upper left', fontsize='xx-small')
     else:
         plt.legend()
+    if fig_path:
+        fig_path = f"_{title}.".replace(' ', '_').join(fig_path.split('.'))
+        plt.savefig(fig_path, bbox_inches='tight')
     plt.show()
 
     if grouped:
         for group, metrics in sorted(grouped.items()):
-            plot_metrics(metrics, group, step_start,
+            plot_metrics(metrics, group, fig_path, step_start,
                          plot_range, smoothing, **kwargs)
 
 
@@ -926,7 +960,7 @@ def make_table(data, out=None, row_name="", spacing=2):
     print()
     headers = list(dict.fromkeys([k for d in data.values() for k in d.keys()]))
     row_data = ([[row_name] + headers] +
-                [[m] + [f"{data[m][h]:.2f}" if h in data[m] else "--"
+                [[m] + [(f"{data[m][h] * 100:.1f}%" if 'acc' in h else f"{data[m][h]:.2f}") if h in data[m] else "--"
                         for h in headers]
                  for m in data.keys()])
     widths = [max(map(len, column)) for column in zip(*row_data)]
@@ -936,6 +970,10 @@ def make_table(data, out=None, row_name="", spacing=2):
         if i == 0:
             print('-' * len(line))
     if out:
+        row_data = ([[row_name] + headers] +
+                    [[m] + [f"{data[m][h]:.5f}" if h in data[m] else "--"
+                            for h in headers]
+                     for m in data.keys()])
         table = '\n'.join(','.join(rd) for rd in row_data)
         with open(out, 'w') as f:
             f.write(table)
@@ -992,6 +1030,7 @@ def invert(data_loader, loss_fn, optimizer,
            grad_norm_fn=None,
            callback_fn=None,
            plot=False,
+           fig_path=None,
            track_per_batch=False,
            track_grad_norm=False,
            print_grouped=False,
@@ -1100,7 +1139,6 @@ def invert(data_loader, loss_fn, optimizer,
     print(flush=True)
 
     if plot and steps > 1:
-        plot_metrics(metrics, smoothing=0)
-        plt.show()
+        plot_metrics(metrics, fig_path=fig_path, smoothing=0)
 
     return metrics
