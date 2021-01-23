@@ -340,7 +340,7 @@ for method, loss_fn in methods:
     def callback_fn(epoch, metrics):
         if epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
-            utility.im_show(show_batch[:10],
+            utility.im_show(invert_fn(show_batch[:10]),
                             fig_path_fmt(f"{args.dataset}_{method}_epoch_{epoch}"))
 
     optimizer = torch.optim.Adam(reconstruct.parameters(), lr=inv_lr)
