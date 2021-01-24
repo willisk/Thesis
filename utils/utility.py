@@ -713,8 +713,8 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
         color = colors[i] if num_plots > 10 else color_cycle[i]
         if key in scaled:
             # values = [y_min + v * (y_max - y_min) for v in values]
-            # values = y_min + values * (y_max - y_min)
             # plt.plot(steps[a:b], scaled_values[a:b], label=label)
+            values = values * 100
             if not scaled_axis:
                 scaled_axis = axis.twinx()
             axis = scaled_axis
