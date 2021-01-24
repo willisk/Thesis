@@ -235,12 +235,12 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
             info = {}
             loss = torch.tensor(0).float().to(DEVICE)
 
-            if f_reg != 0:
+            if f_reg != 0.0:
                 loss_reg = f_reg * regularization(inputs)
                 info['[losses] regularization'] = loss_reg.item()
                 loss += loss_reg
 
-            if f_stats != 0:
+            if f_stats != 0.0:
                 outputs = project(data)
                 stats = utility.get_stats(
                     outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
@@ -250,7 +250,7 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
                     info[k] = f_stats * f_stats_scale * v
                 loss += f_stats * f_stats_scale * cost_stats
 
-            if f_crit != 0:
+            if f_crit != 0.0:
                 if net_last_outputs is None:
                     net_last_outputs = net(inputs)
                 loss_crit = f_crit * criterion(net_last_outputs, labels)
