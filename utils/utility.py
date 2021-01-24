@@ -412,7 +412,7 @@ def average_haar_psi(data_loader, invert_fn):
         distorted_images = invert_fn(
             inputs.detach()).cpu().permute(0, 2, 3, 1).squeeze().numpy()
         for image, distorted_image in zip(images, distorted_images):
-            out += haar_psi_numpy(image, distorted_image)[0] / len(inputs)
+            out += haar_psi_numpy(image, distorted_image)[0]
         count += len(inputs)
     return out / count
 
