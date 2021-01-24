@@ -312,8 +312,8 @@ def grad_norm_fn(x):
 
 
 for method, loss_fn in methods:
-    if method != "NN ALL":
-        continue
+    # if method != "NN ALL":
+    #     continue
     print("\n\n\n## Method:", method)
 
     reconstruct = ReconstructionModel()

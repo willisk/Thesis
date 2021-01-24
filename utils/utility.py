@@ -747,7 +747,7 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
         if scaled_axis:
             main_ax.legend(loc=2)
             scaled_axis.set_ylabel('%')
-            scaled_axis.set_ylim([-0.1, 1.1])
+            scaled_axis.set_ylim([-10, 110])
             scaled_axis.legend(loc=1)
         else:
             main_ax.legend()
