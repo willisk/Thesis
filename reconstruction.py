@@ -311,7 +311,7 @@ def grad_norm_fn(x):
     return min(x, 10)  # torch.sqrt(x) if x > 1 else x
 
 
-for method, loss_fn in methods[6:]:
+for method, loss_fn in methods:
     print("\n\n\n## Method:", method)
 
     reconstruct = ReconstructionModel()
