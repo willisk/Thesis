@@ -13,6 +13,8 @@ import torchvision
 from torch.cuda.amp import autocast, GradScaler
 from torch.utils.data import DataLoader
 
+import pandas as pd
+
 import inspect
 from functools import reduce, wraps
 
@@ -24,11 +26,11 @@ import time
 
 from functools import partial
 from .debug import debug
+from .haarPsi import haar_psi_numpy
 
 from tqdm import tqdm
 
 from matplotlib.axes._axes import _log as matplotlib_axes_logger
-from utils.haarPsi import haar_psi_numpy
 
 
 class tqdmEpoch(tqdm):
@@ -371,10 +373,14 @@ def collect_data(data_loader, data_fn, accumulate_fn, final_fn=None):
 
 
 def to_zero_one(x):
-    return (x - x.min()) / (x.max() - x.min())
+    assert x.ndim == 4
+    x_min = x.reshape(len(x), -1).min(dim=1)[0].reshape((len(x), 1, 1, 1))
+    x_max = x.reshape(len(x), -1).max(dim=1)[0].reshape((len(x), 1, 1, 1))
+    return (x - x_min) / (x_max - x_min)
 
 
 def rbg_to_luminance(x):
+    assert x.ndim == 4
     # x = to_zero_one(x)
     return (
         x[:, 0, None, :, :] * 0.2126 +
@@ -403,16 +409,35 @@ def average_psnr(data_loader, invert_fn):
         count += len(inputs)
     return out / count
 
+# from skimage.metrics import structural_similarity as ssim
+
+
+from pytorch_lightning.metrics.functional import ssim
+
+
+@torch.no_grad()
+def average_ssim(data_loader, invert_fn):
+    out = count = 0
+    for images, labels in data_loader:
+        images = to_zero_one(images.detach())
+        restored = invert_fn(images)
+        if images.shape[1] == 3:
+            images = rbg_to_luminance(images)
+            restored = rbg_to_luminance(restored)
+        out += ssim(images, restored).item()
+        count += 1
+    return (out / count + 1) / 2
+
 
 @torch.no_grad()
 def average_haar_psi(data_loader, invert_fn):
     out = count = 0
     for inputs, labels in data_loader:
         images = inputs.detach().cpu().permute(0, 2, 3, 1).squeeze().numpy()
-        distorted_images = invert_fn(
+        restored_images = invert_fn(
             inputs.detach()).cpu().permute(0, 2, 3, 1).squeeze().numpy()
-        for image, distorted_image in zip(images, distorted_images):
-            out += haar_psi_numpy(image, distorted_image)[0]
+        for image, restored_image in zip(images, restored_images):
+            out += haar_psi_numpy(image, restored_image)[0]
         count += len(inputs)
     return out / count
 
@@ -625,12 +650,18 @@ def smoothen(values, weight):
 
 jet = plt.cm.brg
 
+# %%
+
 
 def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_range=None, smoothing=0, **kwargs):
+    if not isinstance(metrics, pd.DataFrame):
+        metrics = pd.DataFrame(metrics)
+    metrics = metrics.fillna(value=np.nan)
+
     if 'step' in metrics:
         steps = metrics['step']
     else:
-        steps = range(step_start, len(list(metrics.values())[0]) + 1)
+        steps = range(step_start, step_start + len(metrics))
 
     a, b = 0, len(steps)
     if plot_range:
@@ -638,9 +669,7 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
         if b == -1:
             b = len(steps)
 
-    metrics = {
-        k.replace(':mean:', '').strip(): v
-        for k, v in metrics.items() if 'step' not in k}
+    metrics = {k: v for k, v in metrics.items() if 'step' not in k}
 
     grouped = {}
     for group in set(e.split(']')[0].split('[')[1] for e in metrics if ']' in e):
@@ -651,14 +680,14 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
     if all(k.isdigit() for k in metrics):
         sorted_items = sorted(metrics.items(), key=lambda e: int(e[0]))
     else:
-        kw_order = ['accuracy', 'loss', '|grad|', 'ideal']
+        kw_order = ['SSIM', 'loss', 'accuracy', '|grad|', 'ideal']
         order = {key: str(i) for i, key in enumerate(kw_order)}
         sorted_items = sorted(metrics.items(),
                               key=lambda e: order[e[0]] if e[0] in order else e[0])
 
-    scaled = ['accuracy', 'haarpsi']
+    scaled = ['accuracy', 'SSIM', 'HaarPsi']
     vals = np.ma.masked_invalid(np.vstack(
-        [v[a:b] for v in metrics.values() if v not in scaled]))
+        [metrics[k].ffill().values[a:b] for k in metrics if k.split(']')[-1].strip() not in scaled]))
     vals_m = sgm(vals, axis=1, keepdims=True)
     vals_s = np.sqrt(((vals - vals_m)**2).mean(axis=1))
     y_max = min(vals.max(), max(vals_m.squeeze() + vals_s))
@@ -669,32 +698,60 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
     if num_plots > 10:
         colors = jet(np.linspace(0, 1, num_plots))
 
+    scaled_axis = False
+    color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+    main_ax = plt.gca()
     for i, (key, values) in enumerate(sorted_items):
+        axis = main_ax
         if smoothing:
             values = smoothen(values, smoothing)
         dashed = ':--:' in key
         label = key.replace(':--:', '').rstrip()
         if key in scaled:
-            scaled_values = [y_min + v * (y_max - y_min) for v in values]
-            plt.plot(steps[a:b], scaled_values[a:b], label=label)
-        else:
-            plt.plot(steps[a:b], values[a:b],
-                     '--' if dashed else '-',
-                     label=label,
-                     color=colors[i] if num_plots > 10 else None)
+            label += ' (%)'
+        color = colors[i] if num_plots > 10 else color_cycle[i]
+        if key in scaled:
+            # values = [y_min + v * (y_max - y_min) for v in values]
+            # values = y_min + values * (y_max - y_min)
+            # plt.plot(steps[a:b], scaled_values[a:b], label=label)
+            if not scaled_axis:
+                scaled_axis = axis.twinx()
+            axis = scaled_axis
+        valid = np.isfinite(values)
+        if sum(valid) > 1:
+            if sum(~valid) > 1:
+                x = np.arange(len(values))
+                filled_values = np.interp(x, x[valid], values[valid])
+                axis.plot(steps[a:b], filled_values[a:b], '--',
+                          label=label,
+                          color=color)
+                color = axis.lines[-1].get_color()
+                label = None
+            axis.plot(steps[a:b], values[a:b], '--' if dashed else '-',
+                      label=label,
+                      color=color)
 
     buffer = 0.1 * (y_max - y_min)
-    plt.gca().set_ylim([y_min - buffer, y_max + buffer])
+    buffer = 0
+    main_ax.set_ylim([y_min - buffer, y_max + buffer])
 
     if smoothing:
         title = f"{title} (smoothing={smoothing})"
     plt.title(title)
     plt.xlabel('steps')
     if num_plots > 10:
-        plt.legend(bbox_to_anchor=(1.05, 1.02),
-                   loc='upper left', fontsize='xx-small')
+        main_ax.legend(bbox_to_anchor=(1.05, 1.02),
+                       loc='upper left', fontsize='xx-small')
     else:
-        plt.legend()
+        if scaled_axis:
+            main_ax.legend(loc=2)
+            scaled_axis.set_ylabel('%')
+            scaled_axis.set_ylim([-0.1, 1.1])
+            scaled_axis.legend(loc=1)
+        else:
+            main_ax.legend()
+
     if fig_path:
         fig_path = f"_{title}.".replace(' ', '_').join(fig_path.split('.'))
         plt.savefig(fig_path, bbox_inches='tight')
@@ -704,6 +761,32 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
         for group, metrics in sorted(grouped.items()):
             plot_metrics(metrics, group, fig_path, step_start,
                          plot_range, smoothing, **kwargs)
+
+
+# import pandas as pd
+# import numpy as np
+# metrics = pd.DataFrame()
+# np.random.seed(0)
+
+
+# def random_data(gaps=False):
+#     x = np.abs(np.random.normal(0, 1, 1000).cumsum())
+#     if gaps:
+#         x[::3] = np.nan
+#         x[20:100], x[200:300], x[400:450] = np.nan, np.nan, np.nan
+#     return x
+
+
+# metrics['x'] = random_data(gaps=True)
+# metrics['y'] = random_data()
+# metrics['z'] = np.nan
+# metrics['z'][0] = 100
+
+# metrics = plots['RP ReLU']
+# plot_metrics(metrics)
+# metrics
+
+# %%
 
 
 def scatter_matrix(data, labels,
@@ -1048,8 +1131,10 @@ def invert(data_loader, loss_fn, optimizer,
     if USE_AMP:
         scaler = GradScaler()
 
-    metrics = defaultdict(list)
     num_batches = len(data_loader)
+    track_len = steps * num_batches if track_per_batch else steps
+    # metrics = defaultdict(lambda: [None] * track_len)
+    metrics = pd.DataFrame({'step': [None] * track_len})
 
     def process_result(res):
         if isinstance(res, dict):
@@ -1066,14 +1151,9 @@ def invert(data_loader, loss_fn, optimizer,
     if callback_fn:
         callback_fn(0, None)
 
-    with tqdmEpoch(steps, len(data_loader)) as pbar:
+    with tqdmEpoch(steps, num_batches) as pbar:
         for epoch in range(steps):
             for batch_i, data in enumerate(data_loader):
-
-                if track_per_batch:
-                    step = epoch + (batch_i + 1) / num_batches
-                else:
-                    step = epoch + 1 + batch_i / num_batches
 
                 optimizer.zero_grad()
 
@@ -1101,7 +1181,7 @@ def invert(data_loader, loss_fn, optimizer,
                 if track_grad_norm or grad_norm_fn:
                     # XXX: probably shouldn't multiply with lr
                     total_norm = torch.norm(torch.stack(
-                        [p.grad.detach().norm() / grad_scale * lr
+                        [p.grad.detach().norm() / grad_scale  # * lr
                             for p, lr in zip(params, lrs)])).item()
 
                     if grad_norm_fn:
@@ -1111,29 +1191,44 @@ def invert(data_loader, loss_fn, optimizer,
 
                     info['|grad|'] = total_norm
 
-                pbar.set_postfix(**{
-                    k.split(']')[-1].split(':')[-1].strip(): v
-                    for k, v in info.items() if ']' not in k
-                }, refresh=False)
+                pbar.set_postfix(**{k: v for k, v in info.items() if ']' not in k},
+                                 refresh=False)
                 pbar.update()
 
-                for k, v in info.items():
-                    if batch_i == 0 or track_per_batch:
-                        metrics[k].append(v)
-                    else:
-                        metrics[k][-1] += v
+                if track_per_batch:
+                    batch_total = epoch * num_batches + batch_i
+                    step = batch_total
+                    # step = epoch + (batch_i + 1) / num_batches
+                else:
+                    step = epoch
+                    # step = epoch + 1 + batch_i / num_batches
 
-                if batch_i == 0 or track_per_batch:
-                    metrics['step'].append(step)
+                for k, v in info.items():
+                    if k not in metrics:    # add new column
+                        metrics[k] = None
+                    if metrics[k][step] is None:
+                        metrics[k][step] = v
+                    else:
+                        metrics[k][step] += v
+                    # if batch_i == 0 or track_per_batch:
+                    #     metrics[k].append(v)
+                    # else:
+                    #     metrics[k][-1] += v
+
+                if not track_per_batch and batch_i == 0:
+                    metrics['step'][epoch] = epoch + 1
+                if track_per_batch:
+                    metrics['step'][batch_total] = (
+                        batch_total + 1) / num_batches
                 # batch end
 
             if not track_per_batch:
                 for k, v in metrics.items():
-                    if ':mean:' in k:
-                        metrics[k][-1] /= num_batches
+                    if k != 'step':
+                        metrics[k][epoch] /= num_batches
 
             if callback_fn:
-                callback_fn(epoch + 1, metrics)
+                callback_fn(epoch + 1, metrics.iloc[step])
             # epoch end
 
     print(flush=True)

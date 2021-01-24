@@ -84,7 +84,7 @@ parser.add_argument("--save_run", action="store_true")
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset MNIST'.split())
     args = parser.parse_args('-dataset CIFAR10'.split())
-    args.inv_steps = 2
+    args.inv_steps = 20
     args.size_A = 16
     args.size_B = 8
     args.size_C = 8
@@ -312,6 +312,8 @@ def grad_norm_fn(x):
 
 
 for method, loss_fn in methods:
+    if method != "NN ALL":
+        continue
     print("\n\n\n## Method:", method)
 
     reconstruct = ReconstructionModel()
@@ -327,11 +329,13 @@ for method, loss_fn in methods:
             inputs = jitter(inputs)
         data_inv = (invert_fn(inputs), labels)
         info = loss_fn(data_inv)
-        info['[IQA metrics] :mean: accuracy'] = info[':mean: accuracy']
-        info['[IQA metrics] :mean: psnr'] = utility.average_psnr(
+        info['[IQA metrics] accuracy'] = info['accuracy']
+        info['[IQA metrics] PSNR'] = utility.average_psnr(
             [data], invert_fn)
-        info['[IQA metrics] :mean: haarpsi'] = utility.average_haar_psi([
-                                                                        data], invert_fn)
+        info['[IQA metrics] SSIM'] = utility.average_ssim(
+            [data], invert_fn)
+        info['[IQA metrics] HaarPsi'] = utility.average_haar_psi(
+            [data], invert_fn)
         if args.plot_ideal:
             with torch.no_grad():
                 info['ideal'] = loss_fn(data)['loss'].item()
@@ -374,7 +378,7 @@ for method, loss_fn in methods:
     print("Results:")
 
     # Loss
-    loss = info['loss'][-1]
+    loss = info['loss'].values[-1]
     print(f"\tloss: {loss:.3f}")
 
     # PSNR
@@ -386,7 +390,13 @@ for method, loss_fn in methods:
     haarpsi = utility.average_haar_psi(DATA_B, invert_fn)
     haarpsi_distort = utility.average_haar_psi(DATA_B, distort)
     print(
-        f"\taverage haarpsi: {haarpsi:.3f} | (distorted: {haarpsi_distort:.3f})")
+        f"\taverage HaarPsi: {haarpsi:.3f} | (distorted: {haarpsi_distort:.3f})")
+
+    # SSIM
+    ssim = utility.average_ssim(DATA_B, invert_fn)
+    ssim_distort = utility.average_ssim(DATA_B, distort)
+    print(
+        f"\taverage SSIM: {ssim:.3f} | (distorted: {ssim_distort:.3f})")
 
     # L2 Reconstruction Error
     Id = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
@@ -412,6 +422,7 @@ for method, loss_fn in methods:
         print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
         metrics[method]['acc(ver)'] = accuracy_ver
     metrics[method]['av. PSNR'] = psnr
+    metrics[method]['av. SSIM'] = ssim
     metrics[method]['av. HaarPsi'] = haarpsi
     metrics[method]['l2-err'] = l2_err
     # metrics[method]['loss'] = loss
@@ -450,6 +461,8 @@ if verifier_net:
     baseline['A']['acc(ver)'] = accuracy_A_ver
 
 baseline['B (distorted)']['av. PSNR'] = psnr_distort
+baseline['B (distorted)']['av. SSIM'] = ssim_distort
+baseline['B (distorted)']['av. HaarPsi'] = haarpsi_distort
 baseline['B (distorted)']['l2-err'] = l2_err_distort
 
 

@@ -205,21 +205,21 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
             loss_m /= num_maps
             loss_s /= num_maps
             if num_maps > 1:
-                info[f'[stats losses means] {i}'] = loss_m.item()
-                info[f'[stats losses vars] {i}'] = loss_s.item()
+                info[f'[statistics losses means] {i}'] = loss_m.item()
+                info[f'[statistics losses vars] {i}'] = loss_s.item()
             else:
-                info['[stats losses] mean'] = loss_m.item()
-                info['[stats losses] var'] = loss_s.item()
+                info['[statistics losses] mean'] = loss_m.item()
+                info['[statistics losses] var'] = loss_s.item()
             if loss_m.isfinite():   # mean, variance is nan if batch empty
                 loss += loss_m
             if loss_s.isfinite():
                 loss += loss_s
-        info['[losses] stats'] = loss.item()
+        info['[losses] statistics'] = loss.item()
         return loss, info
 
     def loss_fn_wrapper(name, project, class_conditional, f_stats_scale=1):
         _name = name.replace(' ', '-')
-        if "RP" in _name:
+        if "RP" in _name or "COMBINED" in _name:
             _name = f"{_name}-{rp_hash}"
 
         stats_A = utility.collect_stats(
@@ -237,7 +237,7 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
 
             if f_reg != 0:
                 loss_reg = f_reg * regularization(inputs)
-                info['[losses] reg'] = loss_reg.item()
+                info['[losses] regularization'] = loss_reg.item()
                 loss += loss_reg
 
             if f_stats != 0:
@@ -254,10 +254,10 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
                 if net_last_outputs is None:
                     net_last_outputs = net(inputs)
                 loss_crit = f_crit * criterion(net_last_outputs, labels)
-                info['[losses] crit'] = loss_crit.item()
+                info['[losses] criterion'] = loss_crit.item()
                 loss += loss_crit
 
-                info[':mean: accuracy'] = utility.count_correct(
+                info['accuracy'] = utility.count_correct(
                     net_last_outputs, labels) / len(labels)
 
             info['loss'] = loss
@@ -276,9 +276,9 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
 
         info = {
             'loss': loss,
-            '[loss] reg': loss_reg.item(),
-            '[loss] crit': loss_crit.item(),
-            ':mean: accuracy': utility.count_correct(outputs, labels) / len(labels)
+            '[losses] reg': loss_reg.item(),
+            '[losses] crit': loss_crit.item(),
+            'accuracy': utility.count_correct(outputs, labels) / len(labels)
         }
 
         return info
