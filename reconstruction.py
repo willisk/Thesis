@@ -317,20 +317,21 @@ def iqa_metrics(data_loader, transform):
             images = utility.to_zero_one(images)
             restored = utility.to_zero_one(restored)
 
-            if images.shape[1] == 3:
-                gray_images = utility.rbg_to_luminance(images)
-                gray_restored = utility.rbg_to_luminance(restored)
-
-            metrics['PSNR'] += utility.psnr(
-                gray_images, gray_restored).mean().item() / len(data_loader)
-            metrics['SSIM'] += (1 + ssim(
-                gray_images, gray_restored).item()) / 2 / len(data_loader)  # default: mean, scale to [0, 1]
-
             for image, restored_image in zip(
                     images.permute(0, 2, 3, 1).squeeze().cpu().numpy(),
                     restored.permute(0, 2, 3, 1).squeeze().cpu().numpy()):
                 metrics['HaarPsi'] += (haar_psi_numpy(image, restored_image)[0]
                                        / len(data_loader) / len(inputs))
+
+            if images.shape[1] == 3:
+                images = utility.rbg_to_luminance(images)
+                restored = utility.rbg_to_luminance(restored)
+
+            metrics['PSNR'] += utility.psnr(
+                images, restored).mean().item() / len(data_loader)
+            metrics['SSIM'] += (1 + ssim(
+                images, restored).item()) / 2 / len(data_loader)  # default: mean, scale to [0, 1]
+
     if args.dataset == 'GMM':
         metrics['c-entropy'] = 0
         for inputs, labels in data_loader:
