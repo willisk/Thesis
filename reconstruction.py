@@ -411,7 +411,7 @@ for method, loss_fn in methods:
             info = {**info, **iqa}
         else:
             info['[IQA metrics] accuracy'] = info['accuracy']
-            for k, v in :
+            for k, v in iqa.items():
                 info[f'[IQA metrics] {k}'] = v
 
         if args.plot_ideal:
