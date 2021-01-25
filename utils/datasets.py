@@ -161,18 +161,16 @@ from scipy.stats import multivariate_normal, ortho_group
 #     )
 class MULTIGMM(Dataset):
 
-    def __init__(self, n_dims=20, n_classes=10, n_modes=8,
-                 scale_mean=1, scale_cov=5, mean_shift=0,
+    def __init__(self, n_dims=20, n_classes=10, n_modes=12,
+                 scale_mean=3, scale_cov=20, mean_shift=3,
                  n_samples_A=1000,
                  n_samples_B=1000,
-                 n_samples_C=1000,
-                 device='cpu', weights=None):
+                 n_samples_C=1000):
 
         # # using equal weights for now
         # if weights is None:
         #     weights = torch.ones((n_classes))
         # self.weights = weights / weights.sum()
-        self.device = device
 
         self.gmms = [
             random_gmm(n_modes, n_dims, scale_mean, scale_cov, mean_shift)
