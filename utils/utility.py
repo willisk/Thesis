@@ -642,8 +642,6 @@ def smoothen(values, weight):
 
 jet = plt.cm.brg
 
-# %%
-
 
 def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_range=None, smoothing=0, **kwargs):
     if not isinstance(metrics, pd.DataFrame):
@@ -672,7 +670,8 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
     if all(k.isdigit() for k in metrics):
         sorted_items = sorted(metrics.items(), key=lambda e: int(e[0]))
     else:
-        kw_order = ['SSIM', 'loss', 'accuracy', 'HaarPsi', '|grad|', 'ideal']
+        kw_order = ['SSIM', 'loss', 'c-entropy',
+                    'accuracy', 'HaarPsi', '|grad|', 'ideal']
         order = {key: str(i) for i, key in enumerate(kw_order)}
         sorted_items = sorted(metrics.items(),
                               key=lambda e: order[e[0]] if e[0] in order else e[0])
