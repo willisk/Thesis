@@ -26,6 +26,7 @@ from utils import datasets
 from utils import debug
 from utils import nets
 from utils.haarPsi import haar_psi_numpy
+from pytorch_lightning.metrics.functional import ssim
 
 try:
     get_ipython()   # pylint: disable=undefined-variable
@@ -48,7 +49,7 @@ from utils.debug import debug
 # ======= Arg Parse =======
 parser = argparse.ArgumentParser(description="Reconstruction Tests")
 parser.add_argument(
-    "-dataset", choices=['CIFAR10', 'MNIST'], required=True)
+    "-dataset", choices=['CIFAR10', 'MNIST', 'GMM'], required=True)
 parser.add_argument("-seed", type=int, default=0)
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
@@ -83,16 +84,19 @@ parser.add_argument("--save_run", action="store_true")
 
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset MNIST'.split())
-    args = parser.parse_args('-dataset CIFAR10'.split())
+    # args = parser.parse_args('-dataset CIFAR10'.split())
+    args = parser.parse_args('-dataset GMM'.split())
     args.inv_steps = 2
-    args.size_A = 16
+    args.size_A = -1
     args.size_B = 8
     args.size_C = 8
     args.batch_size = 8
     args.r_distort_level = 0.1
     args.plot_ideal = True
+    args.f_reg = 0
     # args.nn_resume_train = True
-    # args.nn_reset_train = True
+    args.nn_reset_train = True
+    args.reset_stats = True
     # args.use_std = True
     # args.save_run = True
 else:
@@ -121,6 +125,8 @@ if args.dataset == 'CIFAR10':
     dataset = datasets.CIFAR10()
 elif args.dataset == 'MNIST':
     dataset = datasets.MNIST()
+elif args.dataset == 'GMM':
+    dataset = datasets.MULTIGMM()
 
 A, B, C = dataset.get_datasets(
     size_A=args.size_A, size_B=args.size_B, size_C=args.size_C)
@@ -180,88 +186,109 @@ print()
 # ======= Distortion =======
 
 
-class DistortionModel(nn.Module):
-    def __init__(self):
-        super().__init__()
+if args.dataset == 'GMM':
+    class DistortionModel(nn.Module):
+        def __init__(self, lambd):
+            super().__init__()
+            self.noise = nn.Parameter(
+                torch.randn((n_dims)).unsqueeze(0)) * lambd
+            self.linear = (torch.eye(n_dims)
+                           + torch.randn((n_dims, n_dims)) * lambd)
 
-        kernel_size = 3
-        nch = input_shape[0]
-        lambd = args.r_distort_level
+        @torch.no_grad()
+        def forward(self, inputs):
+            outputs = inputs + self.noise
+            return outputs @ self.linear
+else:
+    class DistortionModel(nn.Module):
+        def __init__(self, lambd):
+            super().__init__()
 
-        self.conv1 = nn.Conv2d(nch, nch, kernel_size,
-                               padding=1, padding_mode='reflect')
-        self.conv2 = nn.Conv2d(nch, nch, kernel_size,
-                               padding=1, padding_mode='reflect')
-        self.noise = nn.Parameter(
-            torch.randn(input_shape).unsqueeze(0))
+            kernel_size = 3
+            nch = input_shape[0]
 
-        self.conv1.weight.data.normal_()
-        self.conv2.weight.data.normal_()
-        self.conv1.weight.data *= lambd
-        self.conv2.weight.data *= lambd
-        for f in range(nch):
-            self.conv1.weight.data[f][f][1][1] += 1
-            self.conv2.weight.data[f][f][1][1] += 1
+            self.conv1 = nn.Conv2d(nch, nch, kernel_size,
+                                   padding=1, padding_mode='reflect')
+            self.conv2 = nn.Conv2d(nch, nch, kernel_size,
+                                   padding=1, padding_mode='reflect')
+            self.noise = nn.Parameter(torch.randn(input_shape).unsqueeze(0))
 
-        self.conv1.bias.data.normal_()
-        self.conv2.bias.data.normal_()
-        self.conv1.bias.data *= lambd
-        self.conv2.bias.data *= lambd
+            self.conv1.weight.data.normal_()
+            self.conv2.weight.data.normal_()
+            self.conv1.weight.data *= lambd
+            self.conv2.weight.data *= lambd
+            for f in range(nch):
+                self.conv1.weight.data[f][f][1][1] += 1
+                self.conv2.weight.data[f][f][1][1] += 1
 
-        self.noise.data *= lambd
+            self.conv1.bias.data.normal_()
+            self.conv2.bias.data.normal_()
+            self.conv1.bias.data *= lambd
+            self.conv2.bias.data *= lambd
 
-    @torch.no_grad()
-    def forward(self, inputs):
-        outputs = inputs
-        outputs = outputs + self.noise
-        outputs = self.conv1(outputs)
-        outputs = self.conv2(outputs)
-        return outputs
+            self.noise.data *= lambd
 
+        @torch.no_grad()
+        def forward(self, inputs):
+            outputs = inputs
+            outputs = outputs + self.noise
+            outputs = self.conv1(outputs)
+            outputs = self.conv2(outputs)
+            return outputs
 
-distort = DistortionModel()
+distort = DistortionModel(args.r_distort_level)
 distort.eval()
 distort.to(DEVICE)
 
 # ======= Reconstruction Model =======
+if args.dataset == 'GMM':
+    class ReconstructionModel(nn.Module):
+        def __init__(self):
+            super().__init__()
 
+            self.bias = nn.Parameter(
+                torch.zeros((n_dims)).unsqueeze(0))
+            self.linear = (torch.eye(n_dims)
+                           + torch.randn((n_dims, n_dims)) / np.sqrt(n_dims))
 
-def conv1x1Id(n_chan):
-    conv = nn.Conv2d(n_chan, n_chan,
-                     kernel_size=1,
-                     bias=False,
-                     )
-    conv.weight.data.fill_(0)
-    for i in range(n_chan):
-        conv.weight.data[i, i, 0, 0] = 1
-    return conv
+        def forward(self, inputs):
+            return inputs @ self.linear + self.bias
+else:
+    def conv1x1Id(n_chan):
+        conv = nn.Conv2d(n_chan, n_chan,
+                         kernel_size=1,
+                         bias=False,
+                         )
+        conv.weight.data.fill_(0)
+        for i in range(n_chan):
+            conv.weight.data[i, i, 0, 0] = 1
+        return conv
 
+    class ReconstructionModel(nn.Module):
+        def __init__(self, relu_out=False, bias=True):
+            super().__init__()
 
-class ReconstructionModel(nn.Module):
-    def __init__(self, relu_out=False, bias=True):
-        super().__init__()
+            utility.seed_everything(args.seed)
 
-        utility.seed_everything(args.seed)
+            n_chan = input_shape[0]
+            self.conv1x1 = conv1x1Id(n_chan)
+            self.bn = nn.BatchNorm2d(n_chan)
 
-        n_chan = input_shape[0]
-        self.conv1x1 = conv1x1Id(n_chan)
-        self.bn = nn.BatchNorm2d(n_chan)
+            self.invert_block = nn.Sequential(*[
+                nets.InvertBlock(
+                    n_chan,
+                    args.r_block_width,
+                    noise_level=1 / np.sqrt(n + 1),
+                    relu_out=n < args.r_block_depth - 1,
+                    bias=bias,
+                ) for n in range(args.r_block_depth)
+            ])
 
-        self.invert_block = nn.Sequential(*[
-            nets.InvertBlock(
-                n_chan,
-                args.r_block_width,
-                noise_level=1 / np.sqrt(n + 1),
-                relu_out=n < args.r_block_depth - 1,
-                bias=bias,
-            ) for n in range(args.r_block_depth)
-        ])
-
-    def forward(self, inputs):
-        outputs = self.conv1x1(inputs)
-        outputs = self.invert_block(outputs)
-        outputs = self.bn(outputs)
-        return outputs
+        def forward(self, inputs):
+            outputs = self.conv1x1(inputs)
+            outputs = self.invert_block(outputs)
+            outputs = self.bn(outputs)
+            return outputs
 
 
 methods = methods.get_methods(DATA_A, net, dataset, args, DEVICE)
@@ -278,23 +305,20 @@ def fig_path_fmt(name, filetype="png"):
 show_batch = next(iter(DATA_B))[0][:50].to(DEVICE)
 
 
-utility.im_show(show_batch,
-                fig_path_fmt(f"{args.dataset}_ground_truth_full"))
-utility.im_show(distort(show_batch),
-                fig_path_fmt(f"{args.dataset}_distorted_full"))
+if args.dataset != 'GMM':
+    utility.im_show(show_batch,
+                    fig_path_fmt(f"{args.dataset}_ground_truth_full"))
+    utility.im_show(distort(show_batch),
+                    fig_path_fmt(f"{args.dataset}_distorted_full"))
 
+    print("\nground truth:", flush=True)
+    utility.im_show(show_batch[:10],
+                    fig_path_fmt(f"{args.dataset}_ground_truth"))
 
-print("\nground truth:", flush=True)
-utility.im_show(show_batch[:10],
-                fig_path_fmt(f"{args.dataset}_ground_truth"))
+    print("\ndistorted:")
+    utility.im_show(distort(show_batch[:10]),
+                    fig_path_fmt(f"{args.dataset}_distorted"))
 
-
-print("\ndistorted:")
-utility.im_show(distort(show_batch[:10]),
-                fig_path_fmt(f"{args.dataset}_distorted"))
-
-
-from pytorch_lightning.metrics.functional import ssim
 
 Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
 
@@ -335,7 +359,8 @@ def iqa_metrics(data_loader, transform):
     if args.dataset == 'GMM':
         metrics['c-entropy'] = 0
         for inputs, labels in data_loader:
-            metrics['c-entropy'] += dataset.cross_entropy() / len(data_loader)
+            metrics['c-entropy'] += dataset.cross_entropy(
+                inputs) / len(data_loader)
 
     return metrics
 
@@ -391,6 +416,8 @@ for method, loss_fn in methods:
         return info
 
     def callback_fn(epoch, metrics):
+        if args.dataset == 'GMM':
+            return
         if epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
             utility.im_show(invert_fn(show_batch[:10]),
@@ -418,11 +445,12 @@ for method, loss_fn in methods:
     # ======= Result =======
     reconstruct.eval()
 
-    print("Inverted:")
-    if len(show_batch) != len(B):
-        print(f"{len(show_batch)} / {len(B)} ")
-    utility.im_show(invert_fn(show_batch), fig_path_fmt(
-        f"{args.dataset}_{method}_epoch_{inv_steps}_full"))
+    if args.dataset != 'GMM':
+        print("Inverted:")
+        if len(show_batch) != len(B):
+            print(f"{len(show_batch)} / {len(B)} ")
+        utility.im_show(invert_fn(show_batch), fig_path_fmt(
+            f"{args.dataset}_{method}_epoch_{inv_steps}_full"))
 
     print("Results:")
 
@@ -463,6 +491,7 @@ accuracy_B_pert = utility.net_accuracy(
     net, DATA_B, inputs_pre_fn=distort)
 accuracy_C_pert = utility.net_accuracy(
     net, DATA_C, inputs_pre_fn=distort)
+
 
 if verifier_net:
     accuracy_A_ver = utility.net_accuracy(

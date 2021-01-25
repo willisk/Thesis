@@ -162,7 +162,7 @@ from scipy.stats import multivariate_normal, ortho_group
 class MULTIGMM(Dataset):
 
     def __init__(self, n_dims=20, n_classes=10, n_modes=8,
-                 scale_mean=1, scale_cov=1, mean_shift=0,
+                 scale_mean=1, scale_cov=5, mean_shift=0,
                  n_samples_A=1000,
                  n_samples_B=1000,
                  n_samples_C=1000,
@@ -207,7 +207,7 @@ class MULTIGMM(Dataset):
         nn_layer_dims = [self.n_dims] + \
             [nn_width] * nn_depth + [self.n_classes]
         fcnet = nets.FCNet(nn_layer_dims)
-        model_name = f"net_GMM_{'-'.join(map(repr, nn_layer_dims))}{suffix}"
+        model_name = f"net_GMM_{'-'.join(map(repr, nn_layer_dims))}{suffix}.pt"
         model_path = os.path.join(self.data_dir, model_name)
         return model_path, fcnet
 
@@ -232,74 +232,30 @@ class MULTIGMM(Dataset):
                                  weight_factor=self.weights[c]).sum()
         return log_lh / n_total
 
-    def pairwise_cross_entropy(self):
-        if len(self.gmms) < 2:
-            return
-        print("0 < H < inf")
-        for i, P in enumerate(self.gmms):
-            Q_rest = combine_gmms([Q for Q in self.gmms if Q != P])
-            print(f"H(P{i}, Q_rest) = {P.cross_entropy_sample(Q_rest)}")
+    def pdf(self, X):
+        return torch.exp(self.log_pdf(X))
 
-    def pairwise_JS(self):
-        if len(self.gmms) < 2:
-            return
-        print("0 < JS < ln(2)")
-        M = combine_gmms(self.gmms)
-        for i, P in enumerate(self.gmms):
-            Q_rest = combine_gmms([Q for Q in self.gmms if Q != P])
-            print(f"JS(P{i}|Q_rest) = {P.JS_sample(Q_rest, M=M)}")
-
-    def pdf(self, X, Y=None):
-        return torch.exp(self.log_pdf(X, Y))
-
-    def log_pdf(self, X, Y=None):
-        X_c = torch.as_tensor(X)
-        if Y is not None:
-            Y = torch.as_tensor(Y)
+    @torch.no_grad()
+    def log_pdf(self, X):
         n_class = len(self.gmms)
-        a, b = [None] * n_class, [None] * n_class
+        logpX_C_M, b_C = [None] * n_class, [None] * n_class
         a_max = -float('inf')
-        for c, gmm, in enumerate(self.gmms):
-            if Y is not None:
-                X_c = X[Y == c]
-                if len(X_c) == 0:
-                    continue
-            # estimated class prob, should use equal?
-            p_c = 1 / n_class
-            n_modes, n_c = len(gmm.means), len(X_c)
-            b[c] = gmm.weights.reshape(n_modes, -1) * p_c
-            a[c] = torch.empty((n_modes, n_c))
+        n = len(X)
+        for c, gmm in enumerate(self.gmms):
+            n_modes = len(gmm.means)
+            logpX_C_M[c] = torch.empty((n_modes, n))
             for m in range(n_modes):
-                a[c][m] = torch.as_tensor(gmm.mvns[m].logpdf(X_c))
-            a_max = max(a_max, torch.max(a[c]).item())
+                logpX_C_M[c][m] = torch.as_tensor(gmm.mvns[m].logpdf(X.cpu()))
+                # logpX_C_M[c][m] = gmm.logpdf_explicit_unused(X)
+            a_max = max(a_max, torch.max(logpX_C_M[c]).item())
         p_X = torch.zeros((len(X)))
-        for c, (log_p_X_c_m, w) in enumerate(zip(a, b)):
-            if log_p_X_c_m is None:
-                continue
-            p_X_c = (w * torch.exp(log_p_X_c_m - a_max)).sum(dim=0)
-            if Y is not None:
-                p_X[Y == c] = p_X_c
-            else:
-                p_X = p_X + p_X_c
-        # print((p_X == 0).sum().item())
-        # print(p_X.shape)
+        for c in range(n_class):
+            weights = gmm.weights.reshape(n_modes, 1)
+            p_X += (weights * torch.exp(logpX_C_M[c] - a_max)).mean(dim=0)
         return torch.log(p_X) + a_max
 
     def cross_entropy(self, X, Y=None):
-        X = X.to('cpu')
-        if Y is not None:
-            Y = Y.to('cpu')
-        return -self.log_pdf(X, Y=Y).mean()
-
-    # def concatenate(self, except_for=None):
-    #     gmms = [g for g in self.gmms if g is not except_for]
-    #     means, covs, weights = zip(
-    #         *[(q.means, q.covs, q.weights) for q in gmms])
-    #     means = torch.cat(means, dim=0)
-    #     covs = torch.cat(covs, dim=0)
-    #     weights = torch.cat(weights, dim=0)
-    #     weights /= weights.sum()
-    #     return GMM(means, covs, weights)
+        return -self.log_pdf(X).mean()
 
 
 def make_spd_matrix(n_dims, eps_min=0.3):
@@ -329,6 +285,23 @@ def combine_gmms(Q_list, p=None):
     else:
         weights = torch.cat([p * w for w, p in zip(weights, p)], dim=0)
     return GMM(means, covs, weights)
+
+    # def pairwise_cross_entropy(self):
+    #     if len(self.gmms) < 2:
+    #         return
+    #     print("0 < H < inf")
+    #     for i, P in enumerate(self.gmms):
+    #         Q_rest = combine_gmms([Q for Q in self.gmms if Q != P])
+    #         print(f"H(P{i}, Q_rest) = {P.cross_entropy_sample(Q_rest)}")
+
+    # def pairwise_JS(self):
+    #     if len(self.gmms) < 2:
+    #         return
+    #     print("0 < JS < ln(2)")
+    #     M = combine_gmms(self.gmms)
+    #     for i, P in enumerate(self.gmms):
+    #         Q_rest = combine_gmms([Q for Q in self.gmms if Q != P])
+    #         print(f"JS(P{i}|Q_rest) = {P.JS_sample(Q_rest, M=M)}")
 
 
 class GMM():
@@ -372,19 +345,26 @@ class GMM():
         n_modes, n_samples = len(self.means), len(X)
         log_p_m_X = torch.empty((n_modes, n_samples))
         for i in range(n_modes):
-            log_p_m_X[i] = torch.as_tensor(self.mvns[i].logpdf(X))
-        w = self.weights.reshape(n_modes, -1) * prob_factor
+            log_p_m_X[i] = torch.as_tensor(self.mvns[i].logpdf(X.detach()))
+        w = self.weights.reshape(n_modes, 1) * prob_factor
         log_p_X = utility.logsumexp(log_p_m_X, dim=0, b=w)
         return torch.as_tensor(log_p_X)
 
     def logpdf_explicit_unused(self, X):
-        m = self.means[0]
-        C = self.covs[0]
-        C_inv = torch.inv(C)
-        l_X = - ((X - m) @ C_inv * (X - m)).sum(axis=1) / 2
-        const = (- len(m) * torch.log(2 * np.pi) - torch.log(torch.det(C))
-                 ) / 2
-        return l_X + const
+        if not hasattr(self, 'C_inv'):
+            self.C_inv = [torch.inverse(C.double()) for C in self.covs]
+            self.log_det_C = [torch.log(torch.det(C.double()))
+                              for C in self.covs]
+        n_modes, n_samples = len(self.means), len(X)
+        d = X.shape[1]
+        logpX_M = torch.empty((n_modes, n_samples))
+        B = [(X.double() - m.double()) for m in self.means]
+        for m in range(n_modes):
+            logpX_M[m] = ((B[m] @ self.C_inv[m] * B[m]).sum(axis=1)
+                          + d * np.log(2 * np.pi) + self.log_det_C[m]) / -2
+        logpX = utility.logsumexp(
+            logpX_M, dim=0, b=self.weights.reshape(n_modes, 1))
+        return logpX
 
     def cross_entropy(self, X):
         return -self.log_pdf(X).mean()

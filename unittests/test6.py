@@ -13,20 +13,14 @@ import matplotlib.pyplot as plt
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
 
-import utility
-import datasets
-import statsnet
-import deepinversion
-import shared
-import nets
+from utils import utility
+from utils import datasets
+from utils import nets
 
 if 'ipykernel_launcher' in sys.argv:
     import importlib
     importlib.reload(utility)
     importlib.reload(datasets)
-    importlib.reload(statsnet)
-    importlib.reload(deepinversion)
-    importlib.reload(shared)
 
 print(__doc__)
 
@@ -41,18 +35,20 @@ torch.manual_seed(3)
 # Gaussian Mixture Model
 
 n_classes = 3
-
-dataset = datasets.DatasetGMM(
+dataset = datasets.MULTIGMM(
     n_dims=2,
     n_classes=n_classes,
     n_modes=8,
     scale_mean=5,
     scale_cov=2,
-    # mean_shift=20,
-    n_samples_per_class=100,
+    mean_shift=20,
+    n_samples_A=100,
+    n_samples_B=100,
 )
 
-X_A, Y_A = dataset.X, dataset.Y
+X_A, Y_A = dataset.A.tensors
+X_B, Y_B = dataset.B.tensors
+# means_A, _ = utility.c_stats(X_A, Y_A, n_classes)
 
 # distorted Dataset B
 distort_matrix = torch.eye(2) + 1 * torch.randn((2, 2))
@@ -63,7 +59,7 @@ def distort(X):
     return X @ distort_matrix + distort_shift
 
 
-X_B_orig, Y_B = dataset.sample(n_samples_per_class=100)
+X_B_orig, Y_B = X_B, Y_B
 X_B = distort(X_B_orig)
 
 
@@ -77,23 +73,24 @@ model_path = os.path.join(
 net = nets.FCNet(layer_dims)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=lr)
-utility.train(net, dataset.train_loader(), criterion, optimizer,
+utility.train(net, [(X_A, Y_A)], criterion, optimizer,
               model_path=model_path,
               epochs=steps,
-              #   resume_training=True,
+              #   resume_training=nn_resume_training,
               plot=True,
               )
+net.eval()
 # dataset.plot(net=net)
 # plt.show()
 
 print("Before:")
-print("Cross Entropy of A:", dataset.cross_entropy(X_A, Y_A).item())
-print("Cross Entropy of B:", dataset.cross_entropy(X_B, Y_B).item())
+print("Cross Entropy of A:", dataset.cross_entropy(X_A).item())
+print("Cross Entropy of B:", dataset.cross_entropy(X_B).item())
 
 
 # ======= Collect Projected Stats from A =======
-net_layers = utility.get_child_modules(net, ignore_types=["activation"])
-layer_activations = [0] * len(net_layers)
+net_layers = utility.get_child_modules(net)[:-1]
+layer_activations = [None] * len(net_layers)
 
 
 def layer_hook_wrapper(l):
@@ -114,10 +111,6 @@ def project(X):
     return torch.cat(layer_activations, dim=1)
 
 
-with torch.no_grad():
-    X_A_proj = project(X_A)
-A_proj_means, A_proj_vars, _ = utility.c_mean_var(X_A_proj, Y_A, n_classes)
-
 # ======= reconstruct Model =======
 A = torch.eye((2), requires_grad=True)
 b = torch.zeros((2), requires_grad=True)
@@ -128,26 +121,44 @@ def reconstruct(X):
 
 
 # ======= Loss Function =======
-def loss_frechet(X, Y=Y_B):
+with torch.no_grad():
+    X_A_proj = project(X_A)
+A_proj_means, A_proj_vars = utility.c_stats(X_A_proj, Y_A, n_classes)
+
+
+# def loss_frechet(X, Y=Y_B):
+#     X_proj = project(X)
+#     X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y, n_classes)
+#     diff_mean = ((X_proj_means - A_proj_means)**2).sum(dim=0).mean()
+#     diff_var = (X_proj_vars + A_proj_vars
+#                 - 2 * (X_proj_vars * A_proj_vars).sqrt()
+#                 ).sum(dim=0).mean()
+#     loss = (diff_mean + diff_var)
+#     return loss
+
+
+def loss_fn(data):
+    X, Y = data
+    X = reconstruct(X)
     X_proj = project(X)
-    X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y, n_classes)
-    diff_mean = ((X_proj_means - A_proj_means)**2).sum(dim=0).mean()
-    diff_var = (X_proj_vars + A_proj_vars
-                - 2 * (X_proj_vars * A_proj_vars).sqrt()
-                ).sum(dim=0).mean()
-    loss = (diff_mean + diff_var)
-    return loss
+
+    X_proj_means, X_proj_vars = utility.c_stats(X_proj, Y, n_classes)
+    loss_mean = (X_proj_means - A_proj_means).norm(dim=1).mean()
+    loss_var = (X_proj_vars - A_proj_vars).norm(dim=1).mean()
+
+    loss = loss_mean + loss_var
+
+    info = {
+        'loss': loss,
+        '[losses] mean': loss_mean.item(),
+        '[losses] var': loss_var.item(),
+        'c-entropy': dataset.cross_entropy(X),
+    }
+
+    return info
 
 
-def loss_fn(X, Y=Y_B):
-    X_proj = project(X)
-    X_proj_means, X_proj_vars, _ = utility.c_mean_var(X_proj, Y, n_classes)
-    loss_mean = ((X_proj_means - A_proj_means)**2).mean()
-    loss_var = ((X_proj_vars - A_proj_vars)**2).mean()
-    return loss_mean + loss_var
-
-
-loss_fn = loss_frechet
+# loss_fn = loss_frechet
 
 # ======= Optimize =======
 lr = 0.1
@@ -155,29 +166,30 @@ steps = 400
 optimizer = torch.optim.Adam([A, b], lr=lr)
 # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-deeputility.invert([X_B],
-                   loss_fn,
-                   optimizer,
-                   #    scheduler=scheduler,
-                   steps=steps,
-                   pre_fn=reconstruct,
-                   #    track_history=True,
-                   #    track_history_every=10,
-                   plot=True,
-                   )
+utility.invert([(X_B, Y_B)],
+               loss_fn,
+               optimizer,
+               #    scheduler=scheduler,
+               steps=steps,
+               plot=True,
+               track_grad_norm=True,
+               )
 
 # for x, step in zip(*zip(*history)):
 #     utility.plot_stats(x, colors=['r'] * len(history))
 # ======= Result =======
 X_B_proc = reconstruct(X_B).detach()
 print("After Reconstruction:")
-print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc, Y_B).item())
+print("Cross Entropy of B:", dataset.cross_entropy(X_B_proc).item())
+print("Cross Entropy of undistorted B:",
+      dataset.cross_entropy(X_B_orig).item())
+
 plt.title("target data A")
-plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="target data A", alpha=0.5)
+plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="target data A")
 plt.scatter(X_B_proc[:, 0], X_B_proc[:, 1],
-            c=cmaps[1], label="reconstructed data B", alpha=0.5)
+            c=cmaps[1], label="reconstructed data B")
 plt.scatter(X_B_orig[:, 0], X_B_orig[:, 1],
-            c='orange', label="undistorted data B", alpha=0.4)
+            c='orange', alpha=0.4, label="undistorted data B")
 for c in range(n_classes):
     utility.plot_stats([X_A[Y_A == c], X_B_proc[Y_B == c]])
 plt.legend()
@@ -187,3 +199,4 @@ plt.show()
 # L2 Reconstruction Error
 Id = torch.eye(2)
 l2_err = (reconstruct(distort(Id)) - Id).norm(2).item()
+print(f"l2 reconstruction error: {l2_err:.3f}")

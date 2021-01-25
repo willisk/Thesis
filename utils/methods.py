@@ -235,12 +235,12 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
             info = {}
             loss = torch.tensor(0).float().to(DEVICE)
 
-            if f_reg != 0.0:
+            if f_reg:
                 loss_reg = f_reg * regularization(inputs)
                 info['[losses] regularization'] = loss_reg.item()
                 loss += loss_reg
 
-            if f_stats != 0.0:
+            if f_stats:
                 outputs = project(data)
                 stats = utility.get_stats(
                     outputs, labels, n_classes, class_conditional=class_conditional, std=STD)
@@ -250,7 +250,7 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
                     info[k] = f_stats * f_stats_scale * v
                 loss += f_stats * f_stats_scale * cost_stats
 
-            if f_crit != 0.0:
+            if f_crit:
                 if net_last_outputs is None:
                     net_last_outputs = net(inputs)
                 loss_crit = f_crit * criterion(net_last_outputs, labels)
@@ -269,17 +269,20 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
         inputs, labels = data
         outputs = net(inputs)
 
-        loss_reg = f_reg * regularization(inputs)
+        info = {}
+
         loss_crit = f_crit * criterion(outputs, labels)
 
-        loss = loss_reg + loss_crit
+        if f_reg:
+            loss_reg = f_reg * regularization(inputs)
+            info['[losses] regularization'] = loss_reg.item()
+            info['[losses] criterion'] = loss_crit.item()
+            loss = loss_crit + loss_reg
+        else:
+            loss = loss_crit
 
-        info = {
-            'loss': loss,
-            '[losses] reg': loss_reg.item(),
-            '[losses] crit': loss_crit.item(),
-            'accuracy': utility.count_correct(outputs, labels) / len(labels)
-        }
+        info['loss'] = loss
+        info['accuracy'] = utility.count_correct(outputs, labels) / len(labels)
 
         return info
 

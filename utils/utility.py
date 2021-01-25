@@ -1127,17 +1127,17 @@ def invert(data_loader, loss_fn, optimizer,
 
     num_batches = len(data_loader)
     track_len = steps * num_batches if track_per_batch else steps
-    # metrics = defaultdict(lambda: [None] * track_len)
     metrics = pd.DataFrame({'step': [None] * track_len})
 
     def process_result(res):
         if isinstance(res, dict):
             loss = res['loss']
             info = res
+            for k, v in info.items():
+                info[k] = v.item() if isinstance(v, torch.Tensor) else v
         else:
             loss = res
-            info = {}
-        info = {**info, 'loss': loss.item()}
+            info = {'loss': loss.item()}
         return loss, info
 
     print(flush=True)

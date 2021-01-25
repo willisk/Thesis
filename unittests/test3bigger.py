@@ -13,8 +13,9 @@ import matplotlib.pyplot as plt
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
 
-import utility
-import datasets
+from utils import utility
+from utils import datasets
+
 
 if 'ipykernel_launcher' in sys.argv:
     import importlib
@@ -66,7 +67,14 @@ RP = torch.randn((2, n_projections))
 RP = RP / RP.norm(2, dim=0)
 
 
+def project(X):
+    return (X - mean_A) @ RP
+
+
 # plot random projections
+print("Before:")
+print("Cross Entropy of A:", dataset.cross_entropy(X_A).item())
+print("Cross Entropy of B:", dataset.cross_entropy(X_B).item())
 utility.plot_random_projections(RP, project(X_A), mean=mean_A)
 plt.scatter(X_A[:, 0], X_A[:, 1], c=cmaps[0], label="target data A")
 plt.legend()
@@ -90,10 +98,6 @@ def reconstruct(X):
     return X @ A + b
 
 
-def project(X):
-    return (X - mean_A) @ RP
-
-
 # ======= Collect Projected Stats from A =======
 X_A_proj = project(X_A)
 
@@ -107,9 +111,23 @@ A_proj_vars = X_A_proj.var(dim=0, keepdims=True)
 def loss_fn(X):
     X = reconstruct(X)
     X_proj = project(X)
-    loss_mean = ((X_proj.mean(dim=0) - A_proj_means)**2).mean()
-    loss_var = ((X_proj.var(dim=0) - A_proj_vars)**2).mean()
-    return loss_mean + loss_var
+    # loss_mean = ((X_proj.mean(dim=0) - A_proj_means)**2).mean()
+    # loss_var = ((X_proj.var(dim=0) - A_proj_vars)**2).mean()
+    # return loss_mean + loss_var
+
+    loss_mean = (X_proj.mean(dim=0) - A_proj_means).norm()
+    loss_var = (X_proj.var(dim=0) - A_proj_vars).norm()
+
+    loss = loss_mean + loss_var
+
+    info = {
+        'loss': loss,
+        '[losses] mean': loss_mean.item(),
+        '[losses] var': loss_var.item(),
+        'c-entropy': dataset.cross_entropy(X),
+    }
+
+    return info
 
 
 # ======= Optimize =======
@@ -117,13 +135,13 @@ lr = 0.1
 steps = 300
 optimizer = torch.optim.Adam([A, b], lr=lr)
 
-utility.invert([X_B],
-               loss_fn,
-               optimizer,
-               steps=steps,
-               plot=True,
-               track_grad_norm=True,
-               )
+info = utility.invert([X_B],
+                      loss_fn,
+                      optimizer,
+                      steps=steps,
+                      plot=True,
+                      track_grad_norm=True,
+                      )
 
 # for x, step in zip(*zip(*history)):
 #     utility.plot_stats(x, colors=['r'] * len(history))

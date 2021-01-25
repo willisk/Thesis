@@ -13,8 +13,9 @@ import matplotlib.pyplot as plt
 PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PWD)
 
-import datasets
-import utility
+from utils import utility
+from utils import datasets
+
 
 if 'ipykernel_launcher' in sys.argv:
     import importlib
@@ -94,22 +95,33 @@ X_A_proj = project(X_A)
 
 
 # collect stats
-A_proj_means = X_A_proj.mean(dim=0, keepdims=True)
-A_proj_vars = X_A_proj.var(dim=0, keepdims=True)
+A_proj_means = X_A_proj.mean(dim=0)
+A_proj_vars = X_A_proj.var(dim=0)
 
 
 # ======= Loss Function =======
 def loss_fn(X):
     X = reconstruct(X)
     X_proj = project(X)
-    loss_mean = ((X_proj.mean(dim=0) - A_proj_means)**2).mean()
-    loss_var = ((X_proj.var(dim=0) - A_proj_vars)**2).mean()
-    return loss_mean + loss_var
+
+    loss_mean = (X_proj.mean(dim=0) - A_proj_means).norm()
+    loss_var = (X_proj.var(dim=0) - A_proj_vars).norm()
+
+    loss = loss_mean + loss_var
+
+    info = {
+        'loss': loss,
+        '[losses] mean': loss_mean.item(),
+        '[losses] var': loss_var.item(),
+        'c-entropy': gmm.cross_entropy(X),
+    }
+    return info
+    # return loss
 
 
 # ======= Optimize =======
 lr = 0.1
-steps = 200
+steps = 400
 optimizer = torch.optim.Adam([A, b], lr=lr)
 # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
