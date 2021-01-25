@@ -701,7 +701,7 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
         label = key.replace(':--:', '').rstrip()
         if key in scaled:
             label += ' (%)'
-        color = colors[i] if num_plots > 10 else color_cycle[i]
+        color = colors[i] if num_plots > 10 or "statistics" in title else color_cycle[i]
         if key in scaled:
             # values = [y_min + v * (y_max - y_min) for v in values]
             # plt.plot(steps[a:b], scaled_values[a:b], label=label)

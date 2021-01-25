@@ -296,7 +296,8 @@ methods = methods.get_methods(DATA_A, net, dataset, args, DEVICE)
 
 def fig_path_fmt(name, filetype="png"):
     if args.save_run:
-        path = f"figures/reconstruction_{name}.{filetype}".replace(' ', '_')
+        path = f"figures/reconstruction_{args.dataset}_{name}.{filetype}".replace(
+            ' ', '_')
         save_path, _ = utility.search_drive(path, use_drive=USE_DRIVE)
         return save_path
     return None
@@ -307,17 +308,17 @@ show_batch = next(iter(DATA_B))[0][:50].to(DEVICE)
 
 if args.dataset != 'GMM':
     utility.im_show(show_batch,
-                    fig_path_fmt(f"{args.dataset}_ground_truth_full"))
+                    fig_path_fmt(f"ground_truth_full"))
     utility.im_show(distort(show_batch),
-                    fig_path_fmt(f"{args.dataset}_distorted_full"))
+                    fig_path_fmt(f"distorted_full"))
 
     print("\nground truth:", flush=True)
     utility.im_show(show_batch[:10],
-                    fig_path_fmt(f"{args.dataset}_ground_truth"))
+                    fig_path_fmt(f"ground_truth"))
 
     print("\ndistorted:")
     utility.im_show(distort(show_batch[:10]),
-                    fig_path_fmt(f"{args.dataset}_distorted"))
+                    fig_path_fmt(f"distorted"))
 
 
 Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
@@ -421,12 +422,12 @@ for method, loss_fn in methods:
         if epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
             utility.im_show(invert_fn(show_batch[:10]),
-                            fig_path_fmt(f"{args.dataset}_{method}_epoch_{epoch}"))
+                            fig_path_fmt(f"{method}_epoch_{epoch}"))
 
     optimizer = torch.optim.Adam(reconstruct.parameters(), lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    metrics_fig_path = fig_path_fmt(f"{args.dataset}_{method}", "pdf")
+    metrics_fig_path = fig_path_fmt(f"{method}", "pdf")
 
     info = utility.invert(DATA_B,
                           data_loss_fn,
@@ -450,7 +451,7 @@ for method, loss_fn in methods:
         if len(show_batch) != len(B):
             print(f"{len(show_batch)} / {len(B)} ")
         utility.im_show(invert_fn(show_batch), fig_path_fmt(
-            f"{args.dataset}_{method}_epoch_{inv_steps}_full"))
+            f"{method}_epoch_{inv_steps}_full"))
 
     print("Results:")
 
