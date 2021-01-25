@@ -406,7 +406,7 @@ for method, loss_fn in methods:
         data_invert = (invert_fn(inputs), labels)
         info = loss_fn(data_invert)
 
-        iqa = iqa_metrics([data], invert_fn).items()
+        iqa = iqa_metrics([data], invert_fn)
         if args.dataset == 'GMM':
             info = {**info, **iqa}
         else:
