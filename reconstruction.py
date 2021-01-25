@@ -248,8 +248,8 @@ if args.dataset == 'GMM':
 
             self.bias = nn.Parameter(
                 torch.zeros((n_dims)).unsqueeze(0))
-            self.linear = (torch.eye(n_dims)
-                           + torch.randn((n_dims, n_dims)) / np.sqrt(n_dims))
+            self.linear = nn.Parameter(
+                torch.eye(n_dims) + torch.randn((n_dims, n_dims)) / np.sqrt(n_dims))
 
         def forward(self, inputs):
             return inputs @ self.linear + self.bias
