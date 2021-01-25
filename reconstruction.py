@@ -406,9 +406,13 @@ for method, loss_fn in methods:
         data_invert = (invert_fn(inputs), labels)
         info = loss_fn(data_invert)
 
-        info['[IQA metrics] accuracy'] = info['accuracy']
-        for k, v in iqa_metrics([data], invert_fn).items():
-            info[f'[IQA metrics] {k}'] = v
+        iqa = iqa_metrics([data], invert_fn).items()
+        if args.dataset == 'GMM':
+            info = {**info, **iqa}
+        else:
+            info['[IQA metrics] accuracy'] = info['accuracy']
+            for k, v in :
+                info[f'[IQA metrics] {k}'] = v
 
         if args.plot_ideal:
             with torch.no_grad():
