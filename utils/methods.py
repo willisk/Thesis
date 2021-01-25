@@ -70,7 +70,7 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
         return random_net.state_dict()
 
     state_dict = random_net_state_dict(  # pylint: disable=unexpected-keyword-arg
-        path=random_net_path, map_location=DEVICE, use_drive=USE_DRIVE)
+        path=random_net_path, map_location=DEVICE, use_drive=USE_DRIVE, reset=args.reset_stats)
     random_net.load_state_dict(state_dict)
     random_net.to(DEVICE)
     random_net.eval()
