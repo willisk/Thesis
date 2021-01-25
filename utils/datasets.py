@@ -181,8 +181,8 @@ class MULTIGMM(Dataset):
         B = self.sample(int(n_samples_B / n_classes))
         C = self.sample(int(n_samples_C / n_classes))
 
-        mean = A.mean()
-        std = A.std()
+        mean = A[0].mean()
+        std = A[0].std()
 
         # A = (A[0].reshape(-1, 2, 5, 2), A[1])
         # B = (B[0].reshape(-1, 2, 5, 2), B[1])
