@@ -163,9 +163,9 @@ class MULTIGMM(Dataset):
 
     def __init__(self, n_dims=20, n_classes=10, n_modes=12,
                  scale_mean=3, scale_cov=20, mean_shift=3,
-                 n_samples_A=1000,
-                 n_samples_B=1000,
-                 n_samples_C=1000):
+                 n_samples_A=10000,
+                 n_samples_B=2000,
+                 n_samples_C=2000):
 
         # # using equal weights for now
         # if weights is None:
