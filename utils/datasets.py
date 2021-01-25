@@ -204,7 +204,7 @@ class MULTIGMM(Dataset):
         nn_depth = 4
         nn_layer_dims = [self.n_dims] + \
             [nn_width] * nn_depth + [self.n_classes]
-        fcnet = nets.FCNet(nn_layer_dims)
+        fcnet = nets.FCNet(nn_layer_dims, batch_norm=True)
         model_name = f"net_GMM_{'-'.join(map(repr, nn_layer_dims))}{suffix}.pt"
         model_path = os.path.join(self.data_dir, model_name)
         return model_path, fcnet

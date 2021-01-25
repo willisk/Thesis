@@ -170,13 +170,15 @@ class ResidualBlock(nn.Module):
 
 class FCNet(Net):
 
-    def __init__(self, layer_dims):
+    def __init__(self, layer_dims, batch_norm=False):
         super().__init__()
 
         layers = []
         L = len(layer_dims) - 1
         for i in range(L):
             layers.append(nn.Linear(layer_dims[i], layer_dims[i + 1]))
+            if batch_norm:
+                layers.append(nn.BatchNorm1d(layer_dims[i + 1]))
             if i < L - 1:
                 layers.append(nn.ReLU())
         self.main = nn.Sequential(*layers)
