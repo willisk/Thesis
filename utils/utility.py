@@ -671,7 +671,7 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
         sorted_items = sorted(metrics.items(), key=lambda e: int(e[0]))
     else:
         kw_order = ['SSIM', 'loss', 'accuracy', 'c-entropy',
-                    'HaarPsi', '|grad|', 'ideal']
+                    'HaarPsi', '|grad|', 'reference']
         order = {key: str(i) for i, key in enumerate(kw_order)}
         sorted_items = sorted(metrics.items(),
                               key=lambda e: order[e[0]] if e[0] in order else e[0])
