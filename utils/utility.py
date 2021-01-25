@@ -686,7 +686,7 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
 
     plt.figure(**kwargs)
     num_plots = len(metrics)
-    if num_plots > 10:
+    if num_plots > 10 or "statistics" in title:
         colors = jet(np.linspace(0, 1, num_plots))
 
     scaled_axis = False
