@@ -181,6 +181,9 @@ class MULTIGMM(Dataset):
         B = self.sample(int(n_samples_B / n_classes))
         C = self.sample(int(n_samples_C / n_classes))
 
+        mean = A.mean()
+        std = A.std()
+
         # A = (A[0].reshape(-1, 2, 5, 2), A[1])
         # B = (B[0].reshape(-1, 2, 5, 2), B[1])
         # C = (C[0].reshape(-1, 2, 5, 2), C[1])
@@ -191,13 +194,16 @@ class MULTIGMM(Dataset):
 
         data_dir = os.path.join(MODELDIR, "GMM")
 
+        def normalize(X):
+            return (X - mean) / std
+
         super().__init__(input_shape=(n_dims,),
                          n_classes=n_classes,
                          A=A,
                          B=B,
                          C=C,
                          data_dir=data_dir,
-                         transform=None)
+                         transform=normalize)
 
     def net(self, suffix=""):
         nn_width = 32
