@@ -388,58 +388,50 @@ def rbg_to_luminance(x):
         x[:, 2, None, :, :] * 0.0722)
 
 
-@torch.no_grad()
 def psnr(x, y):
     assert x.ndim == 4
-    x = to_zero_one(x)
-    y = to_zero_one(y)
-    if x.shape[1] == 3:
-        x = rbg_to_luminance(x)
-        y = rbg_to_luminance(y)
     x = x.reshape(len(x), -1)
     y = y.reshape(len(x), -1)
     return - 10 * torch.log10(((x - y)**2).mean(dim=1))
 
 
-@torch.no_grad()
-def average_psnr(data_loader, invert_fn):
-    out = count = 0
-    for inputs, labels in data_loader:
-        out += psnr(inputs, invert_fn(inputs)).sum().item()
-        count += len(inputs)
-    return out / count
-
-# from skimage.metrics import structural_similarity as ssim
+# @torch.no_grad()
+# def average_psnr(data_loader, invert_fn):
+#     out = count = 0
+#     for inputs, labels in data_loader:
+#         out += psnr(inputs, invert_fn(inputs)).sum().item()
+#         count += len(inputs)
+#     return out / count
 
 
-from pytorch_lightning.metrics.functional import ssim
+# from pytorch_lightning.metrics.functional import ssim
 
 
-@torch.no_grad()
-def average_ssim(data_loader, invert_fn):
-    out = count = 0
-    for images, labels in data_loader:
-        images = to_zero_one(images.detach())
-        restored = invert_fn(images)
-        if images.shape[1] == 3:
-            images = rbg_to_luminance(images)
-            restored = rbg_to_luminance(restored)
-        out += ssim(images, restored).item()
-        count += 1
-    return (out / count + 1) / 2
+# @torch.no_grad()
+# def average_ssim(data_loader, invert_fn):
+#     out = count = 0
+#     for images, labels in data_loader:
+#         images = to_zero_one(images.detach())
+#         restored = invert_fn(images)
+#         if images.shape[1] == 3:
+#             images = rbg_to_luminance(images)
+#             restored = rbg_to_luminance(restored)
+#         out += ssim(images, restored).item()
+#         count += 1
+#     return (out / count + 1) / 2
 
 
-@torch.no_grad()
-def average_haar_psi(data_loader, invert_fn):
-    out = count = 0
-    for inputs, labels in data_loader:
-        images = inputs.detach().cpu().permute(0, 2, 3, 1).squeeze().numpy()
-        restored_images = invert_fn(
-            inputs.detach()).cpu().permute(0, 2, 3, 1).squeeze().numpy()
-        for image, restored_image in zip(images, restored_images):
-            out += haar_psi_numpy(image, restored_image)[0]
-        count += len(inputs)
-    return out / count
+# @torch.no_grad()
+# def average_haar_psi(data_loader, invert_fn):
+#     out = count = 0
+#     for inputs, labels in data_loader:
+#         images = inputs.detach().cpu().permute(0, 2, 3, 1).squeeze().numpy()
+#         restored_images = invert_fn(
+#             inputs.detach()).cpu().permute(0, 2, 3, 1).squeeze().numpy()
+#         for image, restored_image in zip(images, restored_images):
+#             out += haar_psi_numpy(image, restored_image)[0]
+#         count += len(inputs)
+#     return out / count
 
 
 def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var, cc_n=None):
@@ -680,7 +672,7 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
     if all(k.isdigit() for k in metrics):
         sorted_items = sorted(metrics.items(), key=lambda e: int(e[0]))
     else:
-        kw_order = ['SSIM', 'loss', 'accuracy', '|grad|', 'ideal']
+        kw_order = ['SSIM', 'loss', 'accuracy', 'HaarPsi', '|grad|', 'ideal']
         order = {key: str(i) for i, key in enumerate(kw_order)}
         sorted_items = sorted(metrics.items(),
                               key=lambda e: order[e[0]] if e[0] in order else e[0])
@@ -745,10 +737,12 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
                        loc='upper left', fontsize='xx-small')
     else:
         if scaled_axis:
-            main_ax.legend(loc=2)
+            legend = main_ax.legend(loc=2)
+            legend.remove()
             scaled_axis.set_ylabel('%')
             scaled_axis.set_ylim([-10, 110])
             scaled_axis.legend(loc=1)
+            scaled_axis.add_artist(legend)
         else:
             main_ax.legend()
 

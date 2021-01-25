@@ -84,7 +84,7 @@ parser.add_argument("--save_run", action="store_true")
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset MNIST'.split())
     args = parser.parse_args('-dataset CIFAR10'.split())
-    args.inv_steps = 20
+    args.inv_steps = 2
     args.size_A = 16
     args.size_B = 8
     args.size_C = 8
@@ -294,6 +294,53 @@ utility.im_show(distort(show_batch[:10]),
                 fig_path_fmt(f"{args.dataset}_distorted"))
 
 
+from pytorch_lightning.metrics.functional import ssim
+
+Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
+
+
+@torch.no_grad()
+def iqa_metrics(data_loader, transform):
+    metrics = {}
+    metrics['l2-err'] = ((transform(Id_mat) -
+                          Id_mat).norm() / Id_mat.norm()).item()
+
+    if args.dataset == 'CIFAR10' or args.dataset == 'MNIST':
+        metrics['PSNR'] = 0
+        metrics['SSIM'] = 0
+        metrics['HaarPsi'] = 0
+
+        for inputs, labels in data_loader:
+            images = inputs
+            restored = transform(images)
+
+            images = utility.to_zero_one(images)
+            restored = utility.to_zero_one(restored)
+
+            if images.shape[1] == 3:
+                gray_images = utility.rbg_to_luminance(images)
+                gray_restored = utility.rbg_to_luminance(restored)
+
+            metrics['PSNR'] += utility.psnr(
+                gray_images, gray_restored).mean().item() / len(data_loader)
+            metrics['SSIM'] += (1 + ssim(
+                gray_images, gray_restored).item()) / 2 / len(data_loader)  # default: mean, scale to [0, 1]
+
+            for image, restored_image in zip(
+                    images.permute(0, 2, 3, 1).squeeze().cpu().numpy(),
+                    restored.permute(0, 2, 3, 1).squeeze().cpu().numpy()):
+                metrics['HaarPsi'] += (haar_psi_numpy(image, restored_image)[0]
+                                       / len(data_loader) / len(inputs))
+    if args.dataset == 'GMM':
+        metrics['c-entropy'] = 0
+        for inputs, labels in data_loader:
+            metrics['c-entropy'] += dataset.cross_entropy() / len(data_loader)
+
+    return metrics
+
+
+iqa_distort = iqa_metrics(DATA_B, distort)
+
 # ======= Optimize =======
 inv_lr = args.inv_lr
 inv_steps = args.inv_steps
@@ -312,8 +359,8 @@ def grad_norm_fn(x):
 
 
 for method, loss_fn in methods:
-    # if method != "NN ALL":
-    #     continue
+    # if method == "NN ALL":
+    #     break
     print("\n\n\n## Method:", method)
 
     reconstruct = ReconstructionModel()
@@ -325,20 +372,21 @@ for method, loss_fn in methods:
 
     def data_loss_fn(data):
         inputs, labels = data
+
         if args.use_jitter:
             inputs = jitter(inputs)
-        data_inv = (invert_fn(inputs), labels)
-        info = loss_fn(data_inv)
+
+        data_invert = (invert_fn(inputs), labels)
+        info = loss_fn(data_invert)
+
         info['[IQA metrics] accuracy'] = info['accuracy']
-        info['[IQA metrics] PSNR'] = utility.average_psnr(
-            [data], invert_fn)
-        info['[IQA metrics] SSIM'] = utility.average_ssim(
-            [data], invert_fn)
-        info['[IQA metrics] HaarPsi'] = utility.average_haar_psi(
-            [data], invert_fn)
+        for k, v in iqa_metrics([data], invert_fn).items():
+            info[f'[IQA metrics] {k}'] = v
+
         if args.plot_ideal:
             with torch.no_grad():
-                info['ideal'] = loss_fn(data)['loss'].item()
+                info['reference'] = loss_fn(data)['loss'].item()
+
         return info
 
     def callback_fn(epoch, metrics):
@@ -381,51 +429,27 @@ for method, loss_fn in methods:
     loss = info['loss'].values[-1]
     print(f"\tloss: {loss:.3f}")
 
-    # PSNR
-    psnr = utility.average_psnr(DATA_B, invert_fn)
-    psnr_distort = utility.average_psnr(DATA_B, distort)
-    print(f"\taverage PSNR: {psnr:.3f} | (distorted: {psnr_distort:.3f})")
-
-    # HaarPsi
-    haarpsi = utility.average_haar_psi(DATA_B, invert_fn)
-    haarpsi_distort = utility.average_haar_psi(DATA_B, distort)
-    print(
-        f"\taverage HaarPsi: {haarpsi:.3f} | (distorted: {haarpsi_distort:.3f})")
-
-    # SSIM
-    ssim = utility.average_ssim(DATA_B, invert_fn)
-    ssim_distort = utility.average_ssim(DATA_B, distort)
-    print(
-        f"\taverage SSIM: {ssim:.3f} | (distorted: {ssim_distort:.3f})")
-
-    # L2 Reconstruction Error
-    Id = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
-    l2_err = (invert_fn(Id) - Id).norm().item() / Id.norm().item()
-    l2_err_distort = (distort(Id) - Id).norm().item() / Id.norm().item()
-    print(
-        f"\trel. l2 reconstruction error: {l2_err:.3f} | (distorted: {l2_err_distort:.3f})")
-
     # NN Accuracy
     accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=invert_fn)
     accuracy_val = utility.net_accuracy(
         net, DATA_C, inputs_pre_fn=invert_fn)
-    print(f"\tnn accuracy: {accuracy * 100:.1f} %")
-
-    print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
-
     metrics[method]['acc'] = accuracy
     metrics[method]['acc(val)'] = accuracy_val
+    print(f"\tnn accuracy: {accuracy * 100:.1f} %")
+    print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
 
     if verifier_net:
         accuracy_ver = utility.net_accuracy(
             verifier_net, DATA_B, inputs_pre_fn=invert_fn)
-        print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
         metrics[method]['acc(ver)'] = accuracy_ver
-    metrics[method]['av. PSNR'] = psnr
-    metrics[method]['av. SSIM'] = ssim
-    metrics[method]['av. HaarPsi'] = haarpsi
-    metrics[method]['l2-err'] = l2_err
-    # metrics[method]['loss'] = loss
+        print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
+
+    iqa_invert = iqa_metrics(DATA_B, invert_fn)
+
+    for k, v in iqa_invert.items():
+        metrics[method][k] = v
+        print(f"\taverage {k}: {v:.3f} | (before: {iqa_distort[k]:.3f})")
+
 
 baseline = defaultdict(dict)
 
@@ -460,22 +484,19 @@ if verifier_net:
     baseline['B (original)']['acc(ver)'] = accuracy_B_ver
     baseline['A']['acc(ver)'] = accuracy_A_ver
 
-baseline['B (distorted)']['av. PSNR'] = psnr_distort
-baseline['B (distorted)']['av. SSIM'] = ssim_distort
-baseline['B (distorted)']['av. HaarPsi'] = haarpsi_distort
-baseline['B (distorted)']['l2-err'] = l2_err_distort
-
+for k, v in iqa_distort.items():
+    baseline['B (distorted)'][k] = v
 
 print("\n# Summary")
 print("=========\n")
 
 
-table_path = fig_path_fmt(f"baseline", "csv")
+table_path = fig_path_fmt("baseline", "csv")
 utility.make_table(baseline, row_name="baseline", out=table_path)
 
 print("\nReconstruction methods:")
 
-table_path = fig_path_fmt(f"results", "csv")
+table_path = fig_path_fmt("results", "csv")
 utility.make_table(metrics, row_name="method", out=table_path)
 
 
