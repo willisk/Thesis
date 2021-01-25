@@ -219,7 +219,7 @@ class MULTIGMM(Dataset):
             y = torch.LongTensor([c] * n_samples_per_class)
             X = torch.cat((X, x), dim=0) if X is not None else x
             Y = torch.cat((Y, y), dim=0) if Y is not None else y
-        return X.to(self.device), Y.to(self.device)
+        return X, Y
 
     def log_likelihood(self, X, Y):
         n_total = len(Y) + 0.
