@@ -670,8 +670,8 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
     if all(k.isdigit() for k in metrics):
         sorted_items = sorted(metrics.items(), key=lambda e: int(e[0]))
     else:
-        kw_order = ['SSIM', 'loss', 'c-entropy',
-                    'accuracy', 'HaarPsi', '|grad|', 'ideal']
+        kw_order = ['SSIM', 'loss', 'accuracy', 'c-entropy',
+                    'HaarPsi', '|grad|', 'ideal']
         order = {key: str(i) for i, key in enumerate(kw_order)}
         sorted_items = sorted(metrics.items(),
                               key=lambda e: order[e[0]] if e[0] in order else e[0])
@@ -717,7 +717,6 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
                 axis.plot(steps[a:b], filled_values[a:b], '--',
                           label=label,
                           color=color)
-                color = axis.lines[-1].get_color()
                 label = None
             axis.plot(steps[a:b], values[a:b], '--' if dashed else '-',
                       label=label,
