@@ -409,6 +409,7 @@ for method, loss_fn in methods:
         iqa = iqa_metrics([data], invert_fn)
         if args.dataset == 'GMM':
             info = {**info, **iqa}
+            info.remove('c-entropy')
         else:
             info['[IQA metrics] accuracy'] = info['accuracy']
             for k, v in iqa.items():
