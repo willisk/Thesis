@@ -3,7 +3,17 @@
 \usepackage{amssymb}
 \usepackage{mathrsfs}
 \usepackage{ifluatex}
-\usepackage{csvsimple}
+\usepackage{csvsimple, siunitx, array, booktabs}
+\usepackage{pgfplots, pgfplotstable}
+\usepackage{makecell}
+
+\usepackage{xparse} 
+\ExplSyntaxOn
+\DeclareExpandableDocumentCommand\acc{mm}{\fp_eval:n{#1*#2*100}}
+\DeclareExpandableDocumentCommand\mult{mm}{\fp_eval:n{#1*#2}}
+\ExplSyntaxOff
+% \DeclareExpandableDocumentCommand\mult{mm}{\fp_eval:n{#1*#2}}
+% \newcommand{\acc}[1]{\mult{#1}{100}}
 
 % \usepackage{xcolor}
 % \usepackage[dvipsnames]{xcolor}
