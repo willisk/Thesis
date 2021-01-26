@@ -73,9 +73,11 @@ Furthermore, the original objective that was used in training the neural network
 
 
 \subsection{Objective}
-Given: $\varphi$, $\set A$ (or $\varphi(\set A)$ statistics)
+Given: $\varphi$, $\set A$ (or $\varphi(\set A)$ statistics), 
+fixed size $n_{\set B}$, target labels $\{y^{(i)}\}_{i=1}^{n_{\set B}}$.
 \[
-    \min_{\set B \in \powerset Z} \loss _\varphi (\set A, \set B)
+    \min_{\set B \in \finiteset {\set Z}} \loss _\varphi (\set A, \set B) \comma{where} 
+    \set B = \{(\vec x^{(i)}, y^{(i)})\}_{i=1}^{n_{\set B}}
 \]
     
 
@@ -95,5 +97,9 @@ Given: $\varphi$, $\set A$ (or $\varphi(\set A)$ statistics)
 \subsection{Inversion Evaluation}
 The result of the optimization process can be evaluated by calculating the accuracy obtained by $\Phi$. 
 Though, since $\Phi$ was used in the optimization process, it will likely display heavy bias to what it believes is a correctly classified sample.
-For this sake, another neural network $\Phi_{\text{ver}}$ can be employed, which has been separately trained on either $\set A$ or another data set. Though, practice has shown that a very small portion of $\set A$ is only needed to obtain a close-enough guess at the true statistics of $\set A$.
+For this sake, another neural network $\Phi_{\text{ver}}$ can be employed, which has been separately trained on either $\set A$ or another data set. 
+
+%Though, practice has shown that a very small portion of $\set A$ is only needed to obtain a close-enough guess at the true statistics of $\set A$.
+
+
 
