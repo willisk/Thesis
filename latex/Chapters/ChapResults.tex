@@ -2,12 +2,20 @@
 
 \subsection{Quantitative Results}
 
-
-% \begin{filecontents*}{grade.csv}
-% name,givenname,matriculation,gender,grade
-% Maier,Hans,12345,m,1.0
-% Huber,Anna,23456,f,2.3
-% Weisbaeck,Werner,34567,m,5.0
-% \end{filecontents*}
-
-\csvautotabular{figures}
+\pgfplotstableset{
+col sep = comma,
+string replace*={_}{\textsubscript},
+every head row/.style={before row=\toprule,after row=\midrule},
+every last row/.style={after row=\bottomrule},
+every column/.style={column type=l, precision=1, zerofill},
+columns={[index]0, [index]1, [index]2, [index]3, [index]4, [index]5, [index]6},
+display columns/0/.style={column name=\textbf{Method}, column type=l, string type},
+display columns/1/.style={column name=\textbf{Accuracy} [\%], multiply with=100},
+display columns/2/.style={column name=\makecell{validation \\ \textbf{Accuracy}} [\%], column type=l, multiply with=100},
+display columns/3/.style={column name=\makecell{verifier \\ \textbf{Accuracy}} [\%], column type=l, multiply with=100},
+display columns/4/.style={column name=\textbf{l2-error}},
+display columns/5/.style={column name=\textbf{PSNR}},
+display columns/6/.style={column name=\textbf{SSIM} [\%], column type=l, multiply with=100},
+}
+\pgfplotstabletypeset{figures/reconstruction_CIFAR10_baseline.csv}
+\pgfplotstabletypeset{figures/reconstruction_CIFAR10_results.csv}
