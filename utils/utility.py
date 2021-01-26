@@ -1046,7 +1046,7 @@ def make_table(data, out=None, row_name="", spacing=2):
             print('-' * len(line))
     if out:
         row_data = ([[row_name] + headers] +
-                    [[m] + [f"{data[m][h]:.5f}" if h in data[m] else "--"
+                    [[m] + [f'{data[m][h]:.5f}' if h in data[m] else ''
                             for h in headers]
                      for m in data.keys()])
         table = '\n'.join(','.join(rd) for rd in row_data)
