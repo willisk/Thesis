@@ -77,7 +77,7 @@ parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("--reset_stats", action="store_true")
 parser.add_argument("--save_run", action="store_true")
 parser.add_argument("-run_name", type=str, default="")
-parser.add_argument("--compare_runs", action="store_true")
+parser.add_argument("--silent", action="store_true")
 parser.add_argument("-methods", nargs='+', type=str)
 
 # # GMM
@@ -98,6 +98,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args.r_distort_level = 0.1
     args.plot_ideal = True
     args.f_reg = 0
+    args.silent = True
     # args.nn_resume_train = True
     # args.nn_reset_train = True
     # args.reset_stats = True
@@ -107,27 +108,16 @@ else:
     args = parser.parse_args()
 
 USE_DRIVE = True
-
-if args.compare_runs:
-    assert args.run_name != "", "'run_name' required for comparison."
-    _save_run = args.save_run
-    args.save_run = False   # don't save runs when iterating over many
-
-
-print("#", __doc__)
-print("# on", args.dataset)
-
-
-# ======= Hyperparameters =======
-print("Hyperparameters:")
-print(utility.dict_to_str(vars(args), '\n'), '\n')
-
-# ======= Set Seeds =======
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 utility.seed_everything(args.seed)
 
-# ======= Device =======
-DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-print(f"Running on '{DEVICE}'\n")
+if not args.silent:
+    print("#", __doc__)
+    print("# on", args.dataset)
+    print("Hyperparameters:")
+    print(utility.dict_to_str(vars(args), '\n'), '\n')
+    print(f"Running on '{DEVICE}'\n")
+
 
 # ======= Create Dataset =======
 
@@ -174,7 +164,7 @@ utility.train(net, DATA_A, criterion, optimizer,
               )
 net.eval()
 
-if not 'ipykernel_launcher' in sys.argv[0]:
+if not args.silent:
     utility.print_net_accuracy(net, DATA_A, estimate_epochs=10)
 
 verifier_path, verifier_net = dataset.verifier_net()
@@ -188,7 +178,7 @@ if verifier_net:
                   reset=nn_reset_training,
                   use_drive=USE_DRIVE,
                   )
-    if not 'ipykernel_launcher' in sys.argv[0]:
+    if not args.silent:
         print("verifier ", end='')
         utility.print_net_accuracy(verifier_net, DATA_A, estimate_epochs=10)
 print()
@@ -319,7 +309,7 @@ def fig_path_fmt(name, filetype="png"):
 show_batch = next(iter(DATA_B))[0][:50].to(DEVICE)
 
 
-if args.dataset != 'GMM':
+if not args.silent and args.dataset != 'GMM':
     utility.im_show(show_batch,
                     fig_path_fmt("ground_truth_full"))
     utility.im_show(distort(show_batch),
@@ -402,7 +392,8 @@ for method, loss_fn in methods:
     if args.methods is not None and method not in args.methods:
         continue
 
-    print("\n\n\n## Method:", method)
+    if not args.silent:
+        print("\n\n\n## Method:", method)
 
     reconstruct = ReconstructionModel()
     reconstruct.train()
@@ -420,23 +411,24 @@ for method, loss_fn in methods:
         data_invert = (invert_fn(inputs), labels)
         info = loss_fn(data_invert)
 
-        iqa = iqa_metrics([data], invert_fn)
-        if args.dataset == 'GMM':
-            iqa.pop('c-entropy')
-            info = {**info, **iqa}
-        else:
-            info['[IQA metrics] accuracy'] = info['accuracy']
-            for k, v in iqa.items():
-                info[f'[IQA metrics] {k}'] = v
+        if not args.silent:
+            iqa = iqa_metrics([data], invert_fn)
+            if args.dataset == 'GMM':
+                iqa.pop('c-entropy')
+                info = {**info, **iqa}
+            else:
+                info['[IQA metrics] accuracy'] = info['accuracy']
+                for k, v in iqa.items():
+                    info[f'[IQA metrics] {k}'] = v
 
-        if args.plot_ideal:
-            with torch.no_grad():
-                info['reference'] = loss_fn(data)['loss'].item()
+            if args.plot_ideal:
+                with torch.no_grad():
+                    info['reference'] = loss_fn(data)['loss'].item()
 
         return info
 
     def callback_fn(epoch, metrics):
-        if args.dataset == 'GMM':
+        if args.silent or args.dataset == 'GMM':
             return
         if epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
@@ -453,7 +445,7 @@ for method, loss_fn in methods:
                           optimizer,
                           #    scheduler=scheduler,
                           steps=inv_steps,
-                          plot=not args.compare_runs,
+                          plot=not args.silent,
                           use_amp=args.use_amp,
                           #    grad_norm_fn=grad_norm_fn,
                           callback_fn=callback_fn,
@@ -465,18 +457,18 @@ for method, loss_fn in methods:
     # ======= Result =======
     reconstruct.eval()
 
-    if args.dataset != 'GMM':
+    if not args.silent and args.dataset != 'GMM':
         print("Inverted:")
         if len(show_batch) != len(B):
             print(f"{len(show_batch)} / {len(B)} ")
         utility.im_show(invert_fn(show_batch), fig_path_fmt(
             f"{method}_epoch_{inv_steps}_full"))
 
-    print("Results:")
-
     # Loss
-    loss = info['loss'].values[-1]
-    print(f"\tloss: {loss:.3f}")
+    if not args.silent:
+        loss = info['loss'].values[-1]
+        print("Results:")
+        print(f"\tloss: {loss:.3f}")
 
     # NN Accuracy
     accuracy = utility.net_accuracy(net, DATA_B, inputs_pre_fn=invert_fn)
@@ -545,20 +537,14 @@ if args.dataset == 'GMM':
         DATA_B, lambda x: x)['c-entropy']
 
 
-print("\n# Summary")
-print("=========\n")
+if not args.silent:
+    print("\n# Summary")
+    print("=========\n")
 
+    table_path = fig_path_fmt("baseline", "csv")
+    utility.make_table(baseline, row_name="baseline", out=table_path)
 
-table_path = fig_path_fmt("baseline", "csv")
-utility.make_table(baseline, row_name="baseline", out=table_path)
+    print("\nReconstruction methods:")
 
-print("\nReconstruction methods:")
-
-table_path = fig_path_fmt("results", "csv")
-utility.make_table(metrics, row_name="method", out=table_path)
-
-
-if args.compare_runs:
-    if 'run' not in globals():
-        run = {}
-    run[args.run_name] = metrics
+    table_path = fig_path_fmt("results", "csv")
+    utility.make_table(metrics, row_name="method", out=table_path)
