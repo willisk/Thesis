@@ -323,10 +323,6 @@ if args.dataset != 'GMM':
 
 Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
 
-if args.dataset == 'GMM':
-    print(iqa_metrics(DATA_A, lambda x: x)['c-entropy'])
-    print(iqa_metrics(DATA_B, lambda x: x)['c-entropy'])
-
 
 @torch.no_grad()
 def iqa_metrics(data_loader, transform):
