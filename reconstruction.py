@@ -536,7 +536,7 @@ print("=========\n")
 
 
 table_path = fig_path_fmt("baseline", "csv")
-utility.make_table(baseline, row_name="baseline", out=table_path, sort_rows=True)
+utility.make_table(baseline, row_name="baseline", out=table_path)
 
 print("\nReconstruction methods:")
 
