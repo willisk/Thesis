@@ -1031,13 +1031,22 @@ def _plot_random_projections(RP, X_proj, mean, color='r', marker='o', scatter=Tr
     #     plt.plot(*list(zip(mean, mean + rp * 3)), c='black')
 
 
-def make_table(data, out=None, row_name="", spacing=2):
+def make_table(data, out=None, row_name="", sort_rows=False, spacing=2):
     print()
-    headers = list(dict.fromkeys([k for d in data.values() for k in d.keys()]))
-    row_data = ([[row_name] + headers] +
+    header = list(dict.fromkeys([k for d in data.values() for k in d.keys()]))
+
+    kw_order = ['acc', 'acc(ver)', 'acc(val)', 'l2-err', 'c-entropy']
+    order = {key: str(i) for i, key in enumerate(kw_order)}
+    header = sorted(header, key=lambda h: order[h] if h in order else h)
+
+    rows = data.keys()
+    if sort_rows:
+        rows = sorted(rows)
+
+    row_data = ([[row_name] + header] +
                 [[m] + [(f"{data[m][h] * 100:.1f}%" if 'acc' in h else f"{data[m][h]:.2f}") if h in data[m] else "--"
-                        for h in headers]
-                 for m in data.keys()])
+                        for h in header]
+                 for m in rows])
     widths = [max(map(len, column)) for column in zip(*row_data)]
     for i, rd in enumerate(row_data):
         line = "".join(f"{e:<{w + spacing}}" for e, w in zip(rd, widths))
@@ -1045,10 +1054,10 @@ def make_table(data, out=None, row_name="", spacing=2):
         if i == 0:
             print('-' * len(line))
     if out:
-        row_data = ([[row_name] + headers] +
+        row_data = ([[row_name] + header] +
                     [[m] + [f'{data[m][h]:.5f}' if h in data[m] else ''
-                            for h in headers]
-                     for m in data.keys()])
+                            for h in header]
+                     for m in rows])
         table = '\n'.join(','.join(rd) for rd in row_data)
         with open(out, 'w') as f:
             f.write(table)
