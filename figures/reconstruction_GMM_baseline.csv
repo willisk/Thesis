@@ -1,4 +1,4 @@
-baseline,acc,acc(val),acc(ver),l2-err,c-entropy
-Source B (original),0.93555,0.93262,0.93359,53.5061),
-Source B (distorted),0.62305,0.64648,0.58984,1.41866,inf
-Target A,0.99320,,0.99330,,
+baseline,acc,acc(val),acc(ver),c-entropy,l2-err
+Source B (original),0.93359,0.93262,0.93164,54.94407,
+Source B (distorted),0.62500,0.64551,0.58984,inf,1.41866
+Target A,0.99200,,0.99290,54.90430,
