@@ -520,14 +520,15 @@ if verifier_net:
     baseline['Source B (original)']['acc(ver)'] = accuracy_B_ver
     baseline['Target A']['acc(ver)'] = accuracy_A_ver
 
-for k, v in iqa_distort.items():
-    baseline['Source B (distorted)'][k] = v
-
 if args.dataset == 'GMM':
     baseline['Target A']['c-entropy'] = iqa_metrics(DATA_A, lambda x: x)[
         'c-entropy']
     baseline['Source B (original)']['c-entropy'] = iqa_metrics(DATA_B,
                                                                lambda x: x)['c-entropy']
+
+for k, v in reversed(sorted(iqa_distort.items())):
+    baseline['Source B (distorted)'][k] = v
+
 
 print("\n# Summary")
 print("=========\n")
