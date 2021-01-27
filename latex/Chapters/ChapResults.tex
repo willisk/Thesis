@@ -2,29 +2,77 @@
 
 \subsection{Quantitative Results}
 
-\pgfplotstableset{
-    highlight/.style={postproc cell content/.append style={/pgfplots/table/@cell content/.add={$\bf}{$}}},
-}
 
-% postproc cell content/.append style={/pgfplots/table/@cell content/.add={$\noexpand\bf}{$}},
+The results are presented
 
-\pgfplotstableset{
-col sep = comma,
-string replace*={_}{\textsubscript},
-every head row/.style={before row=\toprule,after row=\midrule},
-every last row/.style={after row=\bottomrule},
-every column/.style={column type=l, precision=1, zerofill},
-columns={[index]0, [index]1, [index]2, [index]3, [index]4, [index]5, [index]6},
-display columns/0/.style={column name=\textbf{Method}, column type=l, string type},
-display columns/1/.style={column name=\textbf{Accuracy} [\%], multiply with=100},
-display columns/2/.style={column name=\makecell{validation \\ \textbf{Accuracy}} [\%], column type=l, multiply with=100},
-display columns/3/.style={column name=\makecell{verifier \\ \textbf{Accuracy}} [\%], column type=l, multiply with=100},
-display columns/4/.style={column name=\textbf{l2-error}},
-display columns/5/.style={column name=\textbf{PSNR}},
-display columns/6/.style={column name=\textbf{SSIM} [\%], column type=l, multiply with=100},
-}
-\pgfplotstabletypeset{figures/reconstruction_CIFAR10_baseline.csv}
+\subsubsection{GMM}
+\begin{table}
+\label{table:recgmmbaseline}
+\centering
+\footnotesize
+\pgfplotstabletypeset[gmm]{figures/reconstruction_GMM_baseline.csv}
+\caption{baseline scores for comparison}
+\end{table}
+
+\begin{table}
+\label{table:recgmmresults}
+\centering
+\footnotesize
 \pgfplotstabletypeset[
+gmm,
+% every row 11 column 1/.style={highlight},
+% every row 11 column 2/.style={highlight},
+% every row 11 column 3/.style={highlight},
+% every row 11 column 4/.style={highlight},
+% every row 5 column 5/.style={highlight},
+% every row 6 column 5/.style={highlight},
+% every row 6 column 6/.style={highlight},
+]{figures/reconstruction_GMM_results.csv}
+\caption{Metrics on reconstruction results after 100 optimization epochs for CIFAR10}
+\end{table}
+
+\subsubsection{MNIST}
+\begin{table}
+\label{table:recmnistbaseline}
+\centering
+\footnotesize
+\pgfplotstabletypeset[images]{figures/reconstruction_MNIST_baseline.csv}
+\caption{baseline scores for comparison}
+\end{table}
+
+\begin{table}
+\label{table:recmnistresults}
+\centering
+\footnotesize
+\pgfplotstabletypeset[
+images,
+every row 11 column 1/.style={highlight},
+every row 11 column 2/.style={highlight},
+every row 11 column 3/.style={highlight},
+every row 11 column 4/.style={highlight},
+every row 5 column 5/.style={highlight},
+every row 6 column 5/.style={highlight},
+every row 6 column 6/.style={highlight},
+]{figures/reconstruction_MNIST_results.csv}
+\caption{Metrics on reconstruction results after 100 optimization epochs for CIFAR10}
+\end{table}
+
+
+\subsubsection{CIFAR10}
+\begin{table}
+\label{table:reccifar10baseline}
+\centering
+\footnotesize
+\pgfplotstabletypeset[images]{figures/reconstruction_CIFAR10_baseline.csv}
+\caption{baseline scores for comparison}
+\end{table}
+
+\begin{table}
+\label{table:reccifar10results}
+\centering
+\footnotesize
+\pgfplotstabletypeset[
+images,
 every row 2 column 1/.style={highlight},
 every row 4 column 1/.style={highlight},
 every row 3 column 2/.style={highlight},
@@ -33,6 +81,8 @@ every row 3 column 4/.style={highlight},
 every row 3 column 5/.style={highlight},
 every row 3 column 6/.style={highlight},
 ]{figures/reconstruction_CIFAR10_results.csv}
+\caption{Metrics on reconstruction results after 100 optimization epochs for CIFAR10}
+\end{table}
 
 
 
