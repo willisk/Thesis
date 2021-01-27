@@ -2,15 +2,16 @@
 
 \subsection{Quantitative Results}
 
-
-The results are presented
-
 \subsubsection{GMM}
+
 \begin{table}
 \label{table:recgmmbaseline}
 \centering
 \footnotesize
-\pgfplotstabletypeset[gmm]{figures/reconstruction_GMM_baseline.csv}
+\pgfplotstabletypeset[
+gmm,
+display columns/0/.style={column name=\textbf{Baseline}, column type=l, string type},
+]{figures/reconstruction_GMM_baseline.csv}
 \caption{baseline scores for comparison}
 \end{table}
 
@@ -20,23 +21,32 @@ The results are presented
 \footnotesize
 \pgfplotstabletypeset[
 gmm,
-% every row 11 column 1/.style={highlight},
-% every row 11 column 2/.style={highlight},
-% every row 11 column 3/.style={highlight},
-% every row 11 column 4/.style={highlight},
-% every row 5 column 5/.style={highlight},
-% every row 6 column 5/.style={highlight},
-% every row 6 column 6/.style={highlight},
+every row 6 column 1/.style={highlight},
+every row 8 column 1/.style={highlight},
+every row 10 column 1/.style={highlight},
+every row 11 column 1/.style={highlight},
+every row 7 column 2/.style={highlight},
+every row 4 column 3/.style={highlight},
+every row 8 column 4/.style={highlight},
+every row 8 column 5/.style={highlight},
 ]{figures/reconstruction_GMM_results.csv}
-\caption{Metrics on reconstruction results after 100 optimization epochs for CIFAR10}
+\caption{Metrics on reconstruction results after 100 optimization epochs for Gaussian Mixture Model data set}
 \end{table}
+
+All proposed methods perform 
+
+
+
 
 \subsubsection{MNIST}
 \begin{table}
 \label{table:recmnistbaseline}
 \centering
 \footnotesize
-\pgfplotstabletypeset[images]{figures/reconstruction_MNIST_baseline.csv}
+\pgfplotstabletypeset[
+images,
+display columns/0/.style={column name=\textbf{Baseline}, column type=l, string type},
+]{figures/reconstruction_MNIST_baseline.csv}
 \caption{baseline scores for comparison}
 \end{table}
 
@@ -51,10 +61,9 @@ every row 11 column 2/.style={highlight},
 every row 11 column 3/.style={highlight},
 every row 11 column 4/.style={highlight},
 every row 5 column 5/.style={highlight},
-every row 6 column 5/.style={highlight},
 every row 6 column 6/.style={highlight},
 ]{figures/reconstruction_MNIST_results.csv}
-\caption{Metrics on reconstruction results after 100 optimization epochs for CIFAR10}
+\caption{Metrics on reconstruction results after 100 optimization epochs for MNIST data set}
 \end{table}
 
 
@@ -63,7 +72,10 @@ every row 6 column 6/.style={highlight},
 \label{table:reccifar10baseline}
 \centering
 \footnotesize
-\pgfplotstabletypeset[images]{figures/reconstruction_CIFAR10_baseline.csv}
+\pgfplotstabletypeset[
+images,
+display columns/0/.style={column name=\textbf{Baseline}, column type=l, string type},
+]{figures/reconstruction_CIFAR10_baseline.csv}
 \caption{baseline scores for comparison}
 \end{table}
 
