@@ -14,6 +14,7 @@ import torchvision
 import matplotlib.pyplot as plt
 # plt.style.use('default')
 import numpy as np
+import pandas as pd
 
 PWD = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(PWD)
@@ -75,6 +76,9 @@ parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("--reset_stats", action="store_true")
 parser.add_argument("--save_run", action="store_true")
+parser.add_argument("-run_name", type=str, default="")
+parser.add_argument("--compare_runs", action="store_true")
+parser.add_argument("-methods", nargs='+', type=str)
 
 # # GMM
 # parser.add_argument("-g_modes", type=int, default=3)
@@ -103,6 +107,11 @@ else:
     args = parser.parse_args()
 
 USE_DRIVE = True
+
+if args.compare_runs:
+    assert args.run_name != "", "'run_name' required for comparison."
+    args._save_run = args.save_run
+    args.save_run = False   # don't save runs when iterating over many
 
 print("#", __doc__)
 print("# on", args.dataset)
@@ -296,7 +305,10 @@ methods = methods.get_methods(DATA_A, net, dataset, args, DEVICE)
 
 def fig_path_fmt(name, filetype="png"):
     if args.save_run:
-        path = f"figures/reconstruction_{args.dataset}_{name}.{filetype}".replace(
+        path = "figures"
+        if args.run_name:
+            path = f"figures/{args.run_name}"
+        path = f"{path}/reconstruction_{args.dataset}_{name}.{filetype}".replace(
             ' ', '_')
         save_path, _ = utility.search_drive(path, use_drive=USE_DRIVE)
         return save_path
@@ -308,17 +320,17 @@ show_batch = next(iter(DATA_B))[0][:50].to(DEVICE)
 
 if args.dataset != 'GMM':
     utility.im_show(show_batch,
-                    fig_path_fmt(f"ground_truth_full"))
+                    fig_path_fmt("ground_truth_full"))
     utility.im_show(distort(show_batch),
-                    fig_path_fmt(f"distorted_full"))
+                    fig_path_fmt("distorted_full"))
 
     print("\nground truth:", flush=True)
     utility.im_show(show_batch[:10],
-                    fig_path_fmt(f"ground_truth"))
+                    fig_path_fmt("ground_truth"))
 
     print("\ndistorted:")
     utility.im_show(distort(show_batch[:10]),
-                    fig_path_fmt(f"distorted"))
+                    fig_path_fmt("distorted"))
 
 
 Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
@@ -333,7 +345,7 @@ def iqa_metrics(data_loader, transform):
     if args.dataset == 'CIFAR10' or args.dataset == 'MNIST':
         metrics['PSNR'] = 0
         metrics['SSIM'] = 0
-        metrics['HaarPsi'] = 0
+        # metrics['HaarPsi'] = 0
 
         for inputs, labels in data_loader:
             images = inputs
@@ -342,11 +354,11 @@ def iqa_metrics(data_loader, transform):
             images = utility.to_zero_one(images)
             restored = utility.to_zero_one(restored)
 
-            for image, restored_image in zip(
-                    images.permute(0, 2, 3, 1).squeeze().cpu().numpy(),
-                    restored.permute(0, 2, 3, 1).squeeze().cpu().numpy()):
-                metrics['HaarPsi'] += (haar_psi_numpy(image, restored_image)[0]
-                                       / len(data_loader) / len(inputs))
+            # for image, restored_image in zip(
+            #         images.permute(0, 2, 3, 1).squeeze().cpu().numpy(),
+            #         restored.permute(0, 2, 3, 1).squeeze().cpu().numpy()):
+            #     metrics['HaarPsi'] += (haar_psi_numpy(image, restored_image)[0]
+            #                            / len(data_loader) / len(inputs))
 
             if images.shape[1] == 3:
                 images = utility.rbg_to_luminance(images)
@@ -386,8 +398,9 @@ def grad_norm_fn(x):
 
 
 for method, loss_fn in methods:
-    # if method == "NN ALL":
-    #     break
+    if args.methods is not None and method not in args.methods:
+        continue
+
     print("\n\n\n## Method:", method)
 
     reconstruct = ReconstructionModel()
@@ -544,6 +557,7 @@ table_path = fig_path_fmt("results", "csv")
 utility.make_table(metrics, row_name="method", out=table_path)
 
 
-def plot_metrics(method, **kwargs):
-    print(f"\n## {method}")
-    utility.plot_metrics(plots[method], **kwargs)
+if args.compare_runs:
+    if 'run' not in globals():
+        run = pd.DataFrame()
+    run[args.run_name] = metrics
