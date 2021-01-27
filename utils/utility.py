@@ -1120,6 +1120,7 @@ def invert(data_loader, loss_fn, optimizer,
            print_grouped=False,
            ):
 
+    print(f"plot={plot} !!!!!!!!")
     assert valid_data_loader(
         data_loader), f"invalid data_loader: {data_loader}"
 

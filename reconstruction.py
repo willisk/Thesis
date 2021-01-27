@@ -108,13 +108,14 @@ else:
 
 USE_DRIVE = True
 
-print("#", __doc__)
-print("# on", args.dataset)
-
 if args.compare_runs:
     assert args.run_name != "", "'run_name' required for comparison."
-    args._save_run = args.save_run
+    _save_run = args.save_run
     args.save_run = False   # don't save runs when iterating over many
+
+
+print("#", __doc__)
+print("# on", args.dataset)
 
 
 # ======= Hyperparameters =======
