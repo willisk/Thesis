@@ -250,15 +250,15 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
                     info[k] = f_stats * f_stats_scale * v
                 loss += f_stats * f_stats_scale * cost_stats
 
+            if net_last_outputs is None:
+                net_last_outputs = net(inputs)
+                info['accuracy'] = utility.count_correct(
+                    net_last_outputs, labels) / len(labels)
+
             if f_crit:
-                if net_last_outputs is None:
-                    net_last_outputs = net(inputs)
                 loss_crit = f_crit * criterion(net_last_outputs, labels)
                 info['[losses] criterion'] = loss_crit.item()
                 loss += loss_crit
-
-                info['accuracy'] = utility.count_correct(
-                    net_last_outputs, labels) / len(labels)
 
             info['loss'] = loss
             return info
