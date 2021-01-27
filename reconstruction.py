@@ -95,8 +95,8 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args.plot_ideal = True
     args.f_reg = 0
     # args.nn_resume_train = True
-    args.nn_reset_train = True
-    args.reset_stats = True
+    # args.nn_reset_train = True
+    # args.reset_stats = True
     # args.use_std = True
     # args.save_run = True
 else:
@@ -323,6 +323,10 @@ if args.dataset != 'GMM':
 
 Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
 
+if args.dataset == 'GMM':
+    print(iqa_metrics(DATA_A, lambda x: x)['c-entropy'])
+    print(iqa_metrics(DATA_B, lambda x: x)['c-entropy'])
+
 
 @torch.no_grad()
 def iqa_metrics(data_loader, transform):
@@ -522,6 +526,12 @@ if verifier_net:
 
 for k, v in iqa_distort.items():
     baseline['Source B (distorted)'][k] = v
+
+if args.dataset == 'GMM':
+    baseline['Target A']['c-entropy'] = iqa_metrics(DATA_A, lambda x: x)[
+        'c-entropy']
+    baseline['Source B (original)']['c-entropy'] = iqa_metrics(DATA_B,
+                                                               lambda x: x)['c-entropy']
 
 print("\n# Summary")
 print("=========\n")
