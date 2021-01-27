@@ -364,7 +364,7 @@ def iqa_metrics(data_loader, transform):
         metrics['c-entropy'] = 0
         for inputs, labels in data_loader:
             metrics['c-entropy'] += dataset.cross_entropy(
-                transform(inputs)) / len(data_loader)
+                transform(inputs)).item() / len(data_loader)
 
     return metrics
 
