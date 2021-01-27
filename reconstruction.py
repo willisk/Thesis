@@ -507,21 +507,21 @@ if verifier_net:
     accuracy_B_pert_ver = utility.net_accuracy(
         verifier_net, DATA_B, inputs_pre_fn=distort)
 
-baseline['B (original)']['acc'] = accuracy_B
-baseline['B (original)']['acc(val)'] = accuracy_C
+baseline['Source B (original)']['acc'] = accuracy_B
+baseline['Source B (original)']['acc(val)'] = accuracy_C
 
-baseline['B (distorted)']['acc'] = accuracy_B_pert
-baseline['B (distorted)']['acc(val)'] = accuracy_C_pert
+baseline['Source B (distorted)']['acc'] = accuracy_B_pert
+baseline['Source B (distorted)']['acc(val)'] = accuracy_C_pert
 
-baseline['A']['acc'] = accuracy_A
+baseline['Target A']['acc'] = accuracy_A
 
 if verifier_net:
-    baseline['B (distorted)']['acc(ver)'] = accuracy_B_pert_ver
-    baseline['B (original)']['acc(ver)'] = accuracy_B_ver
-    baseline['A']['acc(ver)'] = accuracy_A_ver
+    baseline['Source B (distorted)']['acc(ver)'] = accuracy_B_pert_ver
+    baseline['Source B (original)']['acc(ver)'] = accuracy_B_ver
+    baseline['Target A']['acc(ver)'] = accuracy_A_ver
 
 for k, v in iqa_distort.items():
-    baseline['B (distorted)'][k] = v
+    baseline['Source B (distorted)'][k] = v
 
 print("\n# Summary")
 print("=========\n")
