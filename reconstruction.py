@@ -80,8 +80,6 @@ parser.add_argument("-run_name", type=str, default="")
 parser.add_argument("--compare_runs", action="store_true")
 parser.add_argument("-methods", nargs='+', type=str)
 
-print(sys.argv)
-
 # # GMM
 # parser.add_argument("-g_modes", type=int, default=3)
 # parser.add_argument("-g_scale_mean", type=float, default=2)
@@ -110,13 +108,13 @@ else:
 
 USE_DRIVE = True
 
+print("#", __doc__)
+print("# on", args.dataset)
+
 if args.compare_runs:
     assert args.run_name != "", "'run_name' required for comparison."
     args._save_run = args.save_run
     args.save_run = False   # don't save runs when iterating over many
-
-print("#", __doc__)
-print("# on", args.dataset)
 
 
 # ======= Hyperparameters =======
@@ -454,7 +452,7 @@ for method, loss_fn in methods:
                           optimizer,
                           #    scheduler=scheduler,
                           steps=inv_steps,
-                          plot=True,
+                          plot=~args.compare_runs,
                           use_amp=args.use_amp,
                           #    grad_norm_fn=grad_norm_fn,
                           callback_fn=callback_fn,
