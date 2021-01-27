@@ -648,6 +648,8 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
         metrics = pd.DataFrame(metrics)
     metrics = metrics.fillna(value=np.nan)
 
+    print("acc in metr:", "accuracy" in metrics)
+
     if 'step' in metrics:
         steps = metrics['step']
     else:
