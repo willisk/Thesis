@@ -3,6 +3,12 @@
 \subsection{Quantitative Results}
 
 \pgfplotstableset{
+    highlight/.style={postproc cell content/.append style={/pgfplots/table/@cell content/.add={$\bf}{$}}},
+}
+
+% postproc cell content/.append style={/pgfplots/table/@cell content/.add={$\noexpand\bf}{$}},
+
+\pgfplotstableset{
 col sep = comma,
 string replace*={_}{\textsubscript},
 every head row/.style={before row=\toprule,after row=\midrule},
@@ -18,4 +24,34 @@ display columns/5/.style={column name=\textbf{PSNR}},
 display columns/6/.style={column name=\textbf{SSIM} [\%], column type=l, multiply with=100},
 }
 \pgfplotstabletypeset{figures/reconstruction_CIFAR10_baseline.csv}
-\pgfplotstabletypeset{figures/reconstruction_CIFAR10_results.csv}
+\pgfplotstabletypeset[
+every row 2 column 1/.style={highlight},
+every row 4 column 1/.style={highlight},
+every row 3 column 2/.style={highlight},
+every row 4 column 3/.style={highlight},
+every row 3 column 4/.style={highlight},
+every row 3 column 5/.style={highlight},
+every row 3 column 6/.style={highlight},
+]{figures/reconstruction_CIFAR10_results.csv}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
