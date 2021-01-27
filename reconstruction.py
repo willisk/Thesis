@@ -476,20 +476,23 @@ for method, loss_fn in methods:
         net, DATA_C, inputs_pre_fn=invert_fn)
     metrics[method]['acc'] = accuracy
     metrics[method]['acc(val)'] = accuracy_val
-    print(f"\tnn accuracy: {accuracy * 100:.1f} %")
-    print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
+    if not args.silent:
+        print(f"\tnn accuracy: {accuracy * 100:.1f} %")
+        print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
 
     if verifier_net:
         accuracy_ver = utility.net_accuracy(
             verifier_net, DATA_B, inputs_pre_fn=invert_fn)
         metrics[method]['acc(ver)'] = accuracy_ver
-        print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
+        if not args.silent:
+            print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
 
     iqa_invert = iqa_metrics(DATA_B, invert_fn)
 
     for k, v in iqa_invert.items():
         metrics[method][k] = v
-        print(f"\taverage {k}: {v:.3f} | (before: {iqa_distort[k]:.3f})")
+        if not args.silent:
+            print(f"\taverage {k}: {v:.3f} | (before: {iqa_distort[k]:.3f})")
 
 
 baseline = defaultdict(dict)
