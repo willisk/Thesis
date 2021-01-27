@@ -252,8 +252,9 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
 
             if net_last_outputs is None:
                 net_last_outputs = net(inputs)
-                info['accuracy'] = utility.count_correct(
-                    net_last_outputs, labels) / len(labels)
+
+            info['accuracy'] = utility.count_correct(
+                net_last_outputs, labels) / len(labels)
 
             if f_crit:
                 loss_crit = f_crit * criterion(net_last_outputs, labels)
