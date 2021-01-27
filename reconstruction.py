@@ -559,5 +559,5 @@ utility.make_table(metrics, row_name="method", out=table_path)
 
 if args.compare_runs:
     if 'run' not in globals():
-        run = pd.DataFrame()
+        run = {}
     run[args.run_name] = metrics
