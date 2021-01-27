@@ -80,6 +80,8 @@ parser.add_argument("-run_name", type=str, default="")
 parser.add_argument("--compare_runs", action="store_true")
 parser.add_argument("-methods", nargs='+', type=str)
 
+print(sys.argv)
+
 # # GMM
 # parser.add_argument("-g_modes", type=int, default=3)
 # parser.add_argument("-g_scale_mean", type=float, default=2)
