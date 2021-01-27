@@ -448,6 +448,8 @@ for method, loss_fn in methods:
 
     metrics_fig_path = fig_path_fmt(f"{method}", "pdf")
 
+    print("compare runs", args.compare_runs, ~
+          args.compare_runs, not args.compare_runs)
     info = utility.invert(DATA_B,
                           data_loss_fn,
                           optimizer,
