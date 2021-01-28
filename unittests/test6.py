@@ -76,7 +76,7 @@ optimizer = torch.optim.Adam(net.parameters(), lr=lr)
 utility.train(net, [(X_A, Y_A)], criterion, optimizer,
               model_path=model_path,
               epochs=steps,
-              #   resume_training=nn_resume_training,
+              #   resume=nn_resume_training,
               plot=True,
               )
 net.eval()

@@ -128,7 +128,7 @@ optimizer = torch.optim.Adam(net.parameters(), lr=nn_lr)
 utility.train(net, DATA_A, criterion, optimizer,
               model_path=model_path,
               epochs=nn_steps,
-              resume_training=nn_resume_training,
+              resume=nn_resume_training,
               reset=nn_reset_training,
               plot=True,
               use_drive=USE_DRIVE,
@@ -145,7 +145,7 @@ if verifier_net:
     utility.train(verifier_net, DATA_A, criterion, optimizer,
                   model_path=verifier_path,
                   epochs=nn_steps,
-                  resume_training=nn_resume_training,
+                  resume=nn_resume_training,
                   reset=nn_reset_training,
                   use_drive=USE_DRIVE,
                   )

@@ -478,7 +478,7 @@ def search_drive(path, use_drive=True):
         if use_drive:
             if not path[0] == '/':
                 path = os.path.abspath(path)
-            drive_root = path.split(pwd)[0] + 'drive/My Drive/' + pwd
+            drive_root = path.split(pwd)[0] + 'drive/My Drive/'
             drive_path = path.replace(pwd, 'drive/My Drive/' + pwd)
 
             save_path, load_path = path, path
@@ -510,7 +510,7 @@ def train(net, data_loader, criterion, optimizer,
           save_every=20,
           model_path=None,
           use_drive=False,
-          resume_training=False,
+          resume=False,
           reset=False,
           track_grad_norm=False,
           scheduler=None,
@@ -535,7 +535,7 @@ def train(net, data_loader, criterion, optimizer,
         if 'optimizer_state_dict' in checkpoint:
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         print("Training Checkpoint restored: " + load_path)
-        if not resume_training:
+        if not resume:
             net.eval()
             return
     else:
