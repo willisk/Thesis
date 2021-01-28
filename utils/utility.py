@@ -32,6 +32,8 @@ from tqdm import tqdm
 
 from matplotlib.axes._axes import _log as matplotlib_axes_logger
 
+__pwd = None
+
 
 class tqdmEpoch(tqdm):
     def __init__(self, epochs, batch_size, **kwargs):
@@ -463,9 +465,14 @@ def assert_mean_var(calculated_mean, calculated_var, recorded_mean, recorded_var
     )
 
 
+def set_pwd(pwd):
+    global __pwd
+    __pwd = pwd
+
+
 def search_drive(path, use_drive=True):
 
-    pwd = 'Thesis'
+    pwd = __pwd if __pwd else "Thesis"
 
     if path is not None:
         if use_drive:
@@ -499,10 +506,16 @@ def valid_data_loader(data_loader):
 
 
 def train(net, data_loader, criterion, optimizer,
-          epochs=10, save_every=20,
-          model_path=None, use_drive=False,
-          resume_training=False, reset=False,
-          scheduler=None, plot=False, use_amp=False):
+          epochs=10,
+          save_every=20,
+          model_path=None,
+          use_drive=False,
+          resume_training=False,
+          reset=False,
+          track_grad_norm=False,
+          scheduler=None,
+          plot=False,
+          use_amp=False):
     "Training Loop"
 
     device = next(net.parameters()).device
@@ -515,15 +528,19 @@ def train(net, data_loader, criterion, optimizer,
         checkpoint = torch.load(load_path, map_location=device)
         if 'net_state_dict' in checkpoint:
             net.load_state_dict(checkpoint['net_state_dict'])
-            init_epoch = checkpoint['epoch']
         else:
             net.load_state_dict(checkpoint)
+        if 'epoch' in checkpoint:
+            init_epoch = checkpoint['epoch']
+        if 'optimizer_state_dict' in checkpoint:
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         print("Training Checkpoint restored: " + load_path)
         if not resume_training:
             net.eval()
             return
     else:
-        print("No Checkpoint found / Reset.")
+        if model_path:
+            print("No Checkpoint found / Reset.")
         if save_path:
             print("Path: " + save_path)
 
@@ -565,8 +582,9 @@ def train(net, data_loader, criterion, optimizer,
                     loss.backward()
                     grad_scale = 1
 
-                for param in net.parameters():
-                    grad_total += (param.grad.norm(2) / grad_scale).item()
+                if track_grad_norm:
+                    for param in net.parameters():
+                        grad_total += (param.grad.norm(2) / grad_scale).item()
 
                 if USE_AMP:
                     scaler.step(optimizer)
@@ -588,15 +606,16 @@ def train(net, data_loader, criterion, optimizer,
 
             loss = total_loss / total_count
             accuracy = total_correct / total_count
-            grad_norm = grad_total  # / total_count
+            # grad_norm = grad_total  / total_count
 
             if scheduler is not None:
-                scheduler.step(grad_norm)
+                scheduler.step(loss)
 
             if TRACKING:
                 TRACKING['loss'].append(loss)
                 TRACKING['accuracy'].append(accuracy)
-                TRACKING['|grad|'].append(grad_norm)
+                if track_grad_norm:
+                    TRACKING['|grad|'].append(grad_norm)
 
             if save_path is not None \
                 and (save_every is not None
@@ -605,6 +624,7 @@ def train(net, data_loader, criterion, optimizer,
                 torch.save({
                     'epoch': epoch,
                     'net_state_dict': net.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
                 }, save_path)
                 saved_epoch = epoch
 
@@ -1211,10 +1231,6 @@ def invert(data_loader, loss_fn, optimizer,
                         metrics[k][step] = v
                     else:
                         metrics[k][step] += v
-                    # if batch_i == 0 or track_per_batch:
-                    #     metrics[k].append(v)
-                    # else:
-                    #     metrics[k][-1] += v
 
                 if not track_per_batch and batch_i == 0:
                     metrics['step'][epoch] = epoch + 1

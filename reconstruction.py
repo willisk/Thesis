@@ -107,7 +107,6 @@ if 'ipykernel_launcher' in sys.argv[0]:
 else:
     args = parser.parse_args()
 
-USE_DRIVE = True
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 utility.seed_everything(args.seed)
 
