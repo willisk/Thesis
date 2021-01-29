@@ -1133,13 +1133,9 @@ def get_bn_layers(net):
     return all_layers
 
 
-def get_num_params(layers):
-    total = 0
-    for l in layers:
-        for p in l.parameters():
-            if p.requires_grad:
-                total += p.numel()
-    return total
+def count_params(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 
 
 def invert(data_loader, loss_fn, optimizer,
