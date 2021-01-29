@@ -28,13 +28,12 @@ import time
 from functools import partial
 
 
-# if __name__ == '__main__':
-#     print('hi')
-#     PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-#     sys.path.append(PWD)
+if __name__ == '__main__':
+    PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.append(PWD)
 
 # from .debug import debug
-from utils.debug import debug
+from .debug import debug
 # from .haarPsi import haar_psi_numpy
 
 from tqdm import tqdm
@@ -171,7 +170,7 @@ def expand_as_r(a, b):
     return a.reshape(shape)
 
 
-@ torch.no_grad()
+@torch.no_grad()
 def net_accuracy(net, data_loader, inputs_pre_fn=None, estimate_epochs=-1):
     total_count = 0.0
     total_correct = 0.0
