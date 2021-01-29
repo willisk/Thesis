@@ -68,8 +68,6 @@ the target data set $\set A$ only given the statistics of data set $\set A$.
 The source data set $\set B$ is in a first step, initialized by random noise.
 Then, by performing gradient descent on the loss function, the source itself is optimized.
 
-Furthermore, the original objective that was used in training the neural network - the \textbf{criterion} - can be used in order to further "push" the samples in a desired direction by specifying individual target labels.
-
 
 
 \subsection{Objective}
@@ -80,18 +78,6 @@ fixed size $n_{\set B}$, target labels $\{y^{(i)}\}_{i=1}^{n_{\set B}}$.
     \set B = \{(\vec x^{(i)}, y^{(i)})\}_{i=1}^{n_{\set B}}
 \]
     
-
-\subsection{Reconstruction Network}
-
-\begin{minipage}{0.5\textwidth}
-\input{Figures/ChartInvertblock}
-\end{minipage}
-\begin{minipage}{0.5\textwidth}
-\input{Figures/ChartInvertNet}
-\end{minipage}
-
-
-
 
 
 \subsection{Inversion Evaluation}
