@@ -1,4 +1,5 @@
 import os
+import sys
 
 import random
 
@@ -25,8 +26,16 @@ from collections.abc import Iterable
 import time
 
 from functools import partial
-from .debug import debug
-from .haarPsi import haar_psi_numpy
+
+
+# if __name__ == '__main__':
+#     print('hi')
+#     PWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+#     sys.path.append(PWD)
+
+# from .debug import debug
+from utils.debug import debug
+# from .haarPsi import haar_psi_numpy
 
 from tqdm import tqdm
 
@@ -87,22 +96,29 @@ def seed_everything(seed, deterministic=False):
 
 
 @torch.no_grad()
-def im_show(im_batch, fig_path=None, scale_each=False):
-    s = 1.6
-    img_grid = torchvision.utils.make_grid(
-        im_batch.cpu(), nrow=10, normalize=True, scale_each=scale_each)
-    plt.figure(figsize=(s * 10, s * len(im_batch)))
-    plt.axis('off')
-    plt.grid(b=None)
-    plt.imshow(img_grid.permute(1, 2, 0))
+def im_show(im_batch, fig_path=None, nrow=10, padding=2, fig_scale=4, interpolation='none', permute=False, scale_each=False, show=True):
+    if permute:
+        im_batch = im_batch.permute(2, 0, 1)
+    im_grid = torchvision.utils.make_grid(
+        im_batch.cpu(), nrow=10, padding=padding, normalize=True, scale_each=scale_each)
     if fig_path:
-        plt.savefig(fig_path, bbox_inches='tight')
-    plt.show()
-    print(flush=True)
+        torchvision.utils.save_image(im_grid, fig_path, padding=0)
+    if show:
+        dpi = (max(im_batch.shape[1:]) + 2 * padding)
+        figsize = (nrow * fig_scale, (len(im_batch) // nrow + 1) * fig_scale)
+        # print(f"figsize={figsize}", f"dpi={dpi}")
+        plt.figure(figsize=figsize, dpi=dpi, frameon=False)
+        plt.box(False)
+        plt.margins(0, 0)
+        plt.axis('off')
+        plt.grid(b=None)
+        plt.imshow(im_grid.permute(1, 2, 0), interpolation=interpolation)
+        plt.show()
+        print(flush=True)
 
 
 def timing(f):
-    @wraps(f)
+    @ wraps(f)
     def wrap(*args, **kwargs):
         start = time.perf_counter()
         result = f(*args, **kwargs)
@@ -155,7 +171,7 @@ def expand_as_r(a, b):
     return a.reshape(shape)
 
 
-@torch.no_grad()
+@ torch.no_grad()
 def net_accuracy(net, data_loader, inputs_pre_fn=None, estimate_epochs=-1):
     total_count = 0.0
     total_correct = 0.0
@@ -176,7 +192,7 @@ def print_net_accuracy(net, data_loader, estimate_epochs=-1):
     print(f"net accuracy: {accuracy * 100:.1f}%")
 
 
-@torch.no_grad()
+@ torch.no_grad()
 def net_accuracy_batch(net, inputs, labels):
     outputs = net(inputs)
     return count_correct(outputs, labels) / len(inputs)
@@ -309,7 +325,7 @@ def collect_min_max(data_loader, device='cpu', path=None, use_drive=True):
 
 
 # @debug
-@torch.no_grad()
+@ torch.no_grad()
 def collect_stats(data_loader, projection, n_classes, class_conditional,
                   std=False, keepdim=False,
                   device='cpu', path=None, use_drive=True, reset=False):
@@ -334,7 +350,7 @@ def collect_stats(data_loader, projection, n_classes, class_conditional,
 
 
 def store_data(func):
-    @wraps(func)
+    @ wraps(func)
     def _func(*args, map_location='cpu', path=None, use_drive=True, reset=False, **kwargs):
 
         save_path, load_path = search_drive(path, use_drive=use_drive)
@@ -355,7 +371,7 @@ def store_data(func):
     return _func
 
 
-@store_data
+@ store_data
 def collect_data(data_loader, data_fn, accumulate_fn, final_fn=None):
 
     print(flush=True, end='')
