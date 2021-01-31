@@ -256,7 +256,7 @@ else:
     def conv1x1Id(n_chan):
         conv = nn.Conv2d(n_chan, n_chan,
                          kernel_size=1,
-                         bias=False,
+                         bias=True,
                          )
         conv.weight.data.fill_(0)
         for i in range(n_chan):

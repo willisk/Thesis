@@ -263,7 +263,7 @@ class MULTIGMM(Dataset):
 
 
 def make_spd_matrix(n_dims, eps_min=0.3):
-    D = torch.diag(torch.abs(torch.rand((n_dims)))) + eps_min
+    D = torch.diag(torch.rand((n_dims)) + eps_min)
     if n_dims == 1:
         return D
     Q = torch.as_tensor(ortho_group.rvs(n_dims), dtype=D.dtype)
