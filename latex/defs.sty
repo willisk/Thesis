@@ -1,24 +1,12 @@
-% \usepackage{bm}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{mathrsfs}
 \usepackage{ifluatex}
 \usepackage{csvsimple, siunitx, array, booktabs}
-% \usepackage{pgfplots, pgfplotstable}
 \usepackage{makecell}
-
 \usepackage{pgfplotstable}
-% \pgfplotsset{compat=1.6}
+\usepackage{nameref}
 
-
-% \usepackage{xparse} 
-% \ExplSyntaxOn
-% \DeclareExpandableDocumentCommand\acc{mm}{\fp_eval:n{#1*#2*100}}
-% \DeclareExpandableDocumentCommand\mult{mm}{\fp_eval:n{#1*#2}}
-% \ExplSyntaxOff
-
-% \usepackage{xcolor}
-% \usepackage[dvipsnames]{xcolor}
 
 \DeclareRobustCommand*{\drv}{\mathop{}\!\mathrm{d}}
 
@@ -62,7 +50,7 @@
 \DeclareMathOperator{\mean}{mean}
 \DeclareMathOperator{\var}{var}
 % \newcommand{\XXX}[1]{}
-\newcommand{\XXX}[1]{\textcolor{red}{\\XXX: #1\\}}
+\newcommand{\XXX}[1]{\textcolor{green}{\\XXX: #1\\}}
 
 \newcommand{\eqnref}[1]{(\ref{#1})}
 
@@ -71,31 +59,3 @@
 
 
 
-
-%%%%% TABLE %%%%%
-\pgfplotstableset{
-    highlight/.style={postproc cell content/.append style={/pgfplots/table/@cell content/.add={$\bf}{$}}},
-}
-
-\pgfplotstableset{
-col sep=comma,
-string replace*={_}{\textsubscript},
-every head row/.style={before row=\toprule,after row=\midrule},
-every last row/.style={after row=\bottomrule},
-every column/.style={column type=l, precision=1, zerofill},
-empty cells with={--},
-display columns/0/.style={column name=\textbf{Method}, column type=l, string type},
-display columns/1/.style={column name=\textbf{Accuracy} [\%], multiply with=100},
-display columns/2/.style={column name=\makecell{\textbf{validation} \\ \textbf{Accuracy}} [\%], column type=l, multiply with=100},
-display columns/3/.style={column name=\makecell{\textbf{verifier} \\ \textbf{Accuracy}} [\%], column type=l, multiply with=100},
-display columns/4/.style={column name=\textbf{l2-error}},
-images/.style={
-columns={[index]0, [index]1, [index]2, [index]3, [index]4, [index]5, [index]6},
-display columns/5/.style={column name=\textbf{PSNR}},
-display columns/6/.style={column name=\textbf{SSIM} [\%], column type=l, multiply with=100},
-},
-gmm/.style={
-columns={[index]0, [index]1, [index]2, [index]3, [index]4, [index]5},
-display columns/5/.style={column name=\makecell{\textbf{cross}- \\ \textbf{entropy}}}
-},
-}
