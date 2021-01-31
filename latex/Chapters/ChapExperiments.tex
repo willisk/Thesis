@@ -24,7 +24,7 @@ the statistics of the intermediary representations in a neural network,
 several different mappings or collections of mappings will be compared. 
 
 For every method there exists a class-dependent variant.
-\subsection{Neural Network}
+\subsection{neural network}
 
 A \textbf{neural network} $\Phi$ is a function that maps an input $\vec x \in \R^d$ to a label $y$.
 Normally, in classification tasks, where one hopes to assign a label to an input, the output of a neural network is a C-dimensional vector..
@@ -58,7 +58,7 @@ The non-linear activation function $\sigma$ is often one of \textit{ReLU} (Recti
 
 
 
-\subsection{Neural Network - last layer}
+\subsection{neural network - last layer}
 
 Given a neural network $\Phi$ of depth L..
 A feature-mapping can be obtained by mapping inputs to the second-to-last layer.
@@ -68,7 +68,7 @@ Generally, this is seen as a layer with the best feature representation? source?
 \[
     \varphi : \R^d \to \R^{d_\textnormal{L-1}} = (\Phi_\textnormal{L-1} \circ \dots \circ \Phi_1)
 \]
-\subsection{Neural Network - all layers}
+\subsection{neural network - all layers}
 All hidden states of the neural network are used to produce a collection of mappings [$\varphi_0, \dots, \varphi_\text{L}$].
 \begin{alignat*}{2}
     \varphi_\ell &: \R^d \to \R^{d_\ell} &&= (\Phi_\ell \circ \dots \Phi_1) \quad
@@ -80,7 +80,7 @@ All hidden states of the neural network are used to produce a collection of mapp
 
 
 
-\subsection{Random Projections}
+\subsection{random projections}
 The method of projecting the input to the hidden representations of a neural network will be contrasted with taking $n$ random linear projections.
 A random projection is a linear mapping $r: \R^d \to \R$
 It is created by choosing a normalized random vector $\vec v \in S^{d-1} = \{\vec x \in \R^d : \|\vec x\| = 1\}$.
@@ -127,7 +127,7 @@ This way we can ensure a balanced output..
 
 
 
-\subsection{Random Projections ReLU}
+\subsection{random projections ReLU}
 To further explore the influence of the non-linear activation functions contained within the network,
 one can combine the previous method with adding an activation function, in this case the ReLU.
 % 
@@ -157,15 +157,15 @@ where $\boldsymbol \mu_c = \mean ({R_{\vec o}(\set A|_c)})$ and $\boldsymbol \si
     \end{aligned}
 \end{align*}
 
-\subsection{Randomly initialized Neural Network}
+\subsection{randomly initialized neural network}
 To study the importance of an optimized feature-representation of a trained neural network, 
 the same neural network model with randomly initialized parameters will be evaluated and compared.
 
-\subsection{Combinations}
+\subsection{combinations}
 Combinations of all previously defined losses and feature-maps can be made. In particular, the combination of all neural network layers and random projections will be examined in order to report any improvement.
 
 
-\section{Data sets}
+\section{Data Sets}
 \subsection{Gaussian mixture models}
 A Gaussian mixture dataset comprising $C$ classes, each of which is made up of $n_\text{mode}$ clusters or modes of multivariate Gaussian Normal distributions.
 \begin{align}
@@ -190,6 +190,38 @@ Each Image is made up of 28x28 pixels, total 784.
 \subsection{CIFAR-10}
 CIFAR10 contains xxx colored images from 10 non-overlapping categories.
 Each Image has 3 Channels and 32x32 pixels, totaling a dimension of 3072.
+
+
+
+
+
+\section{Perturbation and Reconstruction Models}
+
+
+\section{Gaussian Mixture Models}
+
+For the perturbation of the Gaussian mixture model data set, a parameter-controlled random affine-linear transformation
+was drawn.
+For a given perturbation factor $\lambda \in \R ^+$
+the linear transformation is the identity transformation with a random matrix $\vec N$ multiplied with $\lambda$.
+\[
+    \delta(\vec x) = (\Id + \lambda \vec N)\vec x + \lambda \mu \,,
+\]
+where $\vec N = \{n_{i, j}\}_{i, j = 1}^{d}$ and $n_{i,j} \sim \mathcal N (0, 1)$ for all $i, j = 1 , \ldots, d$, 
+$\mu = \{\mu_i\}_{i=0}^d$ for $i=1,\ldots,d$.
+This transformation is in general invertible,
+\XXX{talk about invertibility?}
+
+\section{Image Data Sets}
+
+\begin{minipage}{0.5\textwidth}
+\input{Figures/ChartInvertblock}
+\end{minipage}
+\begin{minipage}{0.5\textwidth}
+\input{Figures/ChartInvertNet}
+\end{minipage}
+
+
 
 
 

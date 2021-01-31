@@ -5,7 +5,6 @@
 \subsubsection{GMM}
 
 \begin{table}
-\label{table:recgmmbaseline}
 \centering
 \footnotesize
 \pgfplotstabletypeset[
@@ -13,10 +12,10 @@ gmm,
 display columns/0/.style={column name=\textbf{Baseline}, column type=l, string type},
 ]{figures/reconstruction_GMM_baseline.csv}
 \caption{baseline scores for comparison}
+\label{tab:gmmbaseline}
 \end{table}
 
 \begin{table}
-\label{table:recgmmresults}
 \centering
 \footnotesize
 \pgfplotstabletypeset[
@@ -31,16 +30,39 @@ every row 8 column 4/.style={highlight},
 every row 8 column 5/.style={highlight},
 ]{figures/reconstruction_GMM_results.csv}
 \caption{Metrics on reconstruction results after 100 optimization epochs for Gaussian Mixture Model data set}
+\label{tab:gmmresults}
 \end{table}
 
-All proposed methods perform 
+\begin{table}
+\centering
+\footnotesize
+\pgfplotstabletypeset[
+gmm,
+every row 1 column 1/.style={highlight},
+every row 7 column 2/.style={highlight},
+every row 7 column 3/.style={highlight},
+every row 4 column 4/.style={highlight},
+every row 7 column 5/.style={highlight},
+]{figures/reconstruction_GMM_results_raw.csv}
+\caption{Metrics on reconstruction results after 100 optimization epochs for Gaussian Mixture Model data set}
+\label{tab:gmmresultsraw}
+\end{table}
 
+All proposed methods perform reasonably well. 
+Although, it is important that the loss function used in the optimization process
+is a composite loss from the proposed loss between the statistics
+and the original cross-entropy loss used in the optimization of the neural network.
+\[
+    r_{stats} \loss(\set A, \set B) + r_{crit}\loss_{crit}(\set B, y_{\set B})
+\]
+Since the original criterion loss alone already performs quite good, the proposed losses act more
+A comparison of the results for the case $r_{crit}=0$ can be found in table \ref{tab:gmmresultsraw}
 
 
 
 \subsubsection{MNIST}
 \begin{table}
-\label{table:recmnistbaseline}
+\label{tab:mnistbaseline}
 \centering
 \footnotesize
 \pgfplotstabletypeset[
@@ -51,7 +73,7 @@ display columns/0/.style={column name=\textbf{Baseline}, column type=l, string t
 \end{table}
 
 \begin{table}
-\label{table:recmnistresults}
+\label{tab:mnistresults}
 \centering
 \footnotesize
 \pgfplotstabletypeset[
@@ -69,7 +91,7 @@ every row 6 column 6/.style={highlight},
 
 \subsubsection{CIFAR10}
 \begin{table}
-\label{table:reccifar10baseline}
+\label{tab:cifar10baseline}
 \centering
 \footnotesize
 \pgfplotstabletypeset[
@@ -80,7 +102,7 @@ display columns/0/.style={column name=\textbf{Baseline}, column type=l, string t
 \end{table}
 
 \begin{table}
-\label{table:reccifar10results}
+\label{tab:cifar10results}
 \centering
 \footnotesize
 \pgfplotstabletypeset[
