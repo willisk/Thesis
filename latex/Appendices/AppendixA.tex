@@ -1,7 +1,180 @@
-% Appendix Template
+\chapter{Implementation Details}
+\label{AppendixGlossary}
 
-\chapter{Implementation Details} % Main appendix title
+\begin{table}
+\centering
+\caption*{\normalsize{\textbf{Glossary}}}
+\pgfplotstabletypeset[
+parameters,
+% every row no 9/.style={
+%     after row={\\ \textbf{Neural Network} \\ \textbf{Architecture} \\\midrule
+%         main network: &FCNet4 \\
+%         verifier network: &FCNet4 \\
+%     }
+% },
+% every row no 10/.style={
+%     before row={\\ \textbf{Distortion} \\\midrule}
+% },
+% every row no 11/.style={
+%     before row={\multicolumn{2}{l}{\makecell[l]{\\ \textbf{Reconstruction}}} \\\midrule}
+% },
+% every row no 12/.style={
+%     before row={\\ \textbf{Optimization} \\\midrule}
+% },
+]{
+$n_{\set A}$ &= 10000
+$n_{\set B}$ &= 512
+$n_{\set C}$ &= 1024
+$d$ &= 20
+$C$ &= 10
+$n_\textnormal{mode}$ &= 12
+$\alpha$ &= 5
+$\beta$ &= 20
+$\gamma$ &= 3
+$\lambda$ &= 3
+$\kappa$ &= 0.2
+$s_\text{RP}$ &= 256
+learning rate &= 0.01
+batch size &= 128
+$r_\text{crit}$ &= 1
+$r_\text{stats}$ &= 0.0005
+}
+% \label{tab:GMMParams}
+% \caption{Parameters and specifications of the GMM data set as defined in \ref{sec:datasetgmm}}
+\end{table}
 
-\label{AppendixA} % Change X to a consecutive letter; for referencing this appendix elsewhere, use \ref{AppendixX}
+\begin{table}
+\centering
+\caption*{\normalsize{\textbf{GMM}}}
+\pgfplotstabletypeset[
+parameters={\textbf{Data Set}},
+every row no 9/.style={
+    after row={\\ \textbf{Neural Network} \\ \textbf{Architecture} \\\midrule
+        main network: &FCNet4 \\
+        verifier network: &FCNet4 \\
+    }
+},
+every row no 10/.style={
+    before row={\\ \textbf{Distortion} \\\midrule}
+},
+every row no 11/.style={
+    before row={\multicolumn{2}{l}{\makecell[l]{\\ \textbf{Reconstruction}}} \\\midrule}
+},
+every row no 12/.style={
+    before row={\\ \textbf{Optimization} \\\midrule}
+},
+]{
+$n_{\set A}$ &= 10000
+$n_{\set B}$ &= 512
+$n_{\set C}$ &= 1024
+$d$ &= 20
+$C$ &= 10
+$n_\textnormal{mode}$ &= 12
+$\alpha$ &= 5
+$\beta$ &= 20
+$\gamma$ &= 3
+$\lambda$ &= 3
+$\kappa$ &= 0.2
+$s_\text{RP}$ &= 256
+learning rate &= 0.01
+batch size &= 128
+$r_\text{crit}$ &= 1
+$r_\text{stats}$ &= 0.0005
+}
+\label{tab:GMMParams}
+\caption{Parameters and specifications of the GMM data set as defined in \ref{sec:datasetgmm}}
+\end{table}
 
-Details of implementation...
+
+%
+%   MNIST
+%
+\begin{table}
+\begin{minipage}{0.5\textwidth}
+\centering
+\caption*{\normalsize{\textbf{MNIST}}}
+\pgfplotstabletypeset[
+parameters={\textbf{Data Set}},
+every row no 3/.style={before row={\\ Properties \\\midrule}},
+every row no 5/.style={
+    after row={\\ \textbf{Distortion} \\\midrule}
+},
+every row no 6/.style={
+    after row={\\ \textbf{Neural Network} \\ \textbf{Architecture} \\\midrule
+        main network: &ResNet20 \\
+        verifier network: &ResNet9 \\
+    }
+},
+every row no 7/.style={
+    before row={\multicolumn{2}{l}{\makecell[l]{\\ \textbf{Reconstruction Model}}} \\\midrule}
+},
+every row no 10/.style={
+    before row={\\ \textbf{Optimization} \\ \midrule}
+},
+]{
+$n_{\set A}$ &= 60000
+$n_{\set B}$ &= 512
+$n_{\set C}$ &= 1024
+$C$ &= 10
+input shape &= (1, 28, 28)
+$d$ &= 784
+$\kappa$ &= 0.3
+$s_\text{width}$ &= 8
+$s_\text{depth}$ &= 8
+$s_\text{RP}$ &= 512
+learning rate &= 0.1
+batch size &= 128
+$r_\text{crit}$ &= 1
+$r_\text{stats}$ &= 0.001
+}
+\label{tab:MNISTParams}
+\caption{\\ Parameters and specifications of the MNIST data set}
+\end{minipage}
+%
+%   CIFAR10
+%
+\begin{minipage}{0.5\textwidth}
+\centering
+\caption*{\normalsize{\textbf{CIFAR10}}}
+\pgfplotstabletypeset[
+parameters={\textbf{Data Set}},
+every row no 3/.style={before row={\\ Properties \\\midrule}},
+every row no 5/.style={
+    after row={\\ \textbf{Distortion} \\\midrule}
+},
+every row no 6/.style={
+    after row={\\ \textbf{Neural Network} \\ \textbf{Architecture} \\\midrule
+        main network: &ResNet34 \\
+        verifier network: &ResNet18 \\
+    }
+},
+every row no 7/.style={
+    before row={\multicolumn{2}{l}{\makecell[l]{\\ \textbf{Reconstruction Model}}} \\\midrule}
+},
+every row no 10/.style={
+    before row={\\ \textbf{Optimization} \\\midrule}
+},
+]{
+$n_{\set A}$ &= 50000
+$n_{\set B}$ &= 512
+$n_{\set C}$ &= 1024
+$C$ &= 10
+input shape &= (3, 32, 32)
+$d$ &= 3072
+$\kappa$ &= 0.15
+$s_\text{width}$ &= 8
+$s_\text{depth}$ &= 8
+$s_\text{RP}$ &= 512
+learning rate &= 0.1
+batch size &= 128
+$r_\text{crit}$ &= 1
+$r_\text{stats}$ &= 10
+}
+\label{tab:CIFARParams}
+% \decoRule
+\caption{\\ Parameters and specifications of the CIFAR10 data set}
+%
+%
+\end{minipage}
+\end{table}
+
