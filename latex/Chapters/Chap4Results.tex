@@ -118,7 +118,7 @@ Combining the methods (COMBINED) seems to merit overall good scores which can be
 \pgfplotstabletypeset[
 results,
 images,
-display columns/0/.style={column name=\textbf{Baseline}, column type=l, string type},
+display columns/0/.style={column name=\textbf{baseline}, column type=l, string type},
 ]{figures/reconstruction_MNIST_baseline.csv}
 \caption{MNIST baseline scores}
 \label{tab:mnist_baseline}
@@ -143,7 +143,7 @@ every row 6 column 6/.style={highlight},
 
 
 Here, it is important to note that the l2-error and the PSNR-score do not improve after the reconstruction task is performed.
-Contrasting these findings with the qualitative results shown in figure \ref{fig:MNIST_Images} of the appendix, 
+Contrasting these findings with the qualitative results shown in appendix \ref{AppendixResults}, 
 leads to the conclusion that these scores are not indicative of proper image quality.
 These scores rely on per-pixel comparisons and the reconstruction network may introduce shifts in the final image
 that can greatly disrupt the score of these metrics.
@@ -230,14 +230,14 @@ only uses class information in the later layers.
     \includegraphics[
     width=\textwidth, 
     trim={0 0 0 0.6cm}, clip,
-    ]{figures/reconstruction_CIFAR10_NN_ALL_metrics_stats_losses_means.pdf}
+    ]{figures/reconstruction_CIFAR10_NN_ALL_metrics_statistics_losses_means.pdf}
     \end{minipage}%
     \begin{minipage}{0.6\textwidth}
     \caption*{NN ALL CC}
     \includegraphics[
     width=\textwidth,
     trim={0 0 0 0.6cm}, clip,
-    ]{figures/reconstruction_CIFAR10_NN_ALL_CC_metrics_stats_losses_means.pdf}
+    ]{figures/reconstruction_CIFAR10_NN_ALL_CC_metrics_statistics_losses_means.pdf}
     \end{minipage}
     }
     \caption{Loss coming from the difference in mean batch-statistics plotted per layer. 
@@ -264,7 +264,7 @@ A grid search is performed on:
     n_{\set B} &\in \{128, 512, 1024, 2048\} \\
 \end{flalign*}
 
-Every run depicts a hyperparameter setting ($s_\text{width} s_\text{depth}  n_{\set B}$) of the Cartesian product
+Every run depicts a hyperparameter setting ($s_\text{width}, s_\text{depth},  n_{\set B}$) of the Cartesian product
 of all possible values shown above.
 
 The results are depicted in \ref{fig:rec_hyperparameter_search}.
@@ -277,7 +277,8 @@ The findings are solidified in figure \ref{fig:rec_hyperparameter_heatmap}, wher
 between the parameters and the scores is given.
 
 While $n_{\set B}$ is clearly positively correlated for all scores (except for the l2-error, though here,
-a lower score is better), the other parameters show an almost inverse effect on the outcome.
+a lower score is better), the other parameters show an almost inverse effect on what one would expect.
+Most likely, the bigger reconstruction models would achieve higher scores after a longer training time.
 
 
 
@@ -286,13 +287,21 @@ a lower score is better), the other parameters show an almost inverse effect on 
 
 \begin{figure}[!htbp]
 \centering
+    
+    \caption*{\hspace*{6mm}NN ALL CC}
     \centerline{
     \hspace*{6mm}
     \begin{minipage}{0.6\textwidth}
-    \includegraphics[width=\textwidth]{figures/comparison_CIFAR10_verifier_accuracy_NN_ALL_CC.pdf}
+    \includegraphics[
+    trim={0 0 0 0.6cm}, clip,
+    width=\textwidth
+    ]{figures/comparison_CIFAR10_hyperparameters_verifier_accuracy_NN_ALL_CC.pdf}
     \end{minipage}%
     \begin{minipage}{0.6\textwidth}
-    \includegraphics[width=\textwidth]{figures/comparison_CIFAR10_validation_accuracy_NN_ALL_CC.pdf}
+    \includegraphics[
+    trim={0 0 0 0.6cm}, clip,
+    width=\textwidth
+    ]{figures/comparison_CIFAR10_hyperparameters_validation_accuracy_NN_ALL_CC.pdf}
     \end{minipage}
     }
 \caption{Reconstruction Results for multiple hyperparameter settings on CIFAR10. 
@@ -303,9 +312,12 @@ Every data point depicts the end-results after 100 epochs.}
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.7\textwidth]{figures/comparison_CIFAR10_heatmap_NN_ALL_CC.pdf}
-\decoRule
-\caption{heatmap}
+\caption*{NN ALL CC}
+\includegraphics[
+trim={0 0 0 0.75cm}, clip,
+width=0.7\textwidth
+]{figures/comparison_CIFAR10_hyperparameters_heatmap_NN_ALL_CC.pdf}
+\caption{hyperparameter correlation table}
 \label{fig:rec_hyperparameter_heatmap}
 \end{figure}
 

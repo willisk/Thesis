@@ -1,0 +1,112 @@
+\chapter{Objective}
+\label{chap:Objective}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%  Section: Reconstruction   %%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Reconstruction}
+\label{sec:Reconstruction}
+
+\subsection{Objective outline}
+This section introduces the main objective of this work. An outline is given in figure \ref{fig:outline}.
+\begin{figure}[h]
+    \centering
+    \input{Figures/ChartReconstruction}
+    \caption{Outline of the Reconstruction task}
+    \label{fig:outline}
+    \centering
+\end{figure}
+
+
+We are given a data set $\set B$ 
+and a neural network that was trained on - or performs reasonably well on - a data set $\set A$.
+% The neural network is able to predict data coming from $\set A$ accurately, 
+As the distribution of $\set B$ differs crucially from $\set A$, 
+the neural network is unable to reach high performance on data coming from $\set B$.
+The goal is to learn a transformation $\rho$ that adjusts $\set B$ 
+so that the network's performance is regained.
+
+An underlying assumption is that $\set B$ originates from the same distribution
+as $\set A$, but has been corrupted by an unknown perturbation $\delta$.
+The transformation $\rho$ is modeled to correct for this perturbation, 
+in the sense that $\rho(\set B) \approx \set B_\text{true}$.
+This is done by minimizing the a dissimilarity-score between $\set B$ and $\set A$ 
+in a feature space given by an appropriate feature-map $\varphi$, 
+after the transformation $\rho$ has been applied to $\set B$.
+For this, simple statistics of both data sets, such as the mean and variance 
+are recorded in feature space and $\rho$ is adjusted accordingly by backpropagation 
+in order to make the statistics of the source $\set B$ approach those of the target $\set A$.
+
+Whether matching statistics in feature space actually increases similarity between $\set A$ and $\set B$
+strongly depends on $\varphi$ and its representation of the data set.
+
+A hope is that the found transformation $\rho$ will be close to an inverse transformation
+of $\delta$, i.e. that $\rho\circ\delta \approx \text{id}$, the identity transformation,
+although it is important to note that this is different from saying that $\rho(\set B) \approx \set B_\text{true}$.
+
+
+\subsection{Problem Formulation}
+Given a feature-mapping $\varphi$, a source data set $\set B$ and a target data set $\set A$ - or simply the statistics of $\varphi(\set A)$,  find $\rho \in \mathcal{F}$, such that
+\[
+     \loss _\varphi (\set A, \rho(\set B)) \,,
+\]
+is minimized.
+Here, the solution space $\mathcal F$ is a pre-defined set of functions, 
+parametrized by $\boldsymbol \theta$.
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%   Section: Inversion    %%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Inversion}
+\label{sec:Inversion}
+
+\subsection{Objective outline}
+
+\begin{figure}[h]
+    \centering
+    \input{Figures/ChartInversion}
+    \caption{Outline of the Inversion task}
+    \label{fig:inversion_outline}
+    \centering
+\end{figure}
+
+A secondary part of this work is concerned about what kind of data 
+may be recovered from having access to the statistics of a data set.
+In this setting, we are given target statistics of data set $\set A$
+and alternatively modify the source $\set B$ directly to 
+minimize the dissimilarity just as outlined in \ref{sec:Reconstruction}.
+The source data set is, in a first step, initialized randomly and then also 
+iteratively refined by backpropagation after it has been mapped to feature-space.
+
+
+
+\subsection{Problem Formulation}
+Given a feature-mapping $\varphi$, the statistics of $\varphi(\set A)$
+and target labels $\{y^{(i)}\}_{i=1}^{n_{\set B}}$ for a fixed integer size $n_{\set B}$,
+find $\set B$, such that
+\[
+     \loss _\varphi (\set A, \set B)
+\]
+is minimized and $\set B = \{(\vec x^{(i)}, y^{(i)})\}_{i=1}^{n_{\set B}}$.
+
+    
+
+
+% \subsection{Problem Formulation}
+% The result of the optimization process can be evaluated by calculating the accuracy obtained by $\Phi$. 
+% Though, since $\Phi$ was used in the optimization process, it will likely display heavy bias to what it believes is a correctly classified sample.
+% For this sake, another neural network $\Phi_{\text{ver}}$ can be employed, which has been separately trained on either $\set A$ or another data set. 
+
+%Though, practice has shown that a very small portion of $\set A$ is only needed to obtain a close-enough guess at the true statistics of $\set A$.
+
+
+

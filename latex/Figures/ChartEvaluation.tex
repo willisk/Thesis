@@ -1,11 +1,11 @@
 \begin{tikzpicture}[node distance=1cm and 1.7cm, auto]
 
 \node (A) [node, fill=red!7] {\textbf{Target} \\ $\set A$};
-\node (B) [node, below= of A] {\textbf{Source} \\ $\set B$};
-\node (C) [node, below= 2.2cm of B, fill=blue!0] {\textbf{Validation} \\ $\set C$};
+\node (B) [node, below= of A] {\textbf{original} \\ $\set B_\text{true}$};
+\node (C) [node, below= 2.2cm of B, fill=blue!0] {\textbf{Validation} \\ $\set C_{true}$};
 
-\node (Bp) [node, right= of B, fill=blue!2] {\textbf{perturbed} \\ $\widetilde {\set B} = \delta (\set B)$};
-\node (Br) [node, right= of Bp, fill=blue!7] {\textbf{reconstructed} \\ $\widehat {\set B} = \rho^* (\widetilde {\set B})$};
+\node (Bp) [node, right= of B, fill=blue!2] {perturbed \\ \textbf{Source} \\ $\set B$};
+\node (Br) [node, right= of Bp, fill=blue!7] {\textbf{reconstructed} \\ $\rho^* (\set B)$};
 
 
 \draw [arrow, dashed, thin] (B) -- (Bp) node (Pert) [midway, function, dashed] {$\delta$};
@@ -21,8 +21,8 @@
 \draw [arrow, Mahogany, thin, bend left=20] (A) to node[below] {\footnotesize trained} (vNet);
 \draw [arrow, Blue, thin] (Net.210) to[bend right=20] node [midway, above, sloped] {\footnotesize optimized} (Rec.north);
 
-\node (Cp) [node, right= of C, fill=blue!0] {\textbf{perturbed} \\ $\widetilde {\set C} = \delta(\set C)$};
-\node (Cr) [node, right= of Cp, fill=blue!0] {\textbf{reconstructed} \\ $\widehat {\set C} = \rho ^*(\widetilde {\set C})$};
+\node (Cp) [node, right= of C, fill=blue!0] {\textbf{perturbed} \\ $ {\set C}$};
+\node (Cr) [node, right= of Cp, fill=blue!0] {\textbf{reconstructed} \\ $\rho ^*( {\set C})$};
 
 
 \draw [arrow, dashed, thin] (C) -- (Cp);

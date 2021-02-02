@@ -107,24 +107,30 @@
 %%%%% TABLE %%%%%
 \pgfplotstableset{
 highlight/.style={postproc cell content/.append style={/pgfplots/table/@cell content/.add={$\bf}{$}}},
+extra spacing/.style={after row={[10pt]}},
 results/.style={
     col sep=comma,
+    empty cells with={--},
     string replace*={_}{\textsubscript},
-    every column/.style={column type=l, precision=1, zerofill},
-    display columns/0/.style={column name=\textbf{Method}, column type=l, string type},
-    display columns/1/.style={column name=\textbf{accuracy} [\%], multiply with=100},
-    display columns/2/.style={column name=\makecell{\textbf{validation} \\ \textbf{accuracy}} [\%], column type=l, multiply with=100},
-    display columns/3/.style={column name=\makecell[l]{\textbf{verifier} \\ \textbf{accuracy}} [\%], column type=l, multiply with=100},
-    display columns/4/.style={column name=\textbf{l2-error}},
+    every column/.style={column type=c, precision=1, zerofill},
+    display columns/0/.style={column name=\textbf{method}, column type=l, string type},
+    display columns/1/.style={column name=\hspace*{-2mm}\textbf{accuracy} [\%]\hspace*{-7mm}, multiply with=100},
+    display columns/2/.style={column name=\hspace*{4mm}\makecell{\textbf{validation} \\ \textbf{accuracy}} [\%]\hspace*{-3mm}, multiply with=100},
+    display columns/3/.style={column name=\hspace*{0mm}\makecell{\textbf{verifier} \\ \textbf{accuracy}} [\%]\hspace*{-6mm}, multiply with=100},
+    display columns/4/.style={column name=\hspace*{4mm}\makecell{\textbf{l2-error}}\hspace*{1mm}},
+    every head row/.style={ 
+        before row={\toprule},
+        after row={\midrule},
+    },
 },
 gmm/.style={%
     columns={[index]0, [index]1, [index]2, [index]3, [index]4, [index]5},
-    display columns/5/.style={column name=\makecell{\textbf{cross}- \\ \textbf{entropy}}}
+    display columns/5/.style={column name=\hspace*{-2mm}\makecell{\textbf{cross}- \\ \textbf{entropy}}\hspace*{-1mm}}
 },
 images/.style={
     columns={[index]0, [index]1, [index]2, [index]3, [index]4, [index]5, [index]6},
-    display columns/5/.style={column name=\textbf{PSNR}},
-    display columns/6/.style={column name=\textbf{SSIM} [\%], column type=l, multiply with=100},
+    display columns/5/.style={column name=\hspace*{-10mm}\makecell{\footnotesize\textbf{PSNR}}\hspace*{-10mm}},
+    display columns/6/.style={column name=\hspace*{1mm}\makecell{\footnotesize\textbf{SSIM} [\%]}\hspace*{-2mm}, multiply with=100},
 },
 parameters/.style={
     string type,
@@ -137,11 +143,27 @@ parameters/.style={
     },
     every last row/.style={after row=\\},
 },
+glossary/.style={
+    % begin table=\begin{longtable},
+    % end table=\end{longtable},
+    string type,
+    every column/.style={column type=l},
+    display columns/0/.style={column type=r},
+    display columns/1/.style={column type=c},
+    header=false,
+    every head row/.style={
+        output empty row,
+        before row={\textbf{Name} & \textbf{Symbol} & \textbf{Description} \\ \midrule},
+        after row={},
+    },
+    every last row/.style={after row=\\},
+    after row={},
+    % row sep=\\,
+},
 }
 
 \pgfplotstableset{
 col sep=&,
-empty cells with={--},
 every head row/.style={before row=\toprule,after row=\midrule},
 every last row/.style={after row=\bottomrule},
 % row sep=\\,

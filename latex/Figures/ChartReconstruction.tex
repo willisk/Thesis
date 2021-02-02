@@ -9,10 +9,10 @@
 \node [above of= D, align=center, yshift=0.7cm] {Data set \\ Distribution};
 
 \node (A) [node, right= 1cm of D, fill=red!7, yshift=1.5cm] {\textbf{Target} \\ $\set A$};
-\node (B) [node, right= 1cm of D, yshift=-1.5cm] {\textbf{Source} \\ $\set B$};
+\node (B) [node, right= 1cm of D, yshift=-1.5cm] {\textbf{original} \\ $\set B_\text{true}$};
 
-\node (Bp) [node, right= of B, fill=blue!2] {\textbf{perturbed} \\ $\widetilde {\set B} = \delta (\set B)$};
-\node (Br) [node, right= of Bp, fill=blue!7] {\textbf{reconstructed} \\ $\widehat {\set B} = \rho (\widetilde {\set B})$};
+\node (Bp) [node, right= of B, fill=blue!3] {perturbed \\ \textbf{Source} \\ $\set B$}; %\\ $\set B = \delta (\set B_\text{true})$};
+\node (Br) [node, right= of Bp, fill=blue!7] {\textbf{reconstructed} \\ $\rho (\set B)$};
 
 
 %%Arrows

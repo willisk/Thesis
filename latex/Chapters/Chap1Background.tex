@@ -19,21 +19,27 @@ A \textbf{sample batch} or simply \textbf{batch} is a \textit{non-empty} subset 
 
 \noindent
 $\mean$ and $\var$ are used to denote the empirical sample mean and variance of the input.
-\begin{align*}
-    \mean ({\set A}) &= \frac 1 {\lvert \set A \rvert} \sum _{i=1}^{\lvert \set A \rvert} \vec x^{(i)} \; \in \set X \\
-    \var ({\set A}) &= \frac 1 {\lvert \set A \rvert} \sum _{i=1}^{\lvert \set A \rvert} (\vec x^{(i)} - \mean ({\set A}))^2 \; \in \set X
-\end{align*}
+\begin{align}
+    \mean ({\set A}) &= \frac 1 {\lvert \set A \rvert} \sum _{i=1}^{\lvert \set A \rvert} \vec x^{(i)} \; \in \set X
+    \label{eqn:sample_mean} \\
+    \var ({\set A}) &= \frac 1 {\lvert \set A \rvert} \sum _{i=1}^{\lvert \set A \rvert} (\vec x^{(i)} - \mean ({\set A}))^2 \; \in \set X 
+    \label{eqn:sample_var} 
+\end{align}
 
 
-Given a sample batch $\set A$, the set $\set A|_c = \{(\vec x, y) \in \set A \mid y = c\}$ is the subset of $\set A$ \textbf{constrained} to samples of label $c$.
-
+Given a sample batch $\set A$, the set $\set A|_c$ is the subset of $\set A$ \textbf{constrained} to samples of label $c$.
+\begin{equation}
+    \set A|_c = \{(\vec x, y) \in \set A \mid y = c\}
+    \label{eqn:class_constrained}
+\end{equation}
 
 A \textbf{feature-mapping} is any function from input space $\R^d$ to $\R^m$ for some $m$.
 A data set to data set mapping is obtained by applying a feature-mapping $\varphi$ to every input. Given a data set $\set A$, and a feature-mapping $\varphi$:
-\[
+\begin{equation}
     \varphi(\set A) := \{(\varphi(\vec x), y) \mid (\vec x, y) \in \set A\} \;
-    \in \powerset Z
-\]
+    \in \finiteset Z
+    \label{eqn:feature_mapping}
+\end{equation}
 
 
 
@@ -42,32 +48,42 @@ Given two data sets $\set A, \set B$, a \textbf{loss function} or \textbf{object
 I. e. where 
 \[
     \loss (\set A, \set B) = \loss (
-    \,\{(\vec x^{(i)}_{\set A}, y^{(i)}_{\set A})\}_{i=0}^{|\set A|}\,,
-    \,\{(\vec x^{(j)}_{\set B}, y^{(j)}_{\set B})\}_{j=0}^{|\set B|}\,) \,,
+    \,\{(\vec x^{(i)}_{\set A}, y^{(i)}_{\set A})\}_{i=1}^{|\set A|}\,,
+    \,\{(\vec x^{(j)}_{\set B}, y^{(j)}_{\set B})\}_{j=1}^{|\set B|}\,) 
 \]
 is piecewise $\mathcal C^1$ with regard to $\vec x^{(i)}_{\set A}$
 for all $i=1, \dots, |\set A|$, and $\vec x^{(j)}_{\set B}$ for all $j=1, \dots, |\set B|$.
+Note that, for the variance to behave as expected, the batch should contain at least two samples.
 
-
-For a given feature-mapping $\varphi$ that is piecewise $\mathcal C ^1$, it will be defined as follows.
+For a given feature-mapping $\varphi$ that is piecewise $\mathcal C ^1$, the \textbf{statistics-loss} or simply loss, is defined as follows.
 % 
-\[
+\begin{equation}
     \loss _{\varphi} (\set A, \set B) = 
     \|\mean ({\varphi (\set A)}) - \mean ({\varphi (\set B)})\| +
     \|\var ({\varphi (\set A)}) - \var ({\varphi (\set B)})\|
-\]
+    \label{eqn:statistics_loss}
+\end{equation}
 % 
 A \textbf{class-dependent} loss can be obtained as follows:
-\[
+\begin{equation}
+\label{eqn:class_statistics_loss}
     \loss _\varphi ^{\mathcal C} (\set A, \set B) =
-    \sum _{\substack{c = 1 \dots C \\ \set A|_c ,\, \set B|_c \neq \emptyset}} 
-    \|\mean ({\varphi (\set A|_c)}) - \mean({\varphi (\set B|_c)})\|
-    + \|\var ({\varphi (\set A|_c)}) - \var ({\varphi (\set B|_c)})\| 
-\]
+    \sum _{\substack{c = 1 \dots C \\ \set A|_c,\, \set B|_c \text{ contain} \\ \text{at least 2 samples}}}
+    \begin{alignedat}[t]{1}
+        \|\mean ({\varphi (\set A|_c)}) - \mean({\varphi (\set B|_c)}) &\| \\
+        {} + \|\var ({\varphi (\set A|_c)}) - \var ({\varphi (\set B|_c)}) &\| 
+    \end{alignedat}
+\end{equation}
+% \begin{equation}
+%     \loss _\varphi ^{\mathcal C} (\set A, \set B) =
+%     \sum _{\substack{c = 1 \dots C \\ \set A|_c,\, \set B|_c \text{ contain} \\ \text{at least 1 sample}}} 
+%     \substack{{} + \|\var ({\varphi (\set A|_c)}) - \var ({\varphi (\set B|_c)})\|}{\|\mean ({\varphi (\set A|_c)}) - \mean({\varphi (\set B|_c)})\|}
+%     \label{eqn:class_statistics_loss}
+% \end{equation}
 
 \subsection{Combinations}
 % 
-This notion can be extended to a collection of feature-maps [$\varphi_0, \dots, \varphi_n$].
+This notion can be extended to a collection of feature-maps [$\varphi_1, \dots, \varphi_n$].
 A \textbf{collection} is used to refer to a \textit{non-empty finite} set.
 \begin{align*}
     \loss_{[\varphi_1, \dots, \varphi_n]} (\set A, \set B) &= 

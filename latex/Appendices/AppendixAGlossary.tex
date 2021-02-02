@@ -1,0 +1,41 @@
+\chapter{Implementation Details}
+\label{AppendixGlossary}
+
+\begin{table}[!h]
+\caption*{\Large\textbf{Glossary}}
+\pgfplotstabletypeset[
+glossary,
+every row no 2/.style={extra spacing},
+]{
+& $s$ & small letters are used for scalars
+& $\vec v$ & bold-face small letters are used for vectors
+& $\vec M$ & bold-face capital letters are used for matrices
+%
+sample input & $\vec x$ & element of input space $\set X$
+input space & $\set X$ & vector space $\R^d$
+data set dimension & $d$ & 
+input shape & $(d_1, d_2,\ldots)$ & shape of input sample $\vec x \in \R^d=\R^{d_1\times d_2 \times \ldots}$
+sample label & $y$ & label $y \in \set Y$
+label set &$\set Y$ & discreet set $\set Y = \{1,\ldots, C\}$
+number of classes &$C$ & number of distinct labels/classes of the data set
+sample & $\vec z$ & sample of $\set Z$; tuple of input and label $\vec z = (\vec x, y)$
+sample space & $\set Z$ & $\set Z = \set X \times \set Y$
+%
+& $\finiteset{\, \cdot \,}$ & denotes the set of all finite non-empty subsets
+target data set & $\set A$ & data set $\set A = \{\vec z^{(i)}\}_{i=1}^{|\set A|}$ containing samples of $\set Z$;
+&& used for training the main network, 
+&& and for target data set statistics
+source data set & $\set B$ & used in optimization,
+&& where source data set statistics are to 
+&& match target data set statistics
+validation data set & $\set C$ & used for evaluating validation accuracy
+class-constrained batch & $\set A|_c$ & subset of $\set A$ only containing samples of label c 
+%(as defined in \ref{eqn:class_constrained})
+input mean & $\mean$ & empirical data set sample input mean (as defined in \ref{eqn:sample_mean})
+input variance & $\var$ & empirical data set sample input variance (as defined in \ref{eqn:sample_var})
+feature-mapping & $\varphi(\set A)$ & maps a data set to feature-space (as defined in \ref{eqn:feature_mapping})
+statistics-loss & $\loss_\varphi$ & loss/objective function for given feature-mapping $\varphi$ 
+&& (as defined in \ref{eqn:statistics_loss})
+class-loss & $\loss^C_\varphi$ & class-dependent formulation of loss function (as defined in \ref{eqn:class_statistics_loss})
+}
+\end{table}
