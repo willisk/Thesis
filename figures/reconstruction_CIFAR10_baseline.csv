@@ -1,4 +1,4 @@
 baseline,acc,acc(val),acc(ver),l2-err,PSNR,SSIM,HaarPsi
+Target A,0.99707,,0.99805,,,,
 Source B (original),1.00000,0.93164,0.99805,,,,
 Source B (distorted),0.57812,0.51758,0.51367,16.41367,16.46526,0.83923,0.99857
-Target A,0.99707,,0.99805,,,,
