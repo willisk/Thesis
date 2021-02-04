@@ -5,24 +5,24 @@
 The success of the reconstruction largely depends on the representation of the data
 after the feature-map is applied.
 Relying on the mean and variance of the data to accurately describe the data distribution 
-comes with a strong assumption.
-More sophisticated ways of capturing data distributions exist, yet mean and variance were chosen due to their simplicity in evaluation and computing of the gradients.
+relies on a strong assumption.
+More sophisticated ways of capturing data distributions exist, yet mean and variance were chosen due to their simplicity in evaluation and computation of the gradients.
 
-The feature-map ideally is to "disentangle" the data space to enable 
+The feature-map ideally "disentangles" the data space to enable 
 these simple statistics to capture enough of the complexity of the data set.
 
 In order to assess the efficacy of the neural network's latent representations 
 and their ability to capture the data distribution by these statistics,
-several different mappings methods will be compared. 
+several different mappings or methods will be compared. 
 
 First, in order to establish the notation used throughout, in subsection \ref{sec:nn_def}, 
 a short introduction on the multi-layer perceptron (MLP) is given,
 Then, the various feature-mappings or methods will be presented in \ref{sec:methods}.
-Following that, the three data sets used in the experiments are introduced in \ref{sec:datasets}
-and finally the perturbation and reconstruction models are depicted in \ref{sec:reconstruction_models}.
+Following that, the three data sets used in the experiments are introduced in \ref{sec:datasets},
+and finally, the perturbation and reconstruction models are depicted in \ref{sec:reconstruction_models}.
 Section \ref{sec:evaluation} deals with evaluation metrics.
 
-\section{neural network}
+\section{Neural network}
 \label{sec:nn_def}
 
 In a classification setting, a \textbf{neural network} $\Phi$ is a function that maps an input $\vec x \in \R^d$ to an output $\in \R^C$,
@@ -35,7 +35,6 @@ This weighted sum is passed through a non-linear activation function, often one 
 This is done for all nodes in a layer before being passed on to the next.
 A full network thus is a composition of functions $\Phi_\ell$, or \textbf{layers} that 
 successively act on the outputs $\vec h$ of the previous layer, called \textbf{activations} or \textbf{hidden states}. 
-
 In a plain \textbf{fully-connected} neural network, the layers are each made up of an affine linear transformation and a non-linear activation function.
 
 Formally, a fully-connected neural network of layer depth L is described as:
@@ -50,11 +49,11 @@ Formally, a fully-connected neural network of layer depth L is described as:
     \vec h_\ell = (\Phi_\ell \circ \ldots \circ \Phi_1) (\vec x) =
     \Phi_\ell(\vec h_{\ell-1}) \in \R^{d_\ell}
 \]
-$\Phi_\ell$ then, is a mapping from $\R^{d_{\ell-1}}$ to $\R^{d_\ell}$ and $\R^{\textnormal L} = \R^C$.
+$\Phi_\ell$ then, is a mapping from $\R^{d_{\ell-1}}$ to $\R^{d_\ell}$ and $\R^{d_\textnormal{L}} = \R^C$.
 % The space of a hidden state $\vec h$ is called a \textbf{feature-space}.
 The input $\vec x$ is sometimes also referred to as $\vec h_0$ and $\R^{d_0} := \R^d$.
 The layers themselves contain as parameters a \textbf{weight matrix} $\vec W$ and a \textbf{bias} $\vec b$
-to form an affine linear transformation.
+that together form an affine linear transformation.
 \[
     \Phi_\ell(\vec h) = \sigma (\vec W \vec h + \vec b) \comma{where}
     \vec W \in \R^{d_\ell \times d_{\ell-1}} \comma{and}
@@ -72,7 +71,7 @@ The following methods introduce various feature-mappings.
 Each feature-mapping $\varphi$ induces a loss function $\loss_\varphi$ as outlined in \ref{eqn:statistics_loss}.
 For every method there exists a class-dependent loss formulation $\loss_\varphi^{\mathcal C}$,
 as given in \ref{eqn:class_statistics_loss}.
-The abbreviations to the methods are given in the title in parenthesis. 
+The abbreviations to the methods are given in parenthesis in the following headers. 
 When referring to the class-dependent formulation \textit{CC} (class-conditional or
 class-constrained) is added to the abbreviation.
 
@@ -82,7 +81,7 @@ is a composite loss given by
 \[
     r_\text{stats}\loss_\varphi(\set A, \set B) + r_\text{crit}\loss_\text{crit}(\set B, y_{\set B}) \,,
 \]
-where $y_{\set B}$ are the target labels and $\loss_\text{crit}$ is the criterion loss, in this case, the cross-entropy loss.
+where $y_{\set B}$ are the target labels and $\loss_\text{crit}$ is the criterion loss, which, throughout this work, is the cross-entropy loss.
 It is the loss function that was used for optimizing the parameters of the neural network.
 
 
@@ -95,7 +94,7 @@ the layer before the logits layer.
 \[
     \varphi : \R^d \to \R^{d_\textnormal{L-1}} = (\Phi_\textnormal{L-1} \circ \dots \circ \Phi_1)
 \]
-Generally, this layer is considered to hold a highly abstracted representation of the data
+Generally, this layer is considered to encode a highly abstracted representation of the data
 and typically contains the signal in a comparatively high dimensional space, before it's
 reduction to a $C$-dimensional vector by the logits-layer.
 % which contains the least amount of information  on the input.
@@ -104,10 +103,10 @@ of a specified input shape (the Cartesian product of channels$\times$height$\tim
 the spatial relationship of features is kept throughout the forward propagation by the layers.
 In this layer, the entire signal is flattened down to a single $d^{\text{L}-1}$-dimensional vector, 
 before being passed to the logits-layer.
-As normally no activation function is needed on the last layer when returning the index of the maximal value, 
+As an activation function is normally not needed on the last layer when returning the index of the maximal value, 
 the logits-layer has to be able to linearly classify its input - the last hidden state - in order to 
 give the final prediction.
-This leads one to believe that this layer contains the most "disentangled" representation of the data.
+This warrants the belief that this layer contains the most disentangled representation of the data.
 
 
 \subsection{Neural network - all layers (NN ALL)}
@@ -124,11 +123,11 @@ All hidden states together of the neural network can be seen as outputs of a col
 
 
 \subsection{Random projections (RP)}
-To contrast the efficacy of the previous two feature-representations,
-a feature-mapping involving one linear layer will be used, by selecting a number of  random linear projections.
-A random projection is a linear mapping $r: \R^d \to \R$
+To contrast the efficacy of the previous two feature-representations on the success of the optimization process,
+a feature-mapping involving one linear layer is used. This is done by selecting a number of  random linear projections.
+A random projection is a linear mapping $r: \R^d \to \R$.
 It is created by choosing a normalized random vector $\vec v \in S^{d-1} = \{\vec x \in \R^d : \|\vec x\| = 1\}$.
-It can be seen as  linear projection on to the one-dimensional subspace defined by the vector $\vec v \in \R^d$.
+It can be seen as a linear projection to the one-dimensional subspace defined by the vector $\vec v \in \R^d$.
 \[
     r(\vec x) = \vec v ^\top \vec x
 \]
@@ -149,7 +148,7 @@ By choosing a total of $s_\text{RP}$ random vectors $\{v_1, \dots, v_{s_\text{RP
 \]
 %
 % The loss function $\loss_R$ stays as was defined before.
-In order to obtain more balance the outputs,
+In order to obtain a more balanced output,
 the projection can be centered around an origin $\vec o$.
 % 
 \[
@@ -158,7 +157,7 @@ the projection can be centered around an origin $\vec o$.
 where $\vec o \in \R^d$ is the new origin of the projection. 
 The idea is to set the origin to be center of the target data set $\set A$. $\vec o = \mean (\set A)$
 This way, the data after the projection will be centered around $\vec 0$.
-Practically, this doesn't change much as the data is often normalized and $\vec 0$-centered beforehand,
+In practical applications, the data often is normalized and $\vec 0$-centered beforehand,
 yet the class-dependent variant can be modified to select an origin $\vec o_c$ for each class $c$.
 Equation \ref{eqn:class_statistics_loss} then becomes:
 % 
@@ -183,15 +182,14 @@ the previous method is modified by applying an activation function, in this case
 \]
 where $(\,\cdot\,)^+ :\R^n \to \R^n$ is the projection onto the positive orthant. It applies $\max(0, \cdot)$ element-wise.
 
-Since the layers of neural networks have a bias parameter that shifts the threshold of 
-where an input can pass, this will also be incorporated.
+Since the layers of a neural network that use ReLU activation functions have a bias parameter that shifts the threshold above which an input can pass unaltered, this will also be incorporated.
 \[
     R_{\vec o}^{\vec b} (\vec x) = (\vec V (\vec x - \vec o) + \vec b)^+ \,,
 \]
 where $\vec b \in \R^d$ is the bias. For a target dataset $\set A$, it is chosen as $\vec b \sim \mathcal N(\vec 0, \textnormal{diag}(\boldsymbol \sigma ^2))$, 
 where $\boldsymbol \sigma ^2 = \var ({R_{\vec o}(\set A)})$.
 
-The class-dependent variant can again make use for more suited biases $\vec b_c \sim \mathcal N( \vec 0, \textnormal{diag}(\boldsymbol \sigma _c^2))$, 
+The class-dependent variant can again make use of more suited biases $\vec b_c \sim \mathcal N( \vec 0, \textnormal{diag}(\boldsymbol \sigma _c^2))$, 
 where $\boldsymbol \sigma_c ^2 = \var ({R_{\vec o_c}(\set A|_c)})$.
 In this case, equation \ref{eqn:class_statistics_loss} becomes:
 % 
@@ -206,13 +204,13 @@ In this case, equation \ref{eqn:class_statistics_loss} becomes:
 
 \subsection{Randomly initialized neural network (RANDOM NN)}
 To further study the importance of an optimized feature-representation of a trained neural network, 
-the same neural network model with randomly initialized parameters will be evaluated and compared.
-This could give insight to the importance of compositions of non-linear transformations
+the same neural network model with randomly initialized parameters is evaluated and compared.
+This could give insight to the importance of the number of compositions of non-linear transformations.
 
 \subsection{Combinations (COMBINED)}
 All previously defined feature-maps can be combined into a new collection of feature-maps,
 in order to obtain a new loss formulation.
-One combination in particular, the combination of all neural network layers (NN ALL) and random projections (RP) will be further examined in the following experiments.
+One combination in particular, the mixture of all neural network layers (NN ALL) and random projections (RP) is further examined in the following experiments.
 
 
 \section{Data Sets}
@@ -290,17 +288,17 @@ For $\kappa = 0$, the identity transformation is obtained.
 
 The \textbf{reconstruction model} for this data set is also an affine-linear transformation. 
 $\rho(\vec x) = \vec A \vec x + \vec b$.
-$\vec A$ and $\vec b$ make up the models learnable parameters and
-these are first initialized to form the identity transformation ($\vec A = \vec I$, $\vec b = \vec 0$).
+$\vec A$ and $\vec b$ make up the model's learnable parameters, and
+these are initialized to $\vec A = \vec I$ and $\vec b = \vec 0$ in order to form the identity transformation.
 An optimal solution is given by
 $\vec A^* = (\vec I + \kappa \vec N)^{-1}$, $\vec b^* = -\kappa \vec A^* \boldsymbol \mu$.
 Proof:
 \begin{equation}
 \label{eqn:gmm_optimal}
 \begin{split}
-    \delta ( \rho^* (\vec x)) &= (\vec I + \kappa \vec N)(\vec A^* \vec x + \vec b^*) + \kappa \boldsymbol \mu \\
-    &= (\vec I + \kappa \vec N)\vec A^* (\vec x  - \kappa \boldsymbol \mu) + \kappa \boldsymbol \mu \\
-    &= \vec x  -\kappa \boldsymbol \mu + \kappa \boldsymbol \mu \\
+    \rho^* ( \delta (\vec x)) 
+    &= \vec A^* ((\vec I + \kappa \vec N)\vec x + \kappa \boldsymbol \mu) + \vec b^* \\
+    &= \vec A^* (\vec I + \kappa \vec N)\vec x + \kappa \vec A^* \boldsymbol \mu + \vec b^* \\
     &= \vec x
 \end{split}
 \end{equation}
@@ -370,7 +368,7 @@ The 'reflection' padding was chosen.
 
 The model for the reconstruction task on images is given by a residual network architecture
 as outlined in \ref{fig:resnet}. 
-The network \textit{width} - the number of individual convolutional kernels - is controlled by the parameter $s_\text{width}$, the \textit{depth} - the number of residual layers - by the parameter
+The network \textit{width}, the number of individual convolutional kernels, is controlled by the parameter $s_\text{width}$; the \textit{depth}, the number of residual layers, by the parameter
 $s_\text{depth}$.
 
 The default parameters for the experiments are given in \ref{AppendixParameters}.
@@ -381,37 +379,46 @@ The default parameters for the experiments are given in \ref{AppendixParameters}
 \section{Evaluation}
 \label{sec:evaluation}
 
-\input{Figures/ChartEvaluation}
+\begin{figure}[h]
+    \centering
+    \input{Figures/ChartEvaluation}
+    \caption{Overview of evaluation metrics}
+    \label{fig:inversion_outline}
+    \centering
+\end{figure}
 
 The result of the reconstruction task on the GMM data set can be evaluated by the \textbf{accuracy}
-of the neural network. This however, is likely to exhibit a strong bias in the classification accuracy 
-towards the data set, since, the data set $\set B$ and, in many of the presented methods,
-the neural network itself were used in the optimization process.
-For this reason, a validation set $\set C$ will undergo the same transformations 
-as $\set B$ and the correct classification rate will be reported as the \textbf{validation accuracy}. 
-Since none of the data points in $\set C$
-were used during the optimization, it is, to some extent a measure of generalization
+of the neural network. However, this however is likely to exhibit a strong bias in the classification accuracy 
+towards the source data set $\set B$, as it, and 
+the neural network 
+are used in the optimization process
+of many of the presented methods.
+For this reason, the same transformations are applied to
+a validation set $\set C$, and the 
+correct classification rate will be reported as the \textbf{validation accuracy}. 
+Because none of the data points in $\set C$
+are used during optimization, it is, to some extent, a measure of generalization
 of the learned transformation $\rho^*$.
 
 A second measure of generalization can be made by evaluating the accuracy of an
-independently trained neural network, the verifier neural network.
+independently trained neural network, the verification neural network.
 The accuracy of the validation set $\set C$ on this second neural network 
-constitutes the \textbf{verifier accuracy}.
+constitutes the \textbf{verification accuracy}.
 
-For the GMM data set, since the explicit probability density function (pdf) is known, 
+In the case of the GMM data set, since the explicit probability density function (pdf) is known, 
 (see \ref{eqn:gmm_distr}), the estimated \textbf{cross-entropy}, given by
 \begin{equation}
 \label{eqn:cross_entropy}
     H(\set A) = - \frac 1 {|\set A|} \sum_{i=1}^{|\set A|} \log p(\vec x_i)
 \end{equation}
-is used as a measure of reconstruction quality of $\rho^*$.
+is used as a measure of unlikelihood of $\set A$ coming from the underlying distribution.
 
-For the main reconstruction task, 
-five metrics will be studied to determine a methods success (along with visual appeal).
-For one, the accuracy of the reconstructed data set will be measured by the neural network.
-The relative l2-error, the peak signal-to-noise ratio, the accuracy of the neural network and the accuracy on a verifier network.
-Alongside, a validation data set $\set C$ will measure generalization of the found reconstruction $\rho$ to a data set to which it was not optimized for.
-Since the original neural network was also used in the optimization process, a verifier network $\Phi_{\text{ver}}$ will be used as a second evaluation of the accuracy.
+% For the main reconstruction task, 
+% five metrics will be studied to determine a methods success (along with visual appeal).
+% For one, the accuracy of the reconstructed data set will be measured by the neural network.
+% The relative l2-error, the peak signal-to-noise ratio, the accuracy of the neural network and the accuracy on a verification network.
+% Alongside, a validation data set $\set C$ will measure generalization of the found reconstruction $\rho$ to a data set to which it was not optimized for.
+% Since the original neural network was also used in the optimization process, a verification network $\Phi_{\text{ver}}$ will be used as a second evaluation of the accuracy.
 
 If the perturbation $\delta$ is known, then one can calculate the \textbf{relative error} of the identity vectors. 
 \begin{equation}
@@ -419,49 +426,68 @@ If the perturbation $\delta$ is known, then one can calculate the \textbf{relati
     \varepsilon_F = \frac {\|\widehat {\vec I_d} - \vec I_d\|_F} {\|\vec I_d\|_F} \,,
 \end{equation}
 where $\widehat {\vec I_d} = \begin{pmatrix} \rho (\delta (\vec e_1), \dots, \rho (\delta (\vec e_d) \end{pmatrix}$ and $\vec e_i$ is the i-th unit vector of the standard basis.
-
+%
 Then \eqnref{eqn:fro_error} becomes
 \begin{equation}
 \label{eqn:l2_error}
-    \varepsilon_F = \frac 1 {\sqrt d} \sqrt{ \sum_{i=0}^d \|\rho (\delta (\vec e_i)) - \vec e_i)\|_2^2}
+    \varepsilon_F = \sqrt{ \frac 1 d \sum_{i=0}^d \|\rho (\delta (\vec e_i)) - \vec e_i)\|_2^2}
 \end{equation}
 
-For the GMM data set, where the distortion model $\delta(\vec x) = (\vec I + \kappa \vec N) \vec x + \boldsymbol \mu$
-and reconstruction model $\rho(\vec x) = \vec A \vec x + \vec b$ are both affine-linear transformations,
+Given an affine-transformation $\vec M \cdot + \vec s$,
+% equation \ref{eqn:l2_error} becomes:
+
+\begin{align*}
+    &= \frac 1 d \sum_{i=1}^d \|\vec M \vec e_i + \vec s\|^2_2 \\
+    &= \frac 1 d \sum_{i=1}^d \sum_{j=1}^d ( \vec M_{ij} + \vec s_j )^2 \\
+    &= \frac 1 d \sum_{i=1}^d \sum_{j=1}^d \vec M_{ij}^2 + 2 \vec M_{ij} \vec s_j + \vec s_j^2 \\
+    &= \frac 1 d \left (\| \vec M_{ij} \|_F^2 + d \| \vec s \|_2^2 + 2 \, \vec 1^\top \vec M \vec s \right )\\
+    &\leq \| \vec M_{ij} \|_F^2 + \| \vec s \|_2^2 + 2 \|\vec 1^\top \vec M\|_2 \|\vec s\|_2\\
+    &= \| \vec M_{ij} \|_F^2 + \| \vec s \|_2^2 + 2 \|\vec M\|_F \|\vec s\|_2\\
+    &= \Bigl ( \| \vec M_{ij} \|_F + \| \vec s \|_2 \Bigr )^2
+\end{align*}
+Thus, for the GMM data set, where the distortion model $\delta(\vec x) = (\vec I + \kappa \vec N) \vec x + \kappa \boldsymbol \mu$
+and reconstruction model $\rho(\vec x) = \vec A \vec x + \vec b$ are both 
+affine-linear transformations, and the full transformation $\rho \circ \delta$ 
+is expressed as $\vec A (\vec I + \kappa \vec N) \vec x + \kappa \vec A \boldsymbol \mu + \vec b$
 this is motivated as follows.
 \begin{align*}
-    \|\rho(\delta (\vec x)) - \vec x \| 
-    &= \|(\vec I + \kappa \vec N) (\vec A \vec x + \vec b) + \kappa \boldsymbol \mu  - x \| \\
-    &= \|(\vec I + \kappa \vec N) (\vec A \vec x - (\vec I + \kappa \vec N)^{-1} \vec x) 
-        + (\vec I + \kappa \vec N) \vec b + \kappa \boldsymbol \mu  \| \\
-    &= \|(\vec I + \kappa \vec N) (\vec A - (\vec I + \kappa \vec N)^{-1}) \vec x 
-        + (\vec I + \kappa \vec N) (\vec b + (\vec I + \kappa \vec N)^{-1} \kappa \boldsymbol \mu)  \| \\
-    &\leq \|\vec I + \kappa \vec N\| \left(\|(\vec A - (\vec I + \kappa \vec N)^{-1})\| \|\vec x\| 
-        + \|(\vec b + (\vec I + \kappa \vec N)^{-1} \kappa \boldsymbol \mu)  \| \right)\\
-    &= \|\vec I + \kappa \vec N\| \left(\|\vec A - \vec A^* \| \|\vec x\| 
-        + \|\vec b - \vec b ^*\| \right) \,,
+    \varepsilon_F 
+    &= \sqrt{ \sum_{i=1}^d \frac 1 d \|\rho(\delta (\vec e_i)) - \vec e_i \|_2^2 } \\
+    &= \sqrt{ \sum_{i=1}^d \frac 1 d \left \| \Bigl ( \vec A (\vec I + \kappa \vec N) - \vec I \Bigr )\vec e_i 
+        + (\vec b + \kappa \vec A \boldsymbol \mu ) \right \|_2^2} \\
+    &\leq \| \vec A (\vec I + \kappa \vec N) - \vec I \|_F
+        + \| \vec b + \kappa \vec A \boldsymbol \mu \|_2 \\
+    &= \|(\vec A  - (\vec I + \kappa \vec N)^{-1})  (\vec I + \kappa \vec N)\|_F
+        + \| \vec b + \kappa \vec A^* \boldsymbol \mu - \kappa \vec A^* \boldsymbol \mu + \kappa \vec A \boldsymbol \mu \|_2 \\
+    &\leq \| \vec I + \kappa \vec N \|_F \|\vec A  - \vec A^* \|_F
+        + \| \vec b - \vec b^*\|_2 + \| \kappa \vec A^* \boldsymbol \mu - \kappa \vec A \boldsymbol \mu \|_2 \\
+    &\leq \| \vec I + \kappa \vec N \|_F \|\vec A  - \vec A^* \|_F
+        + \| \vec b - \vec b^*\|_2 + \kappa \| \vec A^* - \vec A \|_F \\
+    &= \left (\| \vec I + \kappa \vec N\|_F  + \kappa \right ) \|\vec A  - \vec A^* \|_F
+        + \| \vec b - \vec b^*\|_2 \\
 \end{align*}
 where $\vec A ^*$ and $\vec b^*$ are the parameters to the exact inverse transformation of $\delta$ 
 (see \ref{eqn:gmm_optimal}).
-For a unit vector $\vec e_i$ this becomes:
-\begin{equation*}
-    \|\rho(\delta (\vec e_i)) - \vec e_i \| 
-    \leq \|\vec I + \kappa \vec N\| \left(\|\vec A - \vec A^* \| 
-        + \|\vec b - \vec b ^*\| \right) \,.
-\end{equation*}
-\eqnref{eqn:fro_error} then, is bound by
-\begin{align*}
-    \varepsilon_F 
-    &\leq \|(\vec I + \kappa \vec N)\|
-    \sqrt{ \frac 1 d \sum_{i=0}^d \left(\|\vec A - \vec A^* \|  + \|(\vec b - \vec b ^*)  \| \right)^2} \\
-    &= \|(\vec I + \kappa \vec N)\| \left(\|\vec A - \vec A^* \|  + \|(\vec b - \vec b ^*)  \| \right) \,.
-\end{align*}
+% For a unit vector $\vec e_i$ this becomes:
+% \begin{equation*}
+%     \|\rho(\delta (\vec e_i)) - \vec e_i \| 
+%     \leq \|\vec I + \kappa \vec N\| \left(\|\vec A - \vec A^* \| 
+%         + \|\vec b - \vec b ^*\| \right) \,.
+% \end{equation*}
+% \eqnref{eqn:fro_error} then, is bound by
+% \begin{align*}
+%     \varepsilon_F 
+%     &\leq \|(\vec I + \kappa \vec N)\|
+%     \sqrt{ \frac 1 d \sum_{i=0}^d \left(\|\vec A - \vec A^* \|  + \|(\vec b - \vec b ^*)  \| \right)^2} \\
+%     &= \|(\vec I + \kappa \vec N)\| \left(\|\vec A - \vec A^* \|  + \|(\vec b - \vec b ^*)  \| \right) \,.
+% \end{align*}
 
 These calculations are no longer valid for the image data sets, as it is not guaranteed that 
-an inverse transformation exists, given the convolutional distortion models. The relative
-error, as defined in \ref{eqn:l2_error} will be reported as a metric, but it is important to
-note that the reconstruction model will behave differently on a unit-vector of the standard-basis
-than on an image from the data set, due to its non-linear nature.
+an inverse transformation exists for the convolutional distortion models. The relative
+error, as defined in \ref{eqn:l2_error} is reported, but it is important to
+note that, due to the non-linear nature, the reconstruction model will behave differently 
+for a unit-vector 
+of the standard-basis than for an image from the data set.
 
 A metric that is commonly encountered in image quality assessment (IQA), is the 
 \textbf{peak signal-to-noise ratio} (\textbf{PSNR}).
@@ -469,15 +495,16 @@ It is formed between two images $\vec x$ and $\vec y$ and is calculated as follo
 \[
     PSNR(\vec x, \hat {\vec x}) = 20 \log_{10} \left (\frac {\max_i(\vec x_i)} {\|\vec x-\hat {\vec x}\|_2} \right )
 \]
-It is a common measure of image quality when assessing image compression algorithms and is measured in decibels db.
-It is similar to the relative error in that it uses the mean-squared error, 
-though it assessed on data points directly and therefore could be more indicative of actual 
-reconstruction quality, whereas the l2-error can be seen as a metric describing the general invertibility.
+The PSNR is common measure of image quality when assessing image compression algorithms and is measured in decibels db.
+It is similar to the relative error in that it uses the mean-squared error. 
+However, it is assessed on data points directly and therefore could be more indicative of actual 
+reconstruction quality, whereas the l2-error can be seen as a metric describing the 
+overall distortion of the reconstruction.
 For a batch of images, the score is averaged over the images to give an estimated mean PSNR score.
 
 Both, the l2-error and the PSNR compare individual values in pixels of images for their calculations.
 Because of this, a low score in both of these metrics might not necessarily mean that a reconstruction
-model has a bad performance. A near optimal reconstruction function can suffer from a heavy penalty
+model has a bad performance. A near optimal reconstruction function can suffer a heavy penalty
 in these scores due to a slight shift in translation of pixel values that humans would not even be
 able to notice.
 These translations can easily occur in convolutional models.
@@ -493,4 +520,3 @@ It is given as follows.
 \XXX{explain}
 
 
-\subsection{Results}

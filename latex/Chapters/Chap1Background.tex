@@ -8,16 +8,10 @@
 
 A \textbf{sample} $\vec z$ is an observation drawn from a joint distribution over the domain $\set Z = \set X \times \set Y$. 
 It consists of a tuple $(\vec x, y)$ of an \textbf{input} $\vec x$ and a \textbf{label} $y$. 
-
-\noindent
 The input space $\set X$ typically is $\R^d$ and $\set Y$, the set of possible labels, is a set of integers $\{1, \dots, C\}$ for some whole number $C$, also known as the \textbf{number of classes}.
-
-\noindent
 A \textbf{bracket-notation} $\finiteset{\, \cdot \,}$ is used to denote the set of all \textit{finite non-empty} subsets.
 $\set A = \{\vec z^{(i)}\}_{i=1}^{| \set A |} = \{(\vec x^{(i)}, y^{(i)})\}_{i=1}^{| \set A |} \in \finiteset{\set Z}$ is called a \textbf{data set}. $\set A $ contains \textit{i.i.d.} (independent and identically distributed) samples drawn from some distribution over $\set Z$.
 A \textbf{sample batch} or simply \textbf{batch} is a \textit{non-empty} subset thereof.
-
-\noindent
 $\mean$ and $\var$ are used to denote the empirical sample mean and variance of the input.
 \begin{align}
     \mean ({\set A}) &= \frac 1 {\lvert \set A \rvert} \sum _{i=1}^{\lvert \set A \rvert} \vec x^{(i)} \; \in \set X
@@ -34,18 +28,18 @@ Given a sample batch $\set A$, the set $\set A|_c$ is the subset of $\set A$ \te
 \end{equation}
 
 A \textbf{feature-mapping} is any function from input space $\R^d$ to $\R^m$ for some $m$.
-A data set to data set mapping is obtained by applying a feature-mapping $\varphi$ to every input. Given a data set $\set A$, and a feature-mapping $\varphi$:
+A data set mapping is obtained by applying a feature-mapping $\varphi$ to every input. Given a data set $\set A$, and a feature-mapping $\varphi$:
 \begin{equation}
     \varphi(\set A) := \{(\varphi(\vec x), y) \mid (\vec x, y) \in \set A\} \;
-    \in \finiteset Z
+    \in \finiteset {\set Z}
     \label{eqn:feature_mapping}
 \end{equation}
 
 
 
 \section{Loss function}
-Given two data sets $\set A, \set B$, a \textbf{loss function} or \textbf{objective function} is a function $\loss : \finiteset{\set Z} \times \finiteset{Z} \to \R$ that is \textit{piecewise continuously differentiable} with regard to its inputs.
-I. e. where 
+Given two data sets $\set A, \set B$, a \textbf{loss function} or \textbf{objective function} is a function $\loss : \finiteset{\set Z} \times \finiteset{\set Z} \to \R$ that is \textit{piecewise continuously differentiable} with regard to its inputs,
+i. e. where 
 \[
     \loss (\set A, \set B) = \loss (
     \,\{(\vec x^{(i)}_{\set A}, y^{(i)}_{\set A})\}_{i=1}^{|\set A|}\,,

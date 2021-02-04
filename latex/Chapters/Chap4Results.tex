@@ -5,34 +5,34 @@
 \subsubsection{GMM}
 
 All proposed methods are able to increase the main network's accuracy and validation accuracy.
-Also, the accuracy of the verifier network is increased.
-It is interesting to note that all methods do not decrease the l2-error of the distortion,
-yet the cross-entropy, for most is decreased.
-
-For a larger number of samples, the data set cross-entropy quickly becomes infeasible
-due to floating point precision errors, even with overflow measures in place.
-
-Although, it is important to remember that the loss function used in the optimization process
+Also, the accuracy of the verification network is increased.
+It is interesting to note that even though nearly all methods decrease the 
+the cross-entropy, the l2-error of the distortion always increases
+- for a larger number of samples, the data set cross-entropy is reported as infinity.
+This is due to floating point precision errors that arise even with overflow measures in place.
+However, it is important to remember that the loss function used in the optimization process
 is a composite loss from the proposed loss between the statistics
 and the original cross-entropy loss used in the optimization of the neural network.
 \[
     r_{stats} \loss(\set A, \set B) + r_{crit}\loss_{crit}(\set B, y_{\set B})
 \]
-Since the original criterion loss alone already performs quite good, 
+Since, by itself, the original criterion loss alone already performs quite well, 
 it can be said that the proposed losses act as a kind of regularization 
 by incorporating more knowledge about the target data distribution that prevent overfitting
 of the source data set.
 A comparison of the results for the case $r_{crit}=0$ can be found in table \ref{tab:gmm_results_raw}
 
-The results shown in table \ref{tab:gmm_results_raw} confirm the assumption that the methods alone 
-- without any class information - are not able to achieve good results.
+The results shown in table \ref{tab:gmm_results_raw} confirm the assumption that,
+without any class information, no method is able to achieve good results.
 
-In this scenario, two methods, namely NN CC and RP CC seem to give even better generalization scores 
-(validation and verifier accuracy) than when the original cross-entropy loss is included.
-Although it is hard to explain the lower cross-entropy loss when leaving out the loss that
-is designed to minimize said loss.
-It is important to note that scores can fluctuate a fair amount and more experiment runs are
-necessary to give a clearer picture.
+In this scenario, two methods, namely NN CC and RP CC seem to give 
+better generalization scores 
+(validation and verification accuracy) than when the original cross-entropy loss 
+$\loss_\text{crit}$ is included.
+But it is hard to explain the lower cross-entropy when leaving out 
+$\loss_\text{crit}$, which is specifically designed to minimize the cross-entropy.
+Nevertheless it is important to note that scores can fluctuate a fair amount and more 
+experiment runs are necessary to give a clearer picture.
 
 \begin{table}[!htbp]
 \centering
@@ -103,11 +103,13 @@ The results for the reconstruction task for all methods on the MNIST data set is
 The criterion (CRITERION) alone gives leads to good results on the main network, but fails to generalize when tested on a secondary network.
 This shows that the reconstruction is being heavily biased by what the neural network deems to be "correct" images, 
 yet these features might not be robust in the sense that they don't correspond to features we as humans might make out.
-The hardly improved generalization score of NN, where additionally the second-to-last layer is incorporated seems to confirm
-the network's bias in the optimization procedure. Only by taking into account all layers of the neural network (NN ALL), an
-improvement in the verifier accuracy can be seen.
-The randomly initialized neural network (RANDOM NN) does not add any significant improvement - it seems as though it is
-not able to capture any useful information about the data set.
+The hardly improved verification score of NN, where additionally the second-to-last layer is 
+incorporated, seems to confirm
+the network's bias in the optimization procedure. 
+An improvement in generalization can be seen only after taking 
+all layers of the neural network (NN ALL) into account.
+The randomly initialized neural network (RANDOM NN) does not add any significant improvement - 
+it seems as though it is not able to capture much useful information about the data set.
 Random projections (RP) is able to add an additional amount of regularization that is seen in the generalization scores.
 Combining the methods (COMBINED) seems to merit overall good scores which can be verified in image quality.
 
@@ -160,7 +162,7 @@ The objects of interest have greatly varying backgrounds and are shown from nume
 The learned feature representations have to be able to filter out the noise from the signal more than in
 the previous data sets.
 The network for this data set is of a deeper (34 layers) architecture,
-the learned feature representations seem to be more robust and correlate more with the verifier network.
+the learned feature representations seem to be more robust and correlate more with the verification network.
 Comparing the results of the methods that use the representations of the main network (NN, NN ALL)
 to the randomly initialized network (RANDOM NN), it can be said that a good feature representation is necessary.
 Random projections do not perform well for this task, their design is too simple for this complex task.
