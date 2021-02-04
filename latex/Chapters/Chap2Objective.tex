@@ -22,11 +22,11 @@ This section introduces the main objective of this work. An outline is given in 
 \end{figure}
 
 
-We are given a data set $\set B$ 
+Suppose we are given a data set $\set B$ 
 and a neural network that was trained on - or performs reasonably well on - a data set $\set A$.
 % The neural network is able to predict data coming from $\set A$ accurately, 
 As the distribution of $\set B$ differs crucially from $\set A$, 
-the neural network is unable to reach high performance on data coming from $\set B$.
+such that the neural network is unable to reach high performance on data coming from $\set B$.
 The goal is to learn a transformation $\rho$ that adjusts $\set B$ 
 so that the network's performance is regained.
 
@@ -34,17 +34,17 @@ An underlying assumption is that $\set B$ originates from the same distribution
 as $\set A$, but has been corrupted by an unknown perturbation $\delta$.
 The transformation $\rho$ is modeled to correct for this perturbation, 
 in the sense that $\rho(\set B) \approx \set B_\text{true}$.
-This is done by minimizing the a dissimilarity-score between $\set B$ and $\set A$ 
+This is done by minimizing a dissimilarity-score between $\set B$ and $\set A$ 
 in a feature space given by an appropriate feature-map $\varphi$, 
 after the transformation $\rho$ has been applied to $\set B$.
 For this, simple statistics of both data sets, such as the mean and variance 
 are recorded in feature space and $\rho$ is adjusted accordingly by backpropagation 
 in order to make the statistics of the source $\set B$ approach those of the target $\set A$.
-
+%
 Whether matching statistics in feature space actually increases similarity between $\set A$ and $\set B$
 strongly depends on $\varphi$ and its representation of the data set.
-
-A hope is that the found transformation $\rho$ will be close to an inverse transformation
+%
+One hope is that the found transformation $\rho$ will be close to an inverse transformation
 of $\delta$, i.e. that $\rho\circ\delta \approx \text{id}$, the identity transformation,
 although it is important to note that this is different from saying that $\rho(\set B) \approx \set B_\text{true}$.
 
@@ -79,13 +79,13 @@ parametrized by $\boldsymbol \theta$.
     \centering
 \end{figure}
 
-A secondary part of this work is concerned about what kind of data 
+A secondary part of this work concerns what kind of data 
 may be recovered from having access to the statistics of a data set.
 In this setting, we are given target statistics of data set $\set A$
-and alternatively modify the source $\set B$ directly to 
+and, in contrast to the previous task, modify the source $\set B$ directly to 
 minimize the dissimilarity just as outlined in \ref{sec:Reconstruction}.
-The source data set is, in a first step, initialized randomly and then also 
-iteratively refined by backpropagation after it has been mapped to feature-space.
+The source data set is initialized randomly and then is 
+iteratively refined by backpropagation after being mapped to feature-space.
 
 
 
