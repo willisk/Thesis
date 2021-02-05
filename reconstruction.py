@@ -26,7 +26,7 @@ from utils import methods
 from utils import datasets
 from utils import debug
 from utils import nets
-from utils.haarPsi import haar_psi_numpy
+# from utils.haarPsi import haar_psi_numpy
 from pytorch_lightning.metrics.functional import ssim
 
 try:
@@ -101,9 +101,9 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args.plot_ideal = True
     args.f_reg = 0
     args.silent = True
-    # args.seed = 26
-    # args.seed = 58
     args.seed = 1
+    # args.seed = 26
+    args.seed = 58
 
     # args.seed = 55
     # args.nn_resume_train = True
@@ -332,7 +332,7 @@ def fig_path_fmt(name, filetype="png"):
     return None
 
 
-# show_batch = next(iter(DATA_B))[0][:50].to(DEVICE)
+show_batch = next(iter(DATA_B))[0][:50].to(DEVICE)
 # # utility.im_show(show_batch[:1],
 # #                 fig_path=f"figures/{args.dataset}_example.pdf"
 # #                 )
