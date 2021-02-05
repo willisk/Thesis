@@ -93,17 +93,18 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args.inv_steps = 2
     args.size_A = -1
     args.size_B = 8
+    args.size_B = 200
     args.size_C = 8
     # args.size_B = -1
     # args.size_C = -1
-    args.batch_size = 8
+    args.batch_size = 200
     args.r_distort_level = -0.04
     args.plot_ideal = True
     args.f_reg = 0
     args.silent = True
     args.seed = 1
     # args.seed = 26
-    args.seed = 58
+    args.seed = 60
 
     # args.seed = 55
     # args.nn_resume_train = True
@@ -332,15 +333,14 @@ def fig_path_fmt(name, filetype="png"):
     return None
 
 
-show_batch = next(iter(DATA_B))[0][:50].to(DEVICE)
-# # utility.im_show(show_batch[:1],
-# #                 fig_path=f"figures/{args.dataset}_example.pdf"
-# #                 )
+show_batch = next(iter(DATA_B))[0][:200].to(DEVICE)
+utility.im_show(show_batch[:200],
+                fig_path=f"figures/{args.dataset}_example_2.pdf"
+                )
 # utility.im_show(distort(show_batch[:1]),
 #                 fig_path=f"figures/{args.dataset}_example_reconstruct.pdf"
 #                 )
-
-# sys.exit(0)
+sys.exit(0)
 
 
 if not args.silent and args.dataset != 'GMM':
