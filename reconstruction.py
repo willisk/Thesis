@@ -94,15 +94,16 @@ if 'ipykernel_launcher' in sys.argv[0]:
     args.size_A = -1
     args.size_B = 8
     args.size_C = 8
-    args.size_B = -1
-    args.size_C = -1
+    # args.size_B = -1
+    # args.size_C = -1
     args.batch_size = 8
-    args.r_distort_level = 0.1
+    args.r_distort_level = -0.04
     args.plot_ideal = True
     args.f_reg = 0
     args.silent = True
     # args.seed = 26
-    args.seed = 58
+    # args.seed = 58
+    args.seed = 1
 
     # args.seed = 55
     # args.nn_resume_train = True
@@ -154,14 +155,14 @@ DATA_C = utility.DataL(
 #                         fig_path=f"figures/{args.dataset}_plot.pdf"
 #                         )
 #         break
-utility.im_show(next(iter(DATA_A))[0][:8], nrow=8,
-                fig_path=f"figures/{args.dataset}_plot.pdf"
-                )
+# utility.im_show(next(iter(DATA_A))[0][:8], nrow=8,
+#                 fig_path=f"figures/{args.dataset}_plot.pdf"
+#                 )
 # plt.tight_layout()
 # plt.axis('off')
 # plt.savefig(f"figures/{args.dataset}_plot.pdf", bbox_inches='tight')
 # plt.show()
-sys.exit(0)
+# sys.exit(0)
 
 
 input_shape = dataset.input_shape
@@ -331,7 +332,15 @@ def fig_path_fmt(name, filetype="png"):
     return None
 
 
-show_batch = next(iter(DATA_B))[0][:50].to(DEVICE)
+# show_batch = next(iter(DATA_B))[0][:50].to(DEVICE)
+# # utility.im_show(show_batch[:1],
+# #                 fig_path=f"figures/{args.dataset}_example.pdf"
+# #                 )
+# utility.im_show(distort(show_batch[:1]),
+#                 fig_path=f"figures/{args.dataset}_example_reconstruct.pdf"
+#                 )
+
+# sys.exit(0)
 
 
 if not args.silent and args.dataset != 'GMM':
