@@ -2,18 +2,18 @@
 
 %%Nodes
 \node (D) [minimum height=3.5cm] {\distribution};
-\node [above of= D, align=center, yshift=0.2cm] {Data set \\ Distribution};
+\node [above of= D, align=center, yshift=0.2cm] {data set \\ distribution};
 
 \node (N) [below= -0.5cm of D, minimum height=3.5cm] {\noise};
-\node [above of= N] {Random noise};
+\node [above of= N] {random noise};
 
 \node (B) [node, right= of N, fill=blue!7, draw=blue, thick] {\textbf{Source} \\ $\set B$};
-\node (A) [node, right= of D, fill=red!7] {\textbf{Target} \\ $\set A$};
+\node (A) [node, right= of D, fill=red!7] {\textbf{target} \\ $\set A$};
 
 \path (A) -- (B) node (Mid) [midway] {};
 \node (Net) [function, thick, minimum width=1cm, right= of Mid, xshift=1.2cm] {$\varphi$};
 \node [below right= 0.1cm and -1.2cm of Net] {\small feature-map};
-\node (Loss) [function, thick, right= of Net] {Loss};
+\node (Loss) [function, thick, right= of Net] {loss};
 
 %%Arrows
 % \pgfmathtruncatemacro{\InL}{160}
@@ -42,9 +42,10 @@
 \draw [lineend, blue, connect h] (Net.\OutR) to (Loss.west);
 \node [below= 0cm of B, yshift=-0cm] {\color{blue} \footnotesize optimize};
 
-\path (Net) -- (Loss) node [above=0.3cm, midway] {\small Statistics};
+\path (Net) -- (Loss) node [above=0.3cm, midway] {\small statistics};
 % \draw [arrow, Mahogany, thin, bend left=30] (A.20) to [out=40, in=140] node[above, sloped] {\footnotesize trained} (Net);
 
+\node [below= 0cm of A] {\fbox{\includegraphics[]{figures/CIFAR10_example_3.pdf}}};
 
 \end{tikzpicture}
 
