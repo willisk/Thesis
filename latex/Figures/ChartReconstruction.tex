@@ -6,12 +6,12 @@
 %%Nodes
 
 \node (D) [minimum height=3.5cm] {\distribution};
-\node [above of= D, align=center, yshift=0.7cm] {Data set \\ Distribution};
+\node [above of= D, align=center, yshift=0.7cm] {data set \\ distribution};
 
-\node (A) [node, right= 1cm of D, fill=red!7, yshift=1.5cm] {\textbf{Target} \\ $\set A$};
-\node (B) [node, right= 1cm of D, yshift=-1.5cm] {\textbf{original} \\ $\set B_\text{true}$};
+\node (A) [node, right= 1cm of D, fill=red!7, yshift=1.5cm] {\textbf{target} \\ $\set A$};
+\node (B) [node, right= 1cm of D, yshift=-1.5cm] {\includegraphics[width=0.25\textwidth]{figures/example]{}\textbf{original} \\ $\set B_\text{true}$};
 
-\node (Bp) [node, right= of B, fill=blue!3] {perturbed \\ \textbf{Source} \\ $\set B$}; %\\ $\set B = \delta (\set B_\text{true})$};
+\node (Bp) [node, right= of B, fill=blue!3] {perturbed \\ \textbf{source} \\ $\set B$}; %\\ $\set B = \delta (\set B_\text{true})$};
 \node (Br) [node, right= of Bp, fill=blue!7] {\textbf{reconstructed} \\ $\rho (\set B)$};
 
 
@@ -32,7 +32,7 @@ node (Rec) [midway, function, draw=blue, fill=white] {$\rho$};
 
 \node (Net) [function, thick, minimum width= 1cm, above right= -0cm and 3.1cm of A] {$\varphi$};
 \node [above right=-0.2cm and 0cm of Net] {\small feature-map};
-\node (Loss) [function, thick, above= 1.5cm of Net] {Loss};
+\node (Loss) [function, thick, above= 1.5cm of Net] {loss};
 
 \pgfmathtruncatemacro{\OutL}{110}
 \pgfmathtruncatemacro{\OutM}{95}
@@ -51,7 +51,7 @@ node (Rec) [midway, function, draw=blue, fill=white] {$\rho$};
 \draw [lineend, blue, connect v] (Net.\OutR) to (Loss.south);
 \draw [arrowend, blue, connect h] (Br.192) to (Rec.east);
 
-\path (Net.\OutL) -- node[midway, above= 0.15cm, sloped] {\small Statistics}(Loss.260);
+\path (Net.\OutL) -- node[midway, above= 0.15cm, sloped] {\small statistics}(Loss.260);
 % \node [above= 0.5cm of Net, fill=white] {\footnotesize optimize};
 % \draw [arrow, Mahogany, thin, bend left=20] (A) to node[near end, above] {\footnotesize trained} (Net);
 

@@ -10,7 +10,7 @@ A \textbf{sample} $\vec z$ is an observation drawn from a joint distribution ove
 It consists of a tuple $(\vec x, y)$ of an \textbf{input} $\vec x$ and a \textbf{label} $y$. 
 The input space $\set X$ typically is $\R^d$ and $\set Y$, the set of possible labels, is a set of integers $\{1, \dots, C\}$ for some whole number $C$, also known as the \textbf{number of classes}.
 A \textbf{bracket-notation} $\finiteset{\, \cdot \,}$ is used to denote the set of all \textit{finite non-empty} subsets.
-$\set A = \{\vec z^{(i)}\}_{i=1}^{| \set A |} = \{(\vec x^{(i)}, y^{(i)})\}_{i=1}^{| \set A |} \in \finiteset{\set Z}$ is called a \textbf{data set}. $\set A $ contains \textit{i.i.d.} (independent and identically distributed) samples drawn from some distribution over $\set Z$.
+$\set A = \{\vec z^{(i)}\}_{i=1}^{| \set A |} = \{(\vec x^{(i)}, y^{(i)})\}_{i=1}^{| \set A |} \in \finiteset{\set Z}$ is called a \textbf{data set}. $\set A $ contains \textit{independent} and \textit{identically distributed} (\textit{i.i.d.}) samples drawn from some distribution over $\set Z$.
 A \textbf{sample batch} or simply \textbf{batch} is a \textit{non-empty} subset thereof.
 $\mean$ and $\var$ are used to denote the empirical sample mean and variance of the input.
 \begin{align}
@@ -21,23 +21,23 @@ $\mean$ and $\var$ are used to denote the empirical sample mean and variance of 
 \end{align}
 
 
-Given a sample batch $\set A$, the set $\set A|_c$ is the subset of $\set A$ \textbf{constrained} to samples of label $c$.
+Given a data set $\set A$, the set $\set A|_c$ is the subset of $\set A$ \textbf{constrained} to samples of label $c$.
 \begin{equation}
     \set A|_c = \{(\vec x, y) \in \set A \mid y = c\}
     \label{eqn:class_constrained}
 \end{equation}
 
-A \textbf{feature-mapping} is any function from input space $\R^d$ to $\R^m$ for some $m$.
-A data set mapping is obtained by applying a feature-mapping $\varphi$ to every input. Given a data set $\set A$, and a feature-mapping $\varphi$:
+A \textbf{feature-mapping} is any function from input space $\set X$ to $\R^m$ for some $m$.
+A data set mapping is obtained by applying a feature-map $\varphi$ to every input. Given a data set $\set A$, and a feature-map $\varphi$:
 \begin{equation}
     \varphi(\set A) := \{(\varphi(\vec x), y) \mid (\vec x, y) \in \set A\} \;
-    \in \finiteset {\set Z}
+    % \in \finiteset {\R^m \times \set Y}
     \label{eqn:feature_mapping}
 \end{equation}
 
 
 
-\section{Loss function}
+\section{Loss Function}
 Given two data sets $\set A, \set B$, a \textbf{loss function} or \textbf{objective function} is a function $\loss : \finiteset{\set Z} \times \finiteset{\set Z} \to \R$ that is \textit{piecewise continuously differentiable} with regard to its inputs,
 i. e. where 
 \[
@@ -59,21 +59,19 @@ For a given feature-mapping $\varphi$ that is piecewise $\mathcal C ^1$, the \te
 \end{equation}
 % 
 A \textbf{class-dependent} loss can be obtained as follows:
-\begin{equation}
+\begin{align}
+\begin{split}
 \label{eqn:class_statistics_loss}
-    \loss _\varphi ^{\mathcal C} (\set A, \set B) =
-    \sum _{\substack{c = 1 \dots C \\ \set A|_c,\, \set B|_c \text{ contain} \\ \text{at least 2 samples}}}
+    \loss _\varphi ^\text{CC} (\set A, \set B) =
+    \sum _{c = 1, \dots, C}
+    % \|\mean ({\varphi (\set A|_c)}) &- \mean({\varphi (\set B|_c)}) \| \\
+    % {} + \|\var ({\varphi (\set A|_c)}) &- \var ({\varphi (\set B|_c)}) \| 
     \begin{alignedat}[t]{1}
         \|\mean ({\varphi (\set A|_c)}) - \mean({\varphi (\set B|_c)}) &\| \\
         {} + \|\var ({\varphi (\set A|_c)}) - \var ({\varphi (\set B|_c)}) &\| 
     \end{alignedat}
-\end{equation}
-% \begin{equation}
-%     \loss _\varphi ^{\mathcal C} (\set A, \set B) =
-%     \sum _{\substack{c = 1 \dots C \\ \set A|_c,\, \set B|_c \text{ contain} \\ \text{at least 1 sample}}} 
-%     \substack{{} + \|\var ({\varphi (\set A|_c)}) - \var ({\varphi (\set B|_c)})\|}{\|\mean ({\varphi (\set A|_c)}) - \mean({\varphi (\set B|_c)})\|}
-%     \label{eqn:class_statistics_loss}
-% \end{equation}
+\end{split}
+\end{align}
 
 \subsection{Combinations}
 % 
