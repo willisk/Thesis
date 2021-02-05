@@ -283,6 +283,7 @@ class MULTIGMM(Dataset):
         plt.scatter(X[:, 0], X[:, 1], c=Y, s=3)
         offs = torch.Tensor([2, 1])
         plt.scatter([0], [0], c='k', s=5)
+        plt.annotate('0', offs, c='k')
         for c, gmm in enumerate(self.gmms):
             if c != 2:
                 continue
@@ -291,7 +292,7 @@ class MULTIGMM(Dataset):
             plt.plot((0, center[0]), (0, center[1]), 'k:', lw=1, zorder=0)
             plt.annotate('$\\gamma$', (center * 0.5 + offs))
             plt.scatter(*center, c='red')
-            plt.annotate(f'$m_0$', center + offs, c='red',
+            plt.annotate(f'$m_1$', center + offs, c='red',
                          bbox={'facecolor': 'white', 'edgecolor': 'white', 'pad': 0}, zorder=1)
             for m, mean in enumerate(gmm.means):
                 if m == 1:
@@ -301,7 +302,7 @@ class MULTIGMM(Dataset):
                         '$\\lambda$', (center + (mean - center) * 0.5 + offs), zorder=1)
                 plt.scatter(*mean, marker='^', c='red', zorder=1)
                 plt.annotate(
-                    f'$\\mu_0^{{({m})}}$', mean + offs, c='red', bbox={'facecolor': 'white', 'edgecolor': 'white', 'pad': 0}, zorder=1)
+                    f'$\\mu_1^{{({m + 1})}}$', mean + offs, c='red', bbox={'facecolor': 'white', 'edgecolor': 'white', 'pad': 0}, zorder=1)
         # plt.scatter(X[:, 0], X[:, 1])
 
 
