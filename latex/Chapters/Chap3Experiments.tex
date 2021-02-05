@@ -22,7 +22,7 @@ Following that, the three data sets used in the experiments are introduced in \c
 and finally, the perturbation and reconstruction models are depicted in \cref{sec:reconstruction_models}.
 \Cref{sec:evaluation} deals with evaluation metrics.
 
-\section{Neural network}
+\section{Neural Network}
 \label{sec:nn_def}
 
 In a classification setting, a \textbf{neural network} $\Phi$ is a function that maps an input $\vec x \in \R^d$ to an output $\in \R^C$,
@@ -86,7 +86,7 @@ It is the loss function that was used for optimizing the parameters of the neura
 
 
 
-\subsection{Neural network - second-to-last layer (NN)}
+\subsection{Neural Network - Second-to-Last Layer (NN)}
 
 Given a neural network $\Phi$ of depth L,
 a feature-mapping can be obtained by mapping inputs to the second-to-last layer $\Phi_{\text{L}-1}$, 
@@ -109,7 +109,7 @@ give the final prediction.
 This warrants the belief that this layer contains the most disentangled representation of the data.
 
 
-\subsection{Neural network - all layers (NN ALL)}
+\subsection{Neural Network - All Layers (NN ALL)}
 
 All hidden states together of the neural network can be seen as outputs of a collection of feature-maps [$\varphi_0, \dots, \varphi_\text{L}$], where
 \begin{alignat*}{2}
@@ -122,7 +122,7 @@ All hidden states together of the neural network can be seen as outputs of a col
 
 
 
-\subsection{Random projections (RP)}
+\subsection{Random Projections (RP)}
 To contrast the efficacy of the previous two feature-representations on the success of the optimization process,
 a feature-mapping involving one linear layer is used. This is done by selecting a number of  random linear projections.
 A random projection is a linear mapping $r: \R^d \to \R$.
@@ -163,12 +163,21 @@ yet the class-dependent variant can be modified to select an origin $\vec o_c$ f
 % 
 \begin{equation*}
     \loss _{\text{RP}} ^{\mathcal C} (\set A, \set B) =
-    \sum _{\substack{c = 1 \dots C \\ \set A|_c,\, \set B|_c \text{ contain} \\ \text{at least 2 samples}}}
+    \sum _{c = 1, \dots, C}
     \begin{alignedat}[t]{1}
         \|\mean ({R_{\vec o_c} (\set A|_c)}) - \mean ({R_{\vec o_c} (\set B|_c)}) &\| \\
         {} + \|\var ({R_{\vec o_c} (\set A|_c)}) - \var ({R_{\vec o_c} (\set B|_c)}) &\|  \,,
     \end{alignedat}
 \end{equation*}
+% \begin{align}
+% \begin{split}
+% \label{eqn:class_statistics_loss}
+%     \loss _\varphi ^\text{CC} (\set A, \set B) =
+%     \sum _{c = 1, \dots, C}
+%     \|\mean ({R_{\vec o_c} (\set A|_c)}) - \mean ({R_{\vec o_c} (\set B|_c)}) &\| \\
+%     {} + \|\var ({R_{\vec o_c} (\set A|_c)}) - \var ({R_{\vec o_c} (\set B|_c)}) &\|  \,,
+% \end{split}
+% \end{align}
 %
 where $\vec o_c$ is set to the mean of each class $\mean ({\set A|_c})$.
 
@@ -194,15 +203,15 @@ where $\boldsymbol \sigma_c ^2 = \var ({R_{\vec o_c}(\set A|_c)})$.
 In this case, \cref{eqn:class_statistics_loss} becomes:
 % 
 \begin{equation*}
-    \loss _{R^+} ^{\mathcal C} (\set A, \set B) =
-    \sum _{\substack{c = 1 \dots C \\ \set A|_c,\, \set B|_c \text{ contain} \\ \text{at least 2 samples}}}
+    \loss _{R^+} ^\text{CC} (\set A, \set B) =
+    \sum _{c = 1 \dots C}
     \begin{alignedat}[t]{1}
         \|\mean ({R_{\vec o_c}^{\vec b_c} (\set A|_c)}) - \mean ({R_{\vec o_c}^{\vec b_c} (\set B|_c)}) &\| \\
         {} + \|\var ({R_{\vec o_c}^{\vec b_c} (\set A|_c)}) - \var ({R_{\vec o_c}^{\vec b_c} (\set B|_c)}) &\| 
     \end{alignedat}
 \end{equation*}
 
-\subsection{Randomly initialized neural network (RANDOM NN)}
+\subsection{Randomly Initialized Neural Network (RANDOM NN)}
 To further study the importance of an optimized feature-representation of a trained neural network, 
 the same neural network model with randomly initialized parameters is evaluated and compared.
 This could give insight to the importance of the number of compositions of non-linear transformations.
@@ -227,8 +236,6 @@ is made up of $C$ classes, each of which contains $n_\text{mode}$ clusters or mo
     \mathcal N (\gamma \vec m_c + \lambda \boldsymbol \mu_c^{(m)}, \boldsymbol \Sigma_c^{(m)}) \, ,
 \end{align}
 where \\
-% $\boldsymbole \theta = (
-\XXX{upper indices for c?}
 $\vec m_c \sim \mathcal N (\vec 0, \vec I)$ is the center for each class $c=1,\ldots, C$ ,\\
 $\boldsymbol \mu_c^{(m)} \sim \mathcal N (\vec 0, \vec I)$ and
 $\vec \Sigma_c^{(m)}$ are the center and the covariance matrix of the multivariate normal distribution
@@ -305,7 +312,7 @@ Proof:
 
 \subsection{Image Data Sets}
 
-\subsubsection{Perturbation model}
+\subsubsection{Perturbation Model}
 
 The \textbf{perturbation model} for the image data sets MNIST and CIFAR10
 is a composition of additive Gaussian noise and two noise-controlled 2d-convolutions.
@@ -348,7 +355,7 @@ The 'reflection' padding was chosen.
 \XXX{Should elaborate}
 
 
-\subsubsection{Reconstruction model}
+\subsubsection{Reconstruction Model}
 
 \begin{figure}[!ht]
 \begin{minipage}{0.5\textwidth}
