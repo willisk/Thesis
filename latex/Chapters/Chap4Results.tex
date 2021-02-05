@@ -31,7 +31,7 @@ better generalization scores
 $\loss_\text{crit}$ is included.
 But it is hard to explain the lower cross-entropy when leaving out 
 $\loss_\text{crit}$, which is specifically designed to minimize the cross-entropy.
-Nevertheless it is important to note that scores can fluctuate a fair amount and more 
+Nevertheless, it is important to note that scores can fluctuate a fair amount and more 
 experiment runs are necessary to give a clearer picture.
 
 \begin{table}[!htbp]
@@ -100,9 +100,8 @@ The distortion factor ($\kappa = 0.2$) on the MNIST data set was chosen to be fa
 After distortion, the overall accuracies drop from 97-99\% to near random guesses $\frac 1 C \approx 10\%$
 as seen in \cref{tab:mnist_baseline}.
 The results for the reconstruction task for all methods on the MNIST data set is depicted in \cref{tab:mnist_results}.
-The criterion (CRITERION) alone gives leads to good results on the main network, but fails to generalize when tested on a secondary network.
-This shows that the reconstruction is being heavily biased by what the neural network deems to be "correct" images, 
-yet these features might not be robust in the sense that they don't correspond to features we as humans might make out.
+The criterion (CRITERION) alone gives good results on the main network, but fails to generalize when tested on a secondary network.
+This shows that the reconstruction is being heavily biased by what the neural network deems to be "correct" images. Although these features might not be robust in the sense that they don't correspond to features we as humans might make out.
 The hardly improved verification score of NN, where additionally the second-to-last layer is 
 incorporated, seems to confirm
 the network's bias in the optimization procedure. 
@@ -310,7 +309,7 @@ The larger reconstruction models would likely achieve higher scores after a long
     ]{figures/comparison_CIFAR10_hyperparameters_validation_accuracy_NN_ALL_CC.pdf}
     \end{minipage}
     }
-\caption{Reconstruction Results for multiple hyperparameter settings on CIFAR10. 
+\caption{Reconstruction results for multiple hyperparameter settings on CIFAR10. 
 Every data point depicts the end-results after 100 epochs.}
 \label{fig:rec_hyperparameter_search}
 \end{figure}
@@ -323,7 +322,7 @@ Every data point depicts the end-results after 100 epochs.}
 trim={0 0 0 0.75cm}, clip,
 width=0.7\textwidth
 ]{figures/comparison_CIFAR10_hyperparameters_heatmap_NN_ALL_CC.pdf}
-\caption{hyperparameter correlation table}
+\caption{Hyperparameter correlation table}
 \label{fig:rec_hyperparameter_heatmap}
 \end{figure}
 
