@@ -13,11 +13,17 @@ import torchvision
 from torch.utils.data import random_split, DataLoader, TensorDataset, Subset
 import torchvision.transforms as T
 
+# import matplotlib
+# matplotlib.rc('text', usetex=True)
+# matplotlib.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
+import matplotlib.pyplot as plt
+
 # https://github.com/huyvnphan/PyTorch_CIFAR10
 # from ext.cifar10pretrained.cifar10_models import resnet34, resnet50
 # from torchvision.models import resnet34 as ResNet34, resnet50 as ResNet50
 # from ext.cifar10pretrained.cifar10_download import main as download_resnet
 # download_resnet()
+from .debug import debug
 from . import utility
 from . import nets
 
@@ -161,11 +167,21 @@ from scipy.stats import multivariate_normal, ortho_group
 #     )
 class MULTIGMM(Dataset):
 
-    def __init__(self, n_dims=20, n_classes=10, n_modes=12,
-                 scale_mean=3, scale_cov=20, mean_shift=3,
-                 n_samples_A=10000,
+    def __init__(self,
+                 #  n_dims=20,
+                 n_dims=2,
+                 n_classes=3,
+                 n_modes=3,
+                 #  n_classes=10,
+                 #  n_modes=12,
+                 scale_mean=12,
+                 scale_cov=25,
+                 mean_shift=36,
+                 n_samples_A=1000,
+                 #  n_samples_A=10000,
                  n_samples_B=2000,
-                 n_samples_C=2000):
+                 n_samples_C=2000
+                 ):
 
         # # using equal weights for now
         # if weights is None:
@@ -260,6 +276,33 @@ class MULTIGMM(Dataset):
 
     def cross_entropy(self, X, Y=None):
         return -self.log_pdf(X).mean()
+
+    def plot(self):
+        assert self.n_dims == 2
+        X, Y = self.A.tensors
+        plt.scatter(X[:, 0], X[:, 1], c=Y, s=3)
+        offs = torch.Tensor([2, 1])
+        plt.scatter([0], [0], c='k', s=5)
+        for c, gmm in enumerate(self.gmms):
+            if c != 2:
+                continue
+            debug(gmm.means)
+            center = torch.mean(gmm.means, axis=0)
+            plt.plot((0, center[0]), (0, center[1]), 'k:', lw=1, zorder=0)
+            plt.annotate('$\\gamma$', (center * 0.5 + offs))
+            plt.scatter(*center, c='red')
+            plt.annotate(f'$m_0$', center + offs, c='red',
+                         bbox={'facecolor': 'white', 'edgecolor': 'white', 'pad': 0}, zorder=1)
+            for m, mean in enumerate(gmm.means):
+                if m == 1:
+                    plt.plot((center[0], mean[0]),
+                             (center[1], mean[1]), 'k:', lw=1, zorder=0)
+                    plt.annotate(
+                        '$\\lambda$', (center + (mean - center) * 0.5 + offs), zorder=1)
+                plt.scatter(*mean, marker='^', c='red', zorder=1)
+                plt.annotate(
+                    f'$\\mu_0^{{({m})}}$', mean + offs, c='red', bbox={'facecolor': 'white', 'edgecolor': 'white', 'pad': 0}, zorder=1)
+        # plt.scatter(X[:, 0], X[:, 1])
 
 
 def make_spd_matrix(n_dims, eps_min=0.3):

@@ -99,7 +99,7 @@ def im_show(im_batch, fig_path=None, nrow=10, padding=2, fig_scale=4, interpolat
     if permute:
         im_batch = im_batch.permute(2, 0, 1)
     im_grid = torchvision.utils.make_grid(
-        im_batch.cpu(), nrow=10, padding=padding, normalize=True, scale_each=scale_each)
+        im_batch.cpu(), nrow=nrow, padding=padding, normalize=True, scale_each=scale_each)
     if fig_path:
         torchvision.utils.save_image(im_grid, fig_path, padding=0)
     if show:
@@ -111,6 +111,7 @@ def im_show(im_batch, fig_path=None, nrow=10, padding=2, fig_scale=4, interpolat
         plt.margins(0, 0)
         plt.axis('off')
         plt.grid(b=None)
+        plt.tight_layout(pad=0)
         plt.imshow(im_grid.permute(1, 2, 0), interpolation=interpolation)
         plt.show()
         print(flush=True)
@@ -1135,7 +1136,6 @@ def get_bn_layers(net):
 
 def count_params(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
 
 
 def invert(data_loader, loss_fn, optimizer,
