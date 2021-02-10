@@ -22,12 +22,14 @@ This section introduces the main objective of this work. An outline is given in 
 \end{figure}
 
 
-Suppose we are given a data set $\set B$ 
-and a neural network that was trained on - or performs reasonably well on - a data set $\set A$.
+Suppose we are given a target data set $\set B$ 
+and a neural network that was trained on - or performs reasonably well on - a source data set $\set A$.
 % The neural network is able to predict data coming from $\set A$ accurately, 
-As the distribution of $\set B$ differs crucially from $\set A$, 
-such that the neural network is unable to reach high performance on data coming from $\set B$.
-The goal is to learn a transformation $\rho$ that adjusts $\set B$ 
+Further,
+the distribution of $\set B$ differs crucially from $\set A$, 
+i.e. such that the neural network is unable to reach high performance 
+on data coming from $\set B$.
+The task is to learn a transformation $\rho$ that adjusts $\set B$ 
 so that the network's performance is regained.
 
 An underlying assumption is that $\set B$ originates from the same distribution
@@ -38,25 +40,26 @@ This is done by minimizing a dissimilarity-score between $\set B$ and $\set A$
 in a feature space given by an appropriate feature-map $\varphi$, 
 after the transformation $\rho$ has been applied to $\set B$.
 For this, simple statistics of both data sets, such as the mean and variance 
-are recorded in feature space and $\rho$ is adjusted accordingly by backpropagation 
-in order to make the statistics of the source $\set B$ approach those of the target $\set A$.
+are recorded in feature space and $\rho$ is optimized by backpropagation 
+in order to make the statistics of the target $\set B$ approach those of the source $\set A$.
 %
 Whether matching statistics in feature space actually increases similarity between $\set A$ and $\set B$
 strongly depends on $\varphi$ and its representation of the data set.
 %
 One hope is that the found transformation $\rho$ will be close to an inverse transformation
 of $\delta$, i.e. that $\rho\circ\delta \approx \text{id}$, the identity transformation,
-although it is important to note that this is different from saying that $\rho(\set B) \approx \set B_\text{true}$.
+although it is important to note that this is a much stronger requirement than 
+saying that $\rho(\set B) \approx \set B_\text{true}$, that the data set is reconstructed fairly well.
 
 
-\subsection{Problem Formulation}
-Given a feature-mapping $\varphi$, a source data set $\set B$ and a target data set $\set A$ - or simply the statistics of $\varphi(\set A)$,  find $\rho \in \mathcal{F}$, such that
+\subsection{Problem Statement}
+Given a feature-mapping $\varphi$, a data set $\set B$ and a data set $\set A$ - or simply the statistics of $\varphi(\set A)$,  find $\rho \in \mathcal{F}$, such that
 \[
      \loss _\varphi (\set A, \rho(\set B)) \,,
 \]
 is minimized.
 Here, the solution space $\mathcal F$ is a pre-defined set of functions, 
-parametrized by $\boldsymbol \theta$.
+parametrized by a vector $\boldsymbol \theta$.
 
 
 
@@ -80,23 +83,24 @@ parametrized by $\boldsymbol \theta$.
 \end{figure}
 
 A secondary part of this work concerns what kind of data 
-may be recovered from having access to the statistics of a data set.
-In this setting, we are given target statistics of data set $\set A$
-and, in contrast to the previous task, modify the source $\set B$ directly to 
+may be recovered from having access to the feature-space-statistics of a data set.
+In this setting, we are given the source statistics of data set $\set A$
+and, in contrast to the previous task, modify the target $\set B$ directly to 
 minimize the dissimilarity just as outlined in \cref{sec:Reconstruction}.
-The source data set is initialized randomly and then is 
-iteratively refined by backpropagation after being mapped to feature-space.
+The target data set is initialized randomly and then is 
+iteratively refined by backpropagation through the loss function 
+after being mapped to feature-space.
 
 
 
-\subsection{Problem Formulation}
+\subsection{Problem Statement}
 Given a feature-mapping $\varphi$, the statistics of $\varphi(\set A)$
 and target labels $\{y^{(i)}\}_{i=1}^{n_{\set B}}$ for a fixed integer size $n_{\set B}$,
 find $\set B$, such that
 \[
      \loss _\varphi (\set A, \set B)
 \]
-is minimized and $\set B = \{(\vec x^{(i)}, y^{(i)})\}_{i=1}^{n_{\set B}}$.
+is minimized and where $\set B = \{(\vec x^{(i)}, y^{(i)})\}_{i=1}^{n_{\set B}}$.
 
     
 

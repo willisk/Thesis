@@ -1,7 +1,7 @@
 
 % Chapter Template
 
-\chapter{Background}
+\chapter{Mathematical Preliminaries}
 \label{chap:Background}
 
 \section{Notation}
@@ -12,21 +12,20 @@ The input space $\set X$ typically is $\R^d$ and $\set Y$, the set of possible l
 A \textbf{bracket-notation} $\finiteset{\, \cdot \,}$ is used to denote the set of all \textit{finite non-empty} subsets.
 $\set A = \{\vec z^{(i)}\}_{i=1}^{| \set A |} = \{(\vec x^{(i)}, y^{(i)})\}_{i=1}^{| \set A |} \in \finiteset{\set Z}$ is called a \textbf{data set}. $\set A $ contains \textit{independent} and \textit{identically distributed} (\textit{i.i.d.}) samples drawn from some distribution over $\set Z$.
 A \textbf{sample batch} or simply \textbf{batch} is a \textit{non-empty} subset thereof.
-$\mean$ and $\var$ are used to denote the empirical sample mean and variance of the input.
+$\mean$ and $\var$ denote the empirical sample mean and variance of the input.
 \begin{align}
     \mean ({\set A}) &= \frac 1 {\lvert \set A \rvert} \sum _{i=1}^{\lvert \set A \rvert} \vec x^{(i)} \; \in \set X
     \label{eqn:sample_mean} \\
     \var ({\set A}) &= \frac 1 {\lvert \set A \rvert} \sum _{i=1}^{\lvert \set A \rvert} (\vec x^{(i)} - \mean ({\set A}))^2 \; \in \set X 
     \label{eqn:sample_var} 
 \end{align}
-
-
+%
 Given a data set $\set A$, the set $\set A|_c$ is the subset of $\set A$ \textbf{constrained} to samples of label $c$.
 \begin{equation}
     \set A|_c = \{(\vec x, y) \in \set A \mid y = c\}
     \label{eqn:class_constrained}
 \end{equation}
-
+%
 A \textbf{feature-mapping} is any function from input space $\set X$ to $\R^m$ for some $m$.
 A data set mapping is obtained by applying a feature-map $\varphi$ to every input. Given a data set $\set A$, and a feature-map $\varphi$:
 \begin{equation}
@@ -38,7 +37,7 @@ A data set mapping is obtained by applying a feature-map $\varphi$ to every inpu
 
 
 \section{Loss Function}
-Given two data sets $\set A, \set B$, a \textbf{loss function} or \textbf{objective function} is a function $\loss : \finiteset{\set Z} \times \finiteset{\set Z} \to \R$ that is \textit{piecewise continuously differentiable} with regard to its inputs,
+A \textbf{loss function} or \textbf{objective function} is a function that maps two data sets $\set A$ and $\set B$ to a real number and that is \textit{piecewise continuously differentiable} with regard to its inputs,
 i. e. where 
 \[
     \loss (\set A, \set B) = \loss (
@@ -47,14 +46,13 @@ i. e. where
 \]
 is piecewise $\mathcal C^1$ with regard to $\vec x^{(i)}_{\set A}$
 for all $i=1, \dots, |\set A|$, and $\vec x^{(j)}_{\set B}$ for all $j=1, \dots, |\set B|$.
-Note that, for the variance to behave as expected, the batch should contain at least two samples.
-
+%
 For a given feature-mapping $\varphi$ that is piecewise $\mathcal C ^1$, the \textbf{statistics-loss} or simply loss, is defined as follows.
 % 
 \begin{equation}
     \loss _{\varphi} (\set A, \set B) = 
-    \|\mean ({\varphi (\set A)}) - \mean ({\varphi (\set B)})\| +
-    \|\var ({\varphi (\set A)}) - \var ({\varphi (\set B)})\|
+    \|\mean ({\varphi (\set A)}) - \mean ({\varphi (\set B)})\|_2 +
+    \|\var ({\varphi (\set A)}) - \var ({\varphi (\set B)})\|_2
     \label{eqn:statistics_loss}
 \end{equation}
 % 
@@ -62,25 +60,174 @@ A \textbf{class-dependent} loss can be obtained as follows:
 \begin{align}
 \begin{split}
 \label{eqn:class_statistics_loss}
-    \loss _\varphi ^\text{CC} (\set A, \set B) =
+    \lossCC _\varphi (\set A, \set B) =
     \sum _{c = 1, \dots, C}
     % \|\mean ({\varphi (\set A|_c)}) &- \mean({\varphi (\set B|_c)}) \| \\
     % {} + \|\var ({\varphi (\set A|_c)}) &- \var ({\varphi (\set B|_c)}) \| 
     \begin{alignedat}[t]{1}
-        \|\mean ({\varphi (\set A|_c)}) - \mean({\varphi (\set B|_c)}) &\| \\
-        {} + \|\var ({\varphi (\set A|_c)}) - \var ({\varphi (\set B|_c)}) &\| 
+        \|\mean ({\varphi (\set A|_c)}) - \mean({\varphi (\set B|_c)}) &\|_2 \\
+        {} + \|\var ({\varphi (\set A|_c)}) - \var ({\varphi (\set B|_c)}) &\|_2 
     \end{alignedat}
 \end{split}
 \end{align}
 
 \subsection{Combinations}
-% 
+
 This notion can be extended to a collection of feature-maps [$\varphi_1, \dots, \varphi_n$].
 A \textbf{collection} is used to refer to a \textit{non-empty finite} set.
 \begin{align*}
     \loss_{[\varphi_1, \dots, \varphi_n]} (\set A, \set B) &= 
     \sum_{i=1}^n \loss_{\varphi_i} (\set A, \set B) \\
     %
-    \loss_{[\varphi_1, \dots, \varphi_n]}^{\mathcal C} (\set A, \set B) &= 
-    \sum_{i=1}^n \loss_{\varphi_i}^{\mathcal C} (\set A, \set B)
+    \lossCC_{[\varphi_1, \dots, \varphi_n]} (\set A, \set B) &= 
+    \sum_{i=1}^n \lossCC_{\varphi_i} (\set A, \set B)
 \end{align*}
+
+\subsection{Further Statistics}
+
+It is also possible to take higher-moment statistics into account. 
+%
+\begin{equation*}
+    \loss _{\varphi} (\set A, \set B) = 
+    \|\mean ({\varphi (\set A)}) - \mean ({\varphi (\set B)})\|_2 +
+    \|\text{Cov} ({\varphi (\set A)}) - \text{Cov} ({\varphi (\set B)})\|_F
+    \label{eqn:cov_loss}
+\end{equation*}
+%
+Preliminary tests have shown promising results with the use of \cref{eqn:cov_loss}.
+
+
+
+\section{Neural Network}
+\label{sec:nn_def}
+
+In a multiple-class classification setting, a \textbf{neural network} $\Phi$ is a function that maps an input $\vec x \in \R^d$ to an output $\in \R^C$.
+These outputs are referred to as the unnormalized logits, as they are 
+implicitly converted to a probability distribution.
+This can be done by a mapping to the positive orthant via the exponential function and
+a following normalization.
+The network then makes its prediction by returning the corresponding label
+of the output with highest "probability", the maximal value.
+The classic artificial neural network is a \textbf{multi-layer perceptron} (MLP) or fully-connected (FC) neural network.
+This network is composed of individual neurons or nodes 
+that are grouped into layers.
+In a typical, feed-forward neural network, an input signal is processed by the first
+layer, and the output then successively passed on to the next.
+In a FC-network, each node is connected to every node of the previous layer via weights.
+Its output or activation, a real number, is computed as a weighted sum over all of 
+its inputs, which is then passed through a non-linear activation function.
+This often is one of either the rectified-linear unit (ReLU) or sigmoid, to form the node's activation. 
+% This is done for all nodes in a layer before being passed on to the next.
+A full network thus is a composition of functions $\Phi_\ell$, or \textbf{layers} that 
+successively act on the outputs $\vec h$ of the previous layer, called \textbf{activations} or \textbf{hidden states} or \textbf{latent vectors}. 
+In a plain \textbf{fully-connected} neural network, the layers are each made up of an affine linear transformation and a non-linear activation function.
+Many other types of artificial neural networks, such as the convolutional neural network, 
+have been proposed.
+
+Formally, a fully-connected neural network of layer depth L is described as:
+
+\[
+    \Phi : \R^d \to \R^C
+\]
+\[
+    \Phi = \Phi_\text{L} \circ \ldots \circ \Phi_1
+\]
+\[
+    \vec h_\ell = (\Phi_\ell \circ \ldots \circ \Phi_1) (\vec x) =
+    \Phi_\ell(\vec h_{\ell-1}) \in \R^{d_\ell}
+\]
+$\Phi_\ell$ then, is a mapping from $\R^{d_{\ell-1}}$ to $\R^{d_\ell}$ and $\R^{d_\textnormal{L}} = \R^C$.
+% The space of a hidden state $\vec h$ is called a \textbf{feature-space}.
+The input $\vec x$ is sometimes referred to as $\vec h_0$ and $\R^{d_0} := \R^d$.
+The layers themselves contain as parameters a \textbf{weight matrix} $\vec W$ and a \textbf{bias} $\vec b$
+that together form an affine linear transformation.
+\[
+    \Phi_\ell(\vec h) = \sigma (\vec W \vec h + \vec b) \comma{where}
+    \vec W \in \R^{d_\ell \times d_{\ell-1}} \text{ and } 
+    \vec b \in \R^{d_\ell}
+\]
+
+The non-linear activation function $\sigma$ is often a function $\sigma:\R\to\R$ that is applied element-wise.
+The ReLU activation function is the projection onto the positive orthant.
+It applies $\max(0, \cdot \,)$ element-wise.
+\begin{equation}
+\label{eqn:relu}
+    \relu(\vec x) = 
+    \begin{pmatrix}
+        \max(x_1, 0) \\
+        \vdots \\
+        \max(x_d, 0) \\
+    \end{pmatrix}
+\end{equation}
+
+
+\section{Convolutional Neural Networks}
+\label{sec:convolutions}
+The convolutional neural network (\cite{Convnet_origins}) 
+makes use of shared weights and a local receptive field 
+resulting in sparse connections between the layers. 
+Convolutions are typically used for spatially structured data 
+where input features exhibit strong local correlations and 
+translation invariant features/filters are desired.
+The typical use-case is for object recognition in images.
+
+A convolution operation can be seen as a sliding filter
+that is able to extract features regardless of their location in the image.
+A discrete 2-dimensional convolution operator can be defined by a kernel $\vec k \in \R^{h_k\times w_k}$. 
+The convolution operator is further illustrated for $\vec k \in \R^{3\times3}$, 
+as for the most part of this work, 3$\times$3 convolutions are used, 
+though a generalization is straightforward.
+The convolution between $\vec x \in \R^{h\times w}$ and $\vec k \in \R^{3\times3}$ is given by
+\begin{equation}
+\label{eqn:convolution_kernel}
+    (\vec x * \vec k)_{i,j}
+    = \sum_{\hat \imath=1}^3 \sum_{\hat \jmath=1}^3 
+        \vec x\left (i - (2 - \hat \imath), j - (2 - \hat \jmath) \right) k_{\hat \imath,\hat \jmath} \,,
+\end{equation}
+where
+\begin{equation}
+\label{eqn:convolution_padding}
+    \vec x(i,j) =
+    \begin{cases}
+        x_{i,j} &, \text{ if } i \in \{1,\ldots, h\} \text{ and } j \in \{1,\ldots, w\} \\
+        \vec x(1-i,j) &, \text{ if } i < 1 \\
+        \vec x(2h + 1 - i,j) &, \text{ if } i > h \\
+        \vec x(i,1-j) &, \text{ if } j < 1 \\
+        \vec x(i, 2w + 1 - j) &, \text{ if } j > w \\
+    \end{cases} \,.
+\end{equation}
+\Cref{eqn:convolution_padding} describes a padding mode by reflection of the original input image.
+A padding mode is necessary in order to preserve the image dimensions in the output.
+Different padding methods are also possible.
+
+
+An image containing multiple channel information, 
+is seen as a generalized matrix, or a tensor $\in \R^{n_\text{chan}\times h \times w}$
+with input shape $(n_\text{chan}, h , w)$.
+Here, $n_\text{chan}$ is the number of channels, and $h$ and $w$ are the image height and width.
+An example of a multi-channel image is a RGB image containing 3 color channels.
+% The output of a convolution operation $\vec K: \R^{h \times w} \to \R^{h \times w}$ 
+% with kernel matrix $\vec k \in \R^{3 \times 3}$ on an image $\vec x \in \R^{h \times w}$
+% is calculated as follows.
+A convolution can be applied to an image with multiple channels by applying a convolution
+$\vec k ^{(c)}$ to each channel separately and summing the outputs:
+$\sum_{c=1}^{n_\text{chan}} \vec x_{c,:,:} * \vec k ^{(c)}$.
+Here, $\vec x_{c,:,:}$ denotes a "slice" along the first index, i.e. $(\vec x_{c,:,:})_{i,j} = \vec x_{c,i,j}$.
+Together, the kernels $\{k^{(c)}\}_{c=1}^{n_\text{chan}}$ are seen as describing one sliding filter.
+In order to obtain a mapping
+$\vec K:\R^{n_\text{chan}\times h \times w} \to \R^{n_\text{filters}\times h \times w}$,
+a total of $n_\text{filters}$ filters or $n_\text{chan} \cdot n_\text{filters}$ 
+individual kernels $\vec k^{[c,f]}$ are needed.
+The output is given by
+\begin{equation}
+\label{eqn:convolution_operator}   
+    (\vec K (\vec x))_{f,i,j}
+    = \left (\sum_{c=1}^{n_\text{chan}} \vec x_{c,:,:} * \vec k^{[c,f]} \right )_{i,j} \,,
+\end{equation}
+
+As the operator $\vec K$ is linear in $\vec x$, the convolution can also be viewed as a matrix-vector multiplication
+$\vec K(\vec x) = \tilde {\vec K} \tilde {\vec x}$, where $\tilde {\vec K} \in \R^{d\times d}$ and 
+$\tilde {\vec x} \in \R^d$ is the flattened vector of dimension $d=n_\text{chan}\cdot h \cdot w$.
+The resulting matrix $\tilde {\vec K}$ is sparse and only contains values present in the kernels $\vec k^{[c,f]}$
+in a tiled pattern.
+A more thorough introduction and recent advances in convolutional neural networks is given by \cite{Convnet_advances}.

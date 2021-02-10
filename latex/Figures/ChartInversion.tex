@@ -7,8 +7,8 @@
 \node (N) [below= 0.5cm of D, minimum height=3.5cm] {\noise};
 \node [above of= N] {random noise};
 
-\node (B) [node, right= of N, fill=blue!7, draw=blue, thick] {\textbf{source} \\ $\set B$};
-\node (A) [node, right= of D, fill=red!7] {\textbf{target} \\ $\set A$};
+\node (B) [node, right= of N, fill=blue!7, draw=blue, thick] {\textbf{target} \\ $\set B$};
+\node (A) [node, right= of D, fill=red!7] {\textbf{source} \\ $\set A$};
 
 \path (A) -- (B) node (Mid) [midway] {};
 \node (Net) [function, thick, minimum width=1cm, right= of Mid, xshift=1.2cm] {$\varphi$};

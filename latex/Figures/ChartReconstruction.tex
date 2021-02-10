@@ -6,10 +6,10 @@
 \node (D) [minimum height=3.5cm] {\distribution};
 \node [above of= D, align=center, yshift=0.7cm] {data set \\ distribution};
 
-\node (A) [node, right= 1cm of D, fill=red!7, yshift=2cm] {\textbf{target} \\ $\set A$};
+\node (A) [node, right= 1cm of D, fill=red!7, yshift=2cm] {\textbf{source} \\ $\set A$};
 \node (B) [node, right= 1cm of D, yshift=-2cm] {\textbf{original} \\ $\set B_\text{true}$};
 
-\node (Bp) [node, right= of B, fill=blue!3] {perturbed \\ \textbf{source} \\ $\set B$}; %\\ $\set B = \delta (\set B_\text{true})$};
+\node (Bp) [node, right= of B, fill=blue!3] {perturbed \\ \textbf{target} \\ $\set B$}; %\\ $\set B = \delta (\set B_\text{true})$};
 \node (Br) [node, right= of Bp, fill=blue!7] {\textbf{reconstructed} \\ $\rho (\set B)$};
 
 
