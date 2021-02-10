@@ -1,4 +1,14 @@
 
+% ResNet
+@misc{Resnet,
+      title={Deep Residual Learning for Image Recognition}, 
+      author={Kaiming He and Xiangyu Zhang and Shaoqing Ren and Jian Sun},
+      year={2015},
+      eprint={1512.03385},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+
 % DeepInversion
 @misc{DeepInversion,
     title={Dreaming to Distill: Data-free Knowledge Transfer via DeepInversion},
@@ -38,9 +48,319 @@
 
 % DeepDream
 @misc{DeepDream,
-title	= {Inceptionism: Going Deeper into Neural Networks},
-author	= {Alexander Mordvintsev and Christopher Olah and Mike Tyka},
-year	= {2015},
-URL	= {https://research.googleblog.com/2015/06/inceptionism-going-deeper-into-neural.html}
+    title	= {Inceptionism: Going Deeper into Neural Networks},
+    author	= {Alexander Mordvintsev and Christopher Olah and Mike Tyka},
+    year	= {2015},
+    URL	= {https://research.googleblog.com/2015/06/inceptionism-going-deeper-into-neural.html}
 }
 
+@article{MNIST,
+  added-at = {2010-06-28T21:16:30.000+0200},
+  author = {LeCun, Yann and Cortes, Corinna},
+  biburl = {https://www.bibsonomy.org/bibtex/2935bad99fa1f65e03c25b315aa3c1032/mhwombat},
+  groups = {public},
+  howpublished = {http://yann.lecun.com/exdb/mnist/},
+  interhash = {21b9d0558bd66279df9452562df6e6f3},
+  intrahash = {935bad99fa1f65e03c25b315aa3c1032},
+  keywords = {MSc _checked character_recognition mnist network neural},
+  lastchecked = {2016-01-14 14:24:11},
+  timestamp = {2016-07-12T19:25:30.000+0200},
+  title = {{MNIST} handwritten digit database},
+  url = {http://yann.lecun.com/exdb/mnist/},
+  username = {mhwombat},
+  year = 2010
+}
+
+@article{CIFAR,
+    author = {Krizhevsky, Alex},
+    year = {2012},
+    month = {05},
+    pages = {},
+    title = {Learning Multiple Layers of Features from Tiny Images},
+    journal = {University of Toronto}
+}
+
+
+@ARTICLE{SSIM,
+       author = {{Wang}, Z. and {Bovik}, A.~C. and {Sheikh}, H.~R. and {Simoncelli}, E.~P.},
+        title = "{Image Quality Assessment: From Error Visibility to Structural Similarity}",
+      journal = {IEEE Transactions on Image Processing},
+         year = 2004,
+        month = apr,
+       volume = {13},
+       number = {4},
+        pages = {600-612},
+          doi = {10.1109/TIP.2003.819861},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2004ITIP...13..600W},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+
+@inproceedings{PSNRvsSSIM,
+    author = {Horé, Alain and Ziou, Djemel},
+    year = {2010},
+    month = {08},
+    pages = {2366-2369},
+    title = {Image quality metrics: PSNR vs. SSIM},
+    doi = {10.1109/ICPR.2010.579}
+}
+
+
+
+
+
+
+
+
+%%%%% Related work
+% feature encoding network -> classification via estimated prototypes (per class), adversarial max
+@article{DA_Prototypes,
+  author    = {Kuniaki Saito and
+               Donghyun Kim and
+               Stan Sclaroff and
+               Trevor Darrell and
+               Kate Saenko},
+  title     = {Semi-supervised Domain Adaptation via Minimax Entropy},
+  journal   = {CoRR},
+  volume    = {abs/1904.06487},
+  year      = {2019},
+  url       = {http://arxiv.org/abs/1904.06487},
+  archivePrefix = {arXiv},
+  eprint    = {1904.06487},
+  timestamp = {Thu, 25 Apr 2019 13:55:01 +0200},
+  biburl    = {https://dblp.org/rec/journals/corr/abs-1904-06487.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@misc{DA_Confusion_MMD,
+      title={Deep Domain Confusion: Maximizing for Domain Invariance}, 
+      author={Eric Tzeng and Judy Hoffman and Ning Zhang and Kate Saenko and Trevor Darrell},
+      year={2014},
+      eprint={1412.3474},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+
+@misc{DA_Deep_Transfer,
+      title={Simultaneous Deep Transfer Across Domains and Tasks}, 
+      author={Eric Tzeng and Judy Hoffman and Trevor Darrell and Kate Saenko},
+      year={2015},
+      eprint={1510.02192},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+
+@misc{DA_MMD,
+      title={Learning Transferable Features with Deep Adaptation Networks}, 
+      author={Mingsheng Long and Yue Cao and Jianmin Wang and Michael I. Jordan},
+      year={2015},
+      eprint={1502.02791},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+
+@misc{DA_how_transferable,
+      title={How transferable are features in deep neural networks?}, 
+      author={Jason Yosinski and Jeff Clune and Yoshua Bengio and Hod Lipson},
+      year={2014},
+      eprint={1411.1792},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+
+
+% DA by multi-task autoencoders
+@article{DA_AE,
+  author    = {Muhammad Ghifary and
+               W. Bastiaan Kleijn and
+               Mengjie Zhang and
+               David Balduzzi},
+  title     = {Domain Generalization for Object Recognition with Multi-task Autoencoders},
+  journal   = {CoRR},
+  volume    = {abs/1508.07680},
+  year      = {2015},
+  url       = {http://arxiv.org/abs/1508.07680},
+  archivePrefix = {arXiv},
+  eprint    = {1508.07680},
+  timestamp = {Mon, 13 Aug 2018 16:46:53 +0200},
+  biburl    = {https://dblp.org/rec/journals/corr/GhifaryKZB15.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+
+% survey on transfer learning
+@ARTICLE{XFER_SURVEY,
+  author={S. J. {Pan} and Q. {Yang}},
+  journal={IEEE Transactions on Knowledge and Data Engineering}, 
+  title={A Survey on Transfer Learning}, 
+  year={2010},
+  volume={22},
+  number={10},
+  pages={1345-1359},
+  doi={10.1109/TKDE.2009.191}}
+  
+
+% survey on deep visual domain adaptation
+@article{DA_SURVEY,
+title = {Deep visual domain adaptation: A survey},
+journal = {Neurocomputing},
+volume = {312},
+pages = {135-153},
+year = {2018},
+issn = {0925-2312},
+doi = {https://doi.org/10.1016/j.neucom.2018.05.083},
+url = {https://www.sciencedirect.com/science/article/pii/S0925231218306684},
+author = {Mei Wang and Weihong Deng},
+keywords = {Deep domain adaptation, Deep networks, Transfer learning, Computer vision applications},
+abstract = {Deep domain adaptation has emerged as a new learning technique to address the lack of massive amounts of labeled data. Compared to conventional methods, which learn shared feature subspaces or reuse important source instances with shallow representations, deep domain adaptation methods leverage deep networks to learn more transferable representations by embedding domain adaptation in the pipeline of deep learning. There have been comprehensive surveys for shallow domain adaptation, but few timely reviews the emerging deep learning based methods. In this paper, we provide a comprehensive survey of deep domain adaptation methods for computer vision applications with four major contributions. First, we present a taxonomy of different deep domain adaptation scenarios according to the properties of data that define how two domains are diverged. Second, we summarize deep domain adaptation approaches into several categories based on training loss, and analyze and compare briefly the state-of-the-art methods under these categories. Third, we overview the computer vision applications that go beyond image classification, such as face recognition, semantic segmentation and object detection. Fourth, some potential deficiencies of current methods and several future directions are highlighted.}
+}
+
+@misc{Deep_Coral,
+      title={Deep CORAL: Correlation Alignment for Deep Domain Adaptation}, 
+      author={Baochen Sun and Kate Saenko},
+      year={2016},
+      eprint={1607.01719},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+
+@misc{DA_CycleGAN,
+      title={Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks}, 
+      author={Jun-Yan Zhu and Taesung Park and Phillip Isola and Alexei A. Efros},
+      year={2020},
+      eprint={1703.10593},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+
+@misc{DA_CMD,
+      title={Central Moment Discrepancy (CMD) for Domain-Invariant Representation Learning}, 
+      author={Werner Zellinger and Thomas Grubinger and Edwin Lughofer and Thomas Natschläger and Susanne Saminger-Platz},
+      year={2019},
+      eprint={1702.08811},
+      archivePrefix={arXiv},
+      primaryClass={stat.ML}
+}
+
+@InProceedings{IP_VN,
+author="Kobler, Erich
+and Klatzer, Teresa
+and Hammernik, Kerstin
+and Pock, Thomas",
+editor="Roth, Volker
+and Vetter, Thomas",
+title="Variational Networks: Connecting Variational Methods and Deep Learning",
+booktitle="Pattern Recognition",
+year="2017",
+publisher="Springer International Publishing",
+address="Cham",
+pages="281--293",
+abstract="In this paper, we introduce variational networks (VNs) for image reconstruction. VNs are fully learned models based on the framework of incremental proximal gradient methods. They provide a natural transition between classical variational methods and state-of-the-art residual neural networks. Due to their incremental nature, VNs are very efficient, but only approximately minimize the underlying variational model. Surprisingly, in our numerical experiments on image reconstruction problems it turns out that giving up exact minimization leads to a consistent performance increase, in particular in the case of convex models.",
+isbn="978-3-319-66709-6"
+}
+
+@inproceedings{IP_Deconv,
+ author = {Xu, Li and Ren, Jimmy SJ and Liu, Ce and Jia, Jiaya},
+ booktitle = {Advances in Neural Information Processing Systems},
+ editor = {Z. Ghahramani and M. Welling and C. Cortes and N. Lawrence and K. Q. Weinberger},
+ pages = {1790--1798},
+ publisher = {Curran Associates, Inc.},
+ title = {Deep Convolutional Neural Network for Image Deconvolution},
+ url = {https://proceedings.neurips.cc/paper/2014/file/1c1d4df596d01da60385f0bb17a4a9e0-Paper.pdf},
+ volume = {27},
+ year = {2014}
+}
+
+
+
+
+
+% Yann Convnet
+@inproceedings{Convnet_origins,
+author = {Le Cun, Y. and Boser, B. and Denker, J. S. and Henderson, D. and Howard, R. E. and Hubbard, W. and Jackel, L. D.},
+title = {Handwritten Digit Recognition with a Back-Propagation Network},
+year = {1989},
+publisher = {MIT Press},
+booktitle = {Proceedings of the 2nd International Conference on Neural Information Processing Systems},
+pages = {396–404},
+numpages = {9},
+series = {NIPS'89}
+}
+
+@misc{Convnet_advances,
+      title={Recent Advances in Convolutional Neural Networks}, 
+      author={Jiuxiang Gu and Zhenhua Wang and Jason Kuen and Lianyang Ma and Amir Shahroudy and Bing Shuai and Ting Liu and Xingxing Wang and Li Wang and Gang Wang and Jianfei Cai and Tsuhan Chen},
+      year={2017},
+      eprint={1512.07108},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+
+
+
+@misc{Disentangling_Def,
+      title={Towards a Definition of Disentangled Representations}, 
+      author={Irina Higgins and David Amos and David Pfau and Sebastien Racaniere and Loic Matthey and Danilo Rezende and Alexander Lerchner},
+      year={2018},
+      eprint={1812.02230},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+
+@INPROCEEDINGS{Image_recognition,
+  author={Y. {LeCun} and  {Fu Jie Huang} and L. {Bottou}},
+  booktitle={Proceedings of the 2004 IEEE Computer Society Conference on Computer Vision and Pattern Recognition, 2004. CVPR 2004.}, 
+  title={Learning methods for generic object recognition with invariance to pose and lighting}, 
+  year={2004},
+  volume={2},
+  number={},
+  pages={II-104 Vol.2},
+  doi={10.1109/CVPR.2004.1315150}}
+  
+ 
+@INPROCEEDINGS{Speech_recognition,
+  author={L. {Deng} and G. {Hinton} and B. {Kingsbury}},
+  booktitle={2013 IEEE International Conference on Acoustics, Speech and Signal Processing}, 
+  title={New types of deep neural network learning for speech recognition and related applications: an overview}, 
+  year={2013},
+  volume={},
+  number={},
+  pages={8599-8603},
+  doi={10.1109/ICASSP.2013.6639344}}
+  
+@misc{gpt3,
+      title={Language Models are Few-Shot Learners}, 
+      author={Tom B. Brown and Benjamin Mann and Nick Ryder and Melanie Subbiah and Jared Kaplan and Prafulla Dhariwal and Arvind Neelakantan and Pranav Shyam and Girish Sastry and Amanda Askell and Sandhini Agarwal and Ariel Herbert-Voss and Gretchen Krueger and Tom Henighan and Rewon Child and Aditya Ramesh and Daniel M. Ziegler and Jeffrey Wu and Clemens Winter and Christopher Hesse and Mark Chen and Eric Sigler and Mateusz Litwin and Scott Gray and Benjamin Chess and Jack Clark and Christopher Berner and Sam McCandlish and Alec Radford and Ilya Sutskever and Dario Amodei},
+      year={2020},
+      eprint={2005.14165},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL}
+}
+
+
+@misc{AlphaZero,
+      title={Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm}, 
+      author={David Silver and Thomas Hubert and Julian Schrittwieser and Ioannis Antonoglou and Matthew Lai and Arthur Guez and Marc Lanctot and Laurent Sifre and Dharshan Kumaran and Thore Graepel and Timothy Lillicrap and Karen Simonyan and Demis Hassabis},
+      year={2017},
+      eprint={1712.01815},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI}
+}
+
+@misc{GithubRepo,
+  author = {Kurt Willis},
+  title = {Image Reconstruction},
+  year = {2021},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/willisk/Thesis}},
+  commit = {adff44a3e79df19275614c4a5b239ac4a1a8a29d}
+}
+
+@article{olah2017feature,
+  author = {Olah, Chris and Mordvintsev, Alexander and Schubert, Ludwig},
+  title = {Feature Visualization},
+  journal = {Distill},
+  year = {2017},
+  note = {https://distill.pub/2017/feature-visualization},
+  doi = {10.23915/distill.00007}
+}
