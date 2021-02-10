@@ -1,4 +1,7 @@
-\section{Results}
+\chapter{Experimental Results}
+\label{chap:Results} 
+
+\section{Reconstruction}
 
 \subsection{Quantitative Results}
 
@@ -164,7 +167,7 @@ The network for this data set is of a deeper (34 layers) architecture, and the
 the learned feature representations seem to be more robust and correlate more with the verification network.
 Comparing the results of the methods that use the representations of the main network (NN, NN ALL)
 to the randomly initialized network (RANDOM NN), it can be said that a good feature representation is necessary.
-Random projections do not perform well on this complex task, as their design is too simple.
+Random projections do not perform well on this task, as their design is too simple to be able to capture complex features.
 
 \begin{table}[!htbp]
 \label{tab:cifar10baseline}
@@ -211,7 +214,7 @@ from one image to another due to background "noise".
 Since the class-conditional formulation groups inputs according to their respective classes, 
 it is possible that, due to random sampling, one iteration contains 
 few samples of one class. Alternatively, one grouped batch could
-display unusual statistics (e.g. all having red backgrounds).
+display unusual statistics (e.g. all having red backgrounds), whereas otherwise these would be averaged out.
 This in turn can lead to a spike in the loss, resulting in large gradients that affect the optimization.
 % NN ALL doesn't suffer from this, as irregularities are smoothed out by larger batches.
 \Cref{fig:layer_losses} shows the loss resulting from the difference in the mean
@@ -250,11 +253,215 @@ Or a hybrid approach could be constructed that only uses class information in la
 \end{figure}
 
 
-
-Conclusion:...
+In conclusion, it can be said that 
+using the proposed loss formulations NN ALL and NN ALL CC can significantly 
+aid in the reconstruction task.
+While random projections might be 
+able to capture relevant features 
+for low-dimensional or comparatively simple data, 
+their practical use for complex image data sets is questionable.
 Incorporating the non-linearity ReLU in the random projections (RP ReLU), in general, 
-does not seem to lead to any notable differences of the performance.
+does not yield any notable differences in the performances.
+This shows that the strength of the neural networks feature-representation
+must come from the depth and hierarchical composition of convolutional feature extractors.
+The increase in performance compared to a randomly initialized neural network
+further shows that learned feature-representations can more efficiently capture
+information about the data set.
+The final effect of the class-conditional formulation is still to be verified.
 
+\subsection{Qualitative Results on Image Data Sets}
+
+\subsubsection{MNIST}
+
+\begin{figure}[h]
+{
+    \centering
+    \setlength{\abovecaptionskip}{0pt plus 0pt minus 0pt}
+    \setlength{\belowcaptionskip}{10pt plus 0pt minus 0pt}
+    
+    \caption*{\normalsize{\textit{Ground Truth}}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_ground_truth.png}}
+    \caption*{\normalsize{\textit{Distorted}}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_distorted.png}}
+    \caption*{\normalsize{CRITERION}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_CRITERION_epoch_100.png}}
+    \caption*{\normalsize{NN}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_NN_epoch_100.png}}
+    \caption*{\normalsize{NN CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_NN_CC_epoch_100.png}}
+    \caption*{\normalsize{NN ALL}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_NN_ALL_epoch_100.png}}
+    \caption*{\normalsize{NN ALL CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_NN_ALL_CC_epoch_100.png}}
+}
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \setlength{\abovecaptionskip}{0pt plus 0pt minus 0pt}
+    \setlength{\belowcaptionskip}{10pt plus 0pt minus 0pt}
+    \caption*{\normalsize{RANDOM NN}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_RANDOM_NN_epoch_100.png}}
+    \caption*{\normalsize{RANDOM NN CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_RANDOM_NN_CC_epoch_100.png}}
+    \caption*{\normalsize{RP}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_RP_epoch_100.png}}
+    \caption*{\normalsize{RP CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_RP_CC_epoch_100.png}}
+    \caption*{\normalsize{RP ReLU}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_RP_ReLU_epoch_100.png}}
+    \caption*{\normalsize{RP ReLU CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_RP_ReLU_CC_epoch_100.png}}
+    \caption*{\normalsize{COMBINED CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_MNIST_COMBINED_CC_epoch_100.png}}
+    
+    \caption{Qualitative results of the reconstruction task on MNIST data set after 100 epochs}
+    \label{fig:MNIST_Images}
+\end{figure}
+
+
+
+\subsubsection{CIFAR10}
+
+\begin{figure}[h]
+    \centering
+    \setlength{\abovecaptionskip}{0pt plus 0pt minus 0pt}
+    \setlength{\belowcaptionskip}{10pt plus 0pt minus 0pt}
+    \caption*{\normalsize{\textit{Ground Truth}}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_ground_truth.png}}
+    \caption*{\normalsize{\textit{Distorted}}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_distorted.png}}
+    \caption*{\normalsize{CRITERION}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_CRITERION_epoch_100.png}}
+    \caption*{\normalsize{NN}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_NN_epoch_100.png}}
+    \caption*{\normalsize{NN CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_NN_CC_epoch_100.png}}
+    \caption*{\normalsize{NN ALL}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_NN_ALL_epoch_100.png}}
+    \caption*{\normalsize{NN ALL CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_NN_ALL_CC_epoch_100.png}}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \setlength{\abovecaptionskip}{0pt plus 0pt minus 0pt}
+    \setlength{\belowcaptionskip}{10pt plus 0pt minus 0pt}
+    \caption*{\normalsize{RANDOM NN}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_RANDOM_NN_epoch_100.png}}
+    \caption*{\normalsize{RANDOM NN CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_RANDOM_NN_CC_epoch_100.png}}
+    \caption*{\normalsize{RP}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_RP_epoch_100.png}}
+    \caption*{\normalsize{RP CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_RP_CC_epoch_100.png}}
+    \caption*{\normalsize{RP ReLU}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_RP_ReLU_epoch_100.png}}
+    \caption*{\normalsize{RP ReLU CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_RP_ReLU_CC_epoch_100.png}}
+    \caption*{\normalsize{COMBINED CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_COMBINED_CC_epoch_100.png}}
+    
+    \caption{Qualitative results of the reconstruction task on CIFAR10 data set after 100 epochs}
+    \label{fig:MNIST_Images}
+\end{figure}
+
+
+
+
+
+
+\begin{figure}[h]
+    \centering
+    \setlength{\abovecaptionskip}{0pt plus 0pt minus 0pt}
+    \setlength{\belowcaptionskip}{10pt plus 0pt minus 0pt}
+    \caption*{\normalsize{\textit{Ground Truth}}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_ground_truth.png}}
+    \caption*{\normalsize{\textit{Distorted}}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_distorted.png}}
+    \caption*{\normalsize{CRITERION}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_CRITERION_epoch_100.png}}
+    \caption*{\normalsize{NN}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_NN_epoch_100.png}}
+    \caption*{\normalsize{NN CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_NN_CC_epoch_100.png}}
+    \caption*{\normalsize{NN ALL}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_NN_ALL_epoch_100.png}}
+    \caption*{\normalsize{NN ALL CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_NN_ALL_CC_epoch_100.png}}
+    
+    \caption{Qualitative results of the reconstruction task on CIFAR10 data set in an unsupervised setting after 100 epochs}
+    \label{fig:MNIST_Images}
+\end{figure}
 
 
 \subsection{Hyperparameter-Influence}

@@ -1,7 +1,8 @@
 \begin{tikzpicture}[node distance=0.58cm and 1.7cm, auto]
 
 \node [] (input) {Input};
-\node [layer, below= 1cm of input] (res1) {Residual Layer};
+\node [layer, below= 1cm of input, fill=Dandelion!9] (conv1) {Conv1x1};
+\node [layer, below= of conv1] (res1) {Residual Layer};
 \node [layer, below= of res1] (res2) {Residual Layer};
 \node [below= of res2, minimum height=0.8cm] (res3) {\dots};
 \node [layer, below= of res3] (res4) {Residual Layer};
@@ -21,7 +22,8 @@
 
 % \draw [larrow, rect connect v=2cm] (branch.center) to (plus.east);
 
-\draw [larrow] (input) to (res1);
+\draw [larrow] (input) to (conv1);
+\draw [larrow] (conv1) to (res1);
 \draw [larrow] (res1) to (res2);
 \draw [larrow] (res2) to (res3);
 \draw [larrow] (res3) to (res4);

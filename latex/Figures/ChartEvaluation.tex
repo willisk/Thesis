@@ -1,10 +1,10 @@
 \begin{tikzpicture}[node distance=1cm and 1.7cm, auto]
 
-\node (A) [node, fill=red!7] {\textbf{Target} \\ $\set A$};
+\node (A) [node, fill=red!7] {\textbf{target} \\ $\set A$};
 \node (B) [node, below= of A] {\textbf{original} \\ $\set B_\text{true}$};
-\node (C) [node, below= 2.2cm of B, fill=blue!0] {\textbf{Validation} \\ $\set C_{true}$};
+\node (C) [node, below= 2.2cm of B, fill=blue!0] {\textbf{validation} \\ $\set C_{true}$};
 
-\node (Bp) [node, right= of B, fill=blue!2] {perturbed \\ \textbf{Source} \\ $\set B$};
+\node (Bp) [node, right= of B, fill=blue!2] {perturbed \\ \textbf{source} \\ $\set B$};
 \node (Br) [node, right= of Bp, fill=blue!7] {\textbf{reconstructed} \\ $\rho^* (\set B)$};
 
 
@@ -14,8 +14,8 @@
 \node [fill=white, below= 0cm of Rec] {\footnotesize \textit{learned}};
 
 
-\node (Net) [function, fill=gray!5, above= of Br] {Neural \\ Network};
-\node (vNet) [function, fill=gray!5, right= of Net] {verification \\ Neural \\ Network};
+\node (Net) [function, fill=gray!5, above= of Br] {neural \\ network};
+\node (vNet) [function, fill=gray!5, right= of Net] {verification \\ neural \\ network};
 
 \draw [arrow, Mahogany, thin, bend left=20] (A) to (Net);
 \draw [arrow, Mahogany, thin, bend left=20] (A) to node[below] {\footnotesize trained} (vNet);
@@ -42,8 +42,8 @@
 
 \node [OliveGreen] at ($(Bp)!0.5!(Cp)$) {IQA metrics};
 
-\node [below= 1.5cm of Pert] (Id) {Id};
-\path (Id) -| node[anchor=center] (Idr) {$\hat {\Id}$} (Rec);
+\node [below= 1.5cm of Pert] (Id) {$\vec I$};
+\path (Id) -| node[anchor=center] (Idr) {$\widehat {\vec I}$} (Rec);
 \draw [arrow] (Id) -- 
 node[near start, xshift=0.2cm, function] {$\delta$} 
 node[near end, xshift=-0.2cm, function] {$\rho^*$} (Idr);

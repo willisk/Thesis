@@ -1,19 +1,28 @@
 \chapter{Implementation Details}
 \label{AppendixGlossary}
 
+
+The implementation of this work was done in Python\footnote{\url{https://www.python.org/}}
+using the popular machine-learning library PyTorch\footnote{\url{https://pytorch.org/}}.
+A copy of the code repository along with all the results 
+is made publicly available on Github\footnote{\url{https://github.com/willisk/Thesis}}.
+
 \begin{table}[!h]
 \caption*{\Large\textbf{Glossary}\vspace{1cm}}
 \pgfplotstabletypeset[
 glossary,
-every row no 2/.style={extra spacing},
+every row no 5/.style={extra spacing},
 ]{
-& $s$ & small letters are used for scalars
-& $\vec v$ & bold-face small letters are used for vectors
-& $\vec M$ & bold-face capital letters are used for matrices
+scalar & $s$ & small letters are used for scalars
+vector & $\vec v$ & bold-face small letters are used for vectors,
+&& the elements are denoted as $v_i$
+matrix & $\vec M$ & bold-face capital letters are used for matrices,
+&& the elements are denoted as $M_{i,j}$
+identity matrix & $\vec I$ & denotes the identity matrix
 %
 sample input & $\vec x$ & element of input space $\set X$
 input space & $\set X$ & vector space $\R^d$
-data set dimension & $d$ & 
+data set dimension & $d$ & dimension of vector space $\set X$
 input shape & $(d_1, d_2,\ldots)$ & shape of input sample $\vec x \in \R^d=\R^{d_1\times d_2 \times \ldots}$
 sample label & $y$ & label $y \in \set Y$
 label set &$\set Y$ & discreet set $\set Y = \{1,\ldots, C\}$
@@ -36,7 +45,7 @@ input variance & $\var$ & empirical data set sample input variance (defined in \
 feature-mapping & $\varphi(\set A)$ & maps a data set to feature-space (defined in \ref{eqn:feature_mapping})
 statistics-loss & $\loss_\varphi$ & loss/objective function for given feature-mapping $\varphi$ 
 &&(defined in \ref{eqn:statistics_loss})
-class-loss & $\loss^\text{CC}_\varphi$ & class-dependent formulation of loss function (defined in \ref{eqn:class_statistics_loss})
+class-loss & $\lossCC_\varphi$ & class-dependent formulation of loss function (defined in \ref{eqn:class_statistics_loss})
 normal distribution & $\mathcal N (\boldsymbol \mu, \boldsymbol \Sigma)$ & multivariate normal distribution 
 &&with mean $\boldsymbol \mu$ and covariance-matrix $\boldsymbol \Sigma$
 uniform distribution & $\mathcal U (a, b)$ & continuous uniform distribution over interval $(a, b)$

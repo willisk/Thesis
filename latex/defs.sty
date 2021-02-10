@@ -23,7 +23,8 @@
 \newcommand{\indicator}[1]{\mathbb I _{\{#1\}}}
 \newcommand{\Id}{\textnormal{Id}}
 \newcommand{\loss}{\textit{L}}
-\newcommand{\Loss}[1]{\loss_{\textnormal{#1}}}
+\newcommand{\lossCC}{\textit{L}^\textit{CC}}
+% \newcommand{\Loss}[1]{\loss_{\textnormal{#1}}}
 
 \providecommand{\norm}[1]{\lVert #1 \rVert}
 \providecommand{\abs}[1]{\lvert #1 \rvert}
@@ -51,8 +52,13 @@
 
 % \newcommand{\mean}[1]{{mean}(#1)}
 % \newcommand{\var}[1]{{var}(#1)}
-\DeclareMathOperator{\mean}{mean}
-\DeclareMathOperator{\var}{var}
+% \DeclareMathOperator{\mean}{mean}
+% \DeclareMathOperator{\var}{var}
+\DeclareMathOperator{\mean}{\mathbb{E}}
+\DeclareMathOperator{\var}{\mathbb{V}}
+\DeclareMathOperator{\relu}{\textnormal{ReLU}}
+
+
 % \newcommand{\XXX}[1]{}
 \newcommand{\XXX}[1]{\textcolor{green}{\\XXX: #1\\}}
 
