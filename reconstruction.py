@@ -7,14 +7,11 @@ from collections import defaultdict
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 # from torch.optim.lr_scheduler import ReduceLROnPlateau
-import torchvision
 
 import matplotlib.pyplot as plt
 # plt.style.use('default')
 import numpy as np
-import pandas as pd
 
 PWD = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(PWD)
@@ -88,23 +85,23 @@ parser.add_argument("-methods", nargs='+', type=str)
 
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset MNIST'.split())
-    args = parser.parse_args('-dataset CIFAR10'.split())
-    # args = parser.parse_args('-dataset GMM'.split())
+    # args = parser.parse_args('-dataset CIFAR10'.split())
+    args = parser.parse_args('-dataset GMM'.split())
     args.inv_steps = 2
     args.size_A = -1
     args.size_B = 8
-    args.size_B = 200
+    # args.size_B = 200
     args.size_C = 8
     # args.size_B = -1
     # args.size_C = -1
-    args.batch_size = 200
+    args.batch_size = 8
     args.r_distort_level = -0.04
     args.plot_ideal = True
     args.f_reg = 0
     args.silent = True
     args.seed = 1
-    # args.seed = 26
-    args.seed = 60
+    args.seed = 26
+    # args.seed = 62
 
     # args.seed = 55
     # args.nn_resume_train = True
@@ -148,22 +145,10 @@ DATA_C = utility.DataL(
 
 
 # dataset.plot()
-# for i, (b_a, b_b, b_c) in enumerate(zip(DATA_A, DATA_B, DATA_C)):
-#     # utility.im_show(b_a[0][:8], nrow=8)
-#     # utility.im_show(b_b[0][:8], nrow=8)
-#     if i == 11:
-#         utility.im_show(b_c[0][:8], nrow=8,
-#                         fig_path=f"figures/{args.dataset}_plot.pdf"
-#                         )
-#         break
-# utility.im_show(next(iter(DATA_A))[0][:8], nrow=8,
-#                 fig_path=f"figures/{args.dataset}_plot.pdf"
-#                 )
 # plt.tight_layout()
 # plt.axis('off')
 # plt.savefig(f"figures/{args.dataset}_plot.pdf", bbox_inches='tight')
 # plt.show()
-# sys.exit(0)
 
 
 input_shape = dataset.input_shape
@@ -318,29 +303,19 @@ else:
             return outputs
 
 
-methods = methods.get_methods(DATA_A, net, dataset, args, DEVICE)
-
-
-def fig_path_fmt(name, filetype="png"):
+def fig_path_fmt(*name_args, filetype="png"):
     if args.save_run:
         path = "figures"
         if args.run_name:
             path = f"figures/{args.run_name}"
-        path = f"{path}/reconstruction_{args.dataset}_{name}.{filetype}".replace(
+        path = f"{path}/reconstruction_{args.dataset}_{'_'.join(name_args)}.{filetype}".replace(
             ' ', '_')
         save_path, _ = utility.search_drive(path, use_drive=USE_DRIVE)
         return save_path
     return None
 
 
-show_batch = next(iter(DATA_B))[0][:200].to(DEVICE)
-utility.im_show(show_batch[:200],
-                fig_path=f"figures/{args.dataset}_example_2.pdf"
-                )
-# utility.im_show(distort(show_batch[:1]),
-#                 fig_path=f"figures/{args.dataset}_example_reconstruct.pdf"
-#                 )
-sys.exit(0)
+show_batch = next(iter(DATA_B))[0][:50].to(DEVICE)
 
 
 if not args.silent and args.dataset != 'GMM':
@@ -422,8 +397,11 @@ def grad_norm_fn(x):
     return min(x, 10)  # torch.sqrt(x) if x > 1 else x
 
 
+methods = methods.get_methods(DATA_A, net, dataset, args, DEVICE)
+
 for method, loss_fn in methods:
     if args.methods is not None and method not in args.methods:
+        print(f"skipping {method}")
         continue
 
     if not args.silent:
@@ -472,7 +450,7 @@ for method, loss_fn in methods:
     optimizer = torch.optim.Adam(reconstruct.parameters(), lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    metrics_fig_path = fig_path_fmt(f"{method}", "pdf")
+    metrics_fig_path = fig_path_fmt(method, "pdf")
 
     info = utility.invert(DATA_B,
                           data_loss_fn,

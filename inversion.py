@@ -21,7 +21,6 @@ from utils import methods
 from utils import datasets
 from utils import debug
 from utils import nets
-from utils.haarPsi import haar_psi_numpy
 
 try:
     get_ipython()   # pylint: disable=undefined-variable
@@ -66,6 +65,7 @@ parser.add_argument("--use_jitter", action="store_true")
 parser.add_argument("--plot_ideal", action="store_true")
 parser.add_argument("--reset_stats", action="store_true")
 parser.add_argument("--save_run", action="store_true")
+parser.add_argument("-methods", nargs='+', type=str)
 
 if 'ipykernel_launcher' in sys.argv[0]:
     # args = parser.parse_args('-dataset MNIST'.split())
@@ -78,6 +78,10 @@ if 'ipykernel_launcher' in sys.argv[0]:
 else:
     args = parser.parse_args()
 
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+utility.seed_everything(args.seed)
+
+
 print("#", __doc__)
 print("# on", args.dataset)
 
@@ -85,13 +89,8 @@ print("# on", args.dataset)
 # ======= Hyperparameters =======
 print("Hyperparameters:")
 print(utility.dict_to_str(vars(args), '\n'), '\n')
-
-# ======= Set Seeds =======
-utility.seed_everything(args.seed)
-
-# ======= Device =======
-DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f"Running on '{DEVICE}'\n")
+
 
 # ======= Create Dataset =======
 
@@ -100,7 +99,7 @@ if args.dataset == 'CIFAR10':
 elif args.dataset == 'MNIST':
     dataset = datasets.MNIST()
 
-A, B, C = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B)
+A, B, _ = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B)
 
 
 DATA_A = utility.DataL(
@@ -155,6 +154,18 @@ if verifier_net:
 print()
 
 
+def fig_path_fmt(*name_args, filetype="png"):
+    if args.save_run:
+        path = "figures"
+        if args.run_name:
+            path = f"figures/{args.run_name}"
+        path = f"{path}/inversion_{args.dataset}_{'_'.join(name_args)}.{filetype}".replace(
+            ' ', '_')
+        save_path, _ = utility.search_drive(path, use_drive=USE_DRIVE)
+        return save_path
+    return None
+
+
 # ======= Optimize =======
 inv_lr = args.inv_lr
 inv_steps = args.inv_steps
@@ -172,18 +183,12 @@ def grad_norm_fn(x):
     return min(x, 10)  # torch.sqrt(x) if x > 1 else x
 
 
-def fig_path_fmt(name, filetype="png"):
-    if args.save_run:
-        path = f"figures/inversion_{name}.{filetype}".replace(' ', '_')
-        save_path, _ = utility.search_drive(path, use_drive=USE_DRIVE)
-        print(save_path)
-        return save_path
-    return None
-
-
 methods = methods.get_methods(DATA_A, net, dataset, args, DEVICE)
 
 for method, loss_fn in methods:
+    if args.methods is not None and method not in args.methods:
+        continue
+
     print("\n\n\n## Method:", method)
 
     batch = torch.randn((args.size_B, *input_shape),
@@ -212,14 +217,13 @@ for method, loss_fn in methods:
         if epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
             utility.im_show(batch[:10],
-                            fig_path_fmt(
-                                f"{args.dataset}_{method}_epoch_{epoch}"),
+                            fig_path_fmt(f"{method}_epoch_{epoch}"),
                             scale_each=True)
 
     optimizer = torch.optim.Adam([batch], lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    metrics_fig_path = fig_path_fmt(f"{args.dataset}_{method}", "pdf")
+    metrics_fig_path = fig_path_fmt(method, "pdf")
 
     info = utility.invert(DATA_B,
                           data_loss_fn,
@@ -238,7 +242,7 @@ for method, loss_fn in methods:
     # ======= Result =======
     print("Inverted:")
     utility.im_show(batch, fig_path_fmt(
-        f"{args.dataset}_{method}_epoch_{inv_steps}_full"),
+        f"{method}_epoch_{inv_steps}_full"),
         scale_each=True)
 
     accuracy = utility.net_accuracy(net, DATA_B)
