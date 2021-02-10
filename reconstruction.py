@@ -556,10 +556,10 @@ if not args.silent:
     print("\n# Summary")
     print("=========\n")
 
-    table_path = fig_path_fmt("baseline", "csv")
+    table_path = fig_path_fmt("baseline", filetype="csv")
     utility.make_table(baseline, row_name="baseline", out=table_path)
 
     print("\nReconstruction methods:")
 
-    table_path = fig_path_fmt("results", "csv")
+    table_path = fig_path_fmt("results", filetype="csv")
     utility.make_table(metrics, row_name="method", out=table_path)
