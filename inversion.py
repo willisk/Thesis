@@ -157,8 +157,6 @@ print()
 def fig_path_fmt(*name_args, filetype="png"):
     if args.save_run:
         path = "figures"
-        if args.run_name:
-            path = f"figures/{args.run_name}"
         path = f"{path}/inversion_{args.dataset}_{'_'.join(name_args)}.{filetype}".replace(
             ' ', '_')
         save_path, _ = utility.search_drive(path, use_drive=USE_DRIVE)
