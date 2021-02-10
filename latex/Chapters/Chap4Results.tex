@@ -252,6 +252,24 @@ Or a hybrid approach could be constructed that only uses class information in la
     \label{fig:layer_losses}
 \end{figure}
 
+\begin{table}[!htbp]
+\label{tab:cifar10results_unsupervised}
+\centering
+\footnotesize
+\pgfplotstabletypeset[
+results,
+images,
+% every row 2 column 1/.style={highlight},
+% every row 4 column 1/.style={highlight},
+% every row 3 column 2/.style={highlight},
+% every row 4 column 3/.style={highlight},
+% every row 3 column 4/.style={highlight},
+% every row 3 column 5/.style={highlight},
+% every row 3 column 6/.style={highlight},
+]{figures/unsupervised/reconstruction_CIFAR10_results.csv}
+\caption{Metrics on reconstruction results after 100 optimization epochs for CIFAR10}
+\end{table}
+
 
 In conclusion, it can be said that 
 using the proposed loss formulations NN ALL and NN ALL CC can significantly 
@@ -418,11 +436,8 @@ The final effect of the class-conditional formulation is still to be verified.
     \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_COMBINED_CC_epoch_100.png}}
     
     \caption{Qualitative results of the reconstruction task on CIFAR10 data set after 100 epochs}
-    \label{fig:MNIST_Images}
+    \label{fig:CIFAR_Images}
 \end{figure}
-
-
-
 
 
 
@@ -433,35 +448,111 @@ The final effect of the class-conditional formulation is still to be verified.
     \caption*{\normalsize{\textit{Ground Truth}}}
     \rule{0.4\textwidth}{.4pt}
     
-    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_ground_truth.png}}
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/unsupervised/reconstruction_CIFAR10_ground_truth.png}}
     \caption*{\normalsize{\textit{Distorted}}}
     \rule{0.4\textwidth}{.4pt}
     
-    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_distorted.png}}
-    \caption*{\normalsize{CRITERION}}
-    \rule{0.4\textwidth}{.4pt}
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/unsupervised/reconstruction_CIFAR10_distorted.png}}
     
-    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_CRITERION_epoch_100.png}}
     \caption*{\normalsize{NN}}
     \rule{0.4\textwidth}{.4pt}
     
-    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_NN_epoch_100.png}}
-    \caption*{\normalsize{NN CC}}
-    \rule{0.4\textwidth}{.4pt}
-    
-    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_NN_CC_epoch_100.png}}
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/unsupervised/reconstruction_CIFAR10_NN_epoch_100.png}}
     \caption*{\normalsize{NN ALL}}
     \rule{0.4\textwidth}{.4pt}
     
-    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_NN_ALL_epoch_100.png}}
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/unsupervised/reconstruction_CIFAR10_NN_ALL_epoch_100.png}}
+    
+    \caption*{\normalsize{RANDOM NN}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/unsupervised/reconstruction_CIFAR10_RANDOM_NN_epoch_100.png}}
+    \caption*{\normalsize{RP}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/unsupervised/reconstruction_CIFAR10_RP_epoch_100.png}}
+    
+    \caption{Qualitative results of the reconstruction task on CIFAR10 data set in an unsupervised setting after 100 epochs}
+
+    \label{fig:CIFAR_Images_unsupervised}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \setlength{\abovecaptionskip}{0pt plus 0pt minus 0pt}
+    \setlength{\belowcaptionskip}{10pt plus 0pt minus 0pt}
+\end{figure}
+
+
+
+
+
+\begin{figure}[h]
+    \centering
+    \setlength{\abovecaptionskip}{0pt plus 0pt minus 0pt}
+    \setlength{\belowcaptionskip}{10pt plus 0pt minus 0pt}
+    
+    \caption*{\normalsize{CRITERION}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/inversion_CIFAR10_CRITERION_epoch_3000.png}}
+    \caption*{\normalsize{NN}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/inversion_CIFAR10_NN_epoch_3000.png}}
+    \caption*{\normalsize{NN CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/inversion_CIFAR10_NN_CC_epoch_3000.png}}
+    \caption*{\normalsize{NN ALL}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/inversion_CIFAR10_NN_ALL_epoch_3000.png}}
     \caption*{\normalsize{NN ALL CC}}
     \rule{0.4\textwidth}{.4pt}
     
-    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/reconstruction_CIFAR10_NN_ALL_CC_epoch_100.png}}
-    
-    \caption{Qualitative results of the reconstruction task on CIFAR10 data set in an unsupervised setting after 100 epochs}
-    \label{fig:MNIST_Images}
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/inversion_CIFAR10_NN_ALL_CC_epoch_3000.png}}
 \end{figure}
+
+\begin{figure}[h]
+    \centering
+    \setlength{\abovecaptionskip}{0pt plus 0pt minus 0pt}
+    \setlength{\belowcaptionskip}{10pt plus 0pt minus 0pt}
+    \caption*{\normalsize{RANDOM NN}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/inversion_CIFAR10_RANDOM_NN_epoch_3000.png}}
+    \caption*{\normalsize{RANDOM NN CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/inversion_CIFAR10_RANDOM_NN_CC_epoch_3000.png}}
+    \caption*{\normalsize{RP}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/inversion_CIFAR10_RP_epoch_3000.png}}
+    \caption*{\normalsize{RP CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/inversion_CIFAR10_RP_CC_epoch_3000.png}}
+    \caption*{\normalsize{RP ReLU}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/inversion_CIFAR10_RP_ReLU_epoch_3000.png}}
+    \caption*{\normalsize{RP ReLU CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/inversion_CIFAR10_RP_ReLU_CC_epoch_3000.png}}
+    \caption*{\normalsize{COMBINED CC}}
+    \rule{0.4\textwidth}{.4pt}
+    
+    \centerline{\hspace*{8mm}\includegraphics[width=1.4\textwidth]{figures/inversion_CIFAR10_COMBINED_CC_epoch_3000.png}}
+    
+    \caption{Qualitative results of the inversion task on CIFAR10 data set after 3000 epochs}
+    \label{fig:CIFAR_Images}
+\end{figure}
+
+
+
 
 
 \subsection{Hyperparameter-Influence}
