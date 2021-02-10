@@ -4,10 +4,10 @@
 \node (D) [minimum height=3.5cm] {\distribution};
 \node [above of= D, align=center, yshift=0.2cm] {data set \\ distribution};
 
-\node (N) [below= -0.5cm of D, minimum height=3.5cm] {\noise};
+\node (N) [below= 0.5cm of D, minimum height=3.5cm] {\noise};
 \node [above of= N] {random noise};
 
-\node (B) [node, right= of N, fill=blue!7, draw=blue, thick] {\textbf{Source} \\ $\set B$};
+\node (B) [node, right= of N, fill=blue!7, draw=blue, thick] {\textbf{source} \\ $\set B$};
 \node (A) [node, right= of D, fill=red!7] {\textbf{target} \\ $\set A$};
 
 \path (A) -- (B) node (Mid) [midway] {};
@@ -46,6 +46,7 @@
 % \draw [arrow, Mahogany, thin, bend left=30] (A.20) to [out=40, in=140] node[above, sloped] {\footnotesize trained} (Net);
 
 \node [below= 0cm of A] {\fbox{\includegraphics[]{figures/CIFAR10_example_3.pdf}}};
+\node [below= 0cm of B] {\fbox{\includegraphics[]{figures/CIFAR10_example_noise.pdf}}};
 
 \end{tikzpicture}
 
