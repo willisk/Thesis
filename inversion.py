@@ -212,7 +212,7 @@ for method, loss_fn in methods:
         return info
 
     def callback_fn(epoch, metrics):
-        if epoch % args.show_after == 0:
+        if args.show_after > 0 and epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
             utility.im_show(batch[:10],
                             fig_path_fmt(f"{method}_epoch_{epoch}"),
