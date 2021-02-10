@@ -208,7 +208,7 @@ for method, loss_fn in methods:
             if ideal_value is None:
                 with torch.no_grad():
                     ideal_value = loss_fn(ideal_data)['loss'].item()
-            info[':--: ideal'] = ideal_value
+            info['reference'] = ideal_value
         return info
 
     def callback_fn(epoch, metrics):
