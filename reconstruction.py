@@ -450,7 +450,7 @@ for method, loss_fn in methods:
     optimizer = torch.optim.Adam(reconstruct.parameters(), lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
 
-    metrics_fig_path = fig_path_fmt(method, "pdf")
+    metrics_fig_path = fig_path_fmt(method, filetype="pdf")
 
     info = utility.invert(DATA_B,
                           data_loss_fn,
