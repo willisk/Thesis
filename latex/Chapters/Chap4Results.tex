@@ -259,15 +259,14 @@ Or a hybrid approach could be constructed that only uses class information in la
 \pgfplotstabletypeset[
 results,
 images,
-% every row 2 column 1/.style={highlight},
-% every row 4 column 1/.style={highlight},
-% every row 3 column 2/.style={highlight},
-% every row 4 column 3/.style={highlight},
-% every row 3 column 4/.style={highlight},
-% every row 3 column 5/.style={highlight},
-% every row 3 column 6/.style={highlight},
+every row 1 column 1/.style={highlight},
+every row 1 column 2/.style={highlight},
+every row 1 column 3/.style={highlight},
+every row 2 column 4/.style={highlight},
+every row 1 column 5/.style={highlight},
+every row 0 column 6/.style={highlight},
 ]{figures/unsupervised/reconstruction_CIFAR10_results.csv}
-\caption{Metrics on reconstruction results after 100 optimization epochs for CIFAR10}
+\caption{Metrics on reconstruction results in the unsupervised setting after 100 optimization epochs for CIFAR10}
 \end{table}
 
 In conclusion, it can be said that 
