@@ -1,16 +1,13 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{mathrsfs}
-\usepackage{ifluatex}
-\usepackage{csvsimple, siunitx, array, booktabs}
 \usepackage{makecell}
 \usepackage{multirow}
 \usepackage{pgfplotstable}
-% \usepackage{cleveref}
-% \usepackage{nameref}
 \usepackage{hyperref}
 \usepackage{cleveref}
 \usepackage{xparse}
+\usepackage{float}
  
 
 
@@ -68,6 +65,17 @@
 
 
 
+
+\NewDocumentCommand{\photostrip}{ O{0pt} O{10pt} m m }{
+    \setlength{\fboxsep}{0pt}
+    \setlength{\fboxrule}{#1}
+    \setlength{\abovecaptionskip}{0pt plus 0pt minus 0pt}
+    \setlength{\belowcaptionskip}{#2 plus 0pt minus 0pt}
+    \caption*{\normalsize{#3}}
+    \rule{0.4\textwidth}{.4pt}
+    \par
+    \centerline{\hspace*{8mm}\fcolorbox{white}{white}{\includegraphics[width=1.4\textwidth]{#4}}}
+}
 
 
 

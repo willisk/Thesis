@@ -5,7 +5,9 @@
 The success of the reconstruction largely depends on the representation of the data
 after the feature-map is applied.
 Relying on the mean and variance of the data to accurately describe the data distribution 
-relies on a strong assumption.
+rests on a strong assumption.
+Nonetheless, it is founded on an extensive theory surrounding kernel embeddings
+(\cite{borgwardt2006integrating,sriperumbudur2010hilbert}).
 More sophisticated ways of capturing data distributions exist, yet mean and variance were chosen due to their simplicity in evaluation and computation of the gradients.
 
 The feature-map ideally "disentangles" the data space to enable 
@@ -123,10 +125,10 @@ yet the class-dependent variant can be modified to select an origin $\vec o_c$ f
 % 
 \begin{equation*}
     \loss _{\text{RP}} ^{\mathcal C} (\set A, \set B) =
-    \sum _{c = 1, \dots, C}
+    \sum _{c = 1}^C
     \begin{alignedat}[t]{1}
-        \|\mean ({R_{\vec o_c} (\set A|_c)}) - \mean ({R_{\vec o_c} (\set B|_c)}) &\| \\
-        {} + \|\var ({R_{\vec o_c} (\set A|_c)}) - \var ({R_{\vec o_c} (\set B|_c)}) &\|  \,,
+        \|\mean ({R_{\vec o_c} (\set A|_c)}) - \mean ({R_{\vec o_c} (\set B|_c)}) &\|_2 \\
+        {} + \|\var ({R_{\vec o_c} (\set A|_c)}) - \var ({R_{\vec o_c} (\set B|_c)}) &\|_2  \,,
     \end{alignedat}
 \end{equation*}
 % \begin{align}
@@ -197,8 +199,8 @@ The probability-density function (pdf) is constructed as follows.
     p(\, \vec x \mid c \,) &= \frac 1 {n_\text{mode}} \sum _{m=1}^{n_\text{mode}}
     \mathcal N (\gamma \vec m_c + \lambda \boldsymbol \mu_c^{(m)}, \boldsymbol \Sigma_c^{(m)}) \, ,
 \end{align}
-where \\
-$\vec m_c \sim \mathcal N (\vec 0, \vec I)$ is the center for each class $c=1,\ldots, C$ ,\\
+where 
+$\vec m_c \sim \mathcal N (\vec 0, \vec I)$ is the center for each class $c=1,\ldots, C$ ,
 $\boldsymbol \mu_c^{(m)} \sim \mathcal N (\vec 0, \vec I)$ and
 $\vec \Sigma_c^{(m)}$ are the center and the covariance matrix of the multivariate normal distribution
 for each mode $m=1,\ldots, n_{\textnormal{mode}}$ and class $c=1,\ldots, C$.  \\
@@ -229,7 +231,7 @@ are listed in \cref{AppendixParameters}.
 The MNIST database of handwritten digits (\cite{MNIST}), a common data set used in pattern recognition, is made up of 70000 black-and-white images 
 of handwritten digits from 0 to 9. 
 Each image is made up of 28$\times$28 pixels, totaling an input dimension of $d=784$.
-\begin{figure}[h]
+\begin{figure}[htb]
     \centering
     \includegraphics{figures/MNIST_plot.pdf}
     \caption{A random batch of the MNIST data set.}
@@ -238,10 +240,10 @@ Each image is made up of 28$\times$28 pixels, totaling an input dimension of $d=
 
 \subsection{CIFAR-10}
 The CIFAR10 dataset (\cite{CIFAR}) is a prominent benchmark in computer vision. 
-It contains 60000 colored images from 10 non-overlapping categories or classes.
-Each image has an input shape of $(3, 32, 32)$ as it comes with 3 color channels 
-and has a dimension of 32$\times$32 pixels, resulting in a total of $d=3072$ dimensions.
-\begin{figure}[h]
+It contains 60,000 colored images from 10 non-overlapping categories or classes.
+Each image has an input shape of $(3, 32, 32)$ as it comes with three color channels 
+and has a dimension of 32$\times$32 pixels, resulting in a total of $d=\text{3,072}$ dimensions.
+\begin{figure}[htb]
     \centering
     \includegraphics{figures/CIFAR10_plot.pdf}
     \caption{A random batch of the CIFAR10 data set.}
@@ -327,7 +329,7 @@ By \cref{eqn:convolution_kernel}
 $(\vec x * \vec k_\text{id})_{i,j} = \vec x_{i, j}$
 and the identity transformation is obtained.
 
-For the CIFAR10 data set, as 3 color channels are present, the shape of the input is (3, 32, 32). 
+For the CIFAR10 data set, as three color channels are present, the shape of the input is (3, 32, 32). 
 In order to obtain the same output shape, 
 a total of $3\cdot 3=9$ kernels $\vec k^{[i,j]}$ for $i,j=1,2,3$ are needed per convolution operator.
 % The output of channel $j$ is given by $\sum_{i=1}^{3} \vec x * \vec k^{[i, j]}$.

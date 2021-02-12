@@ -376,26 +376,10 @@ the other parameters show an almost inverse effect on what one would expect.
 The larger reconstruction perform worse than simpler models 
 However, these are likely to achieve higher scores after a longer training time. 
 
-
-
-
-
-
 \subsection{Qualitative Results on Image Data Sets}
-
-\NewDocumentCommand{\photostrip}{ O{0pt} O{10pt} m m }{
-    \setlength{\fboxsep}{0pt}
-    \setlength{\fboxrule}{#1}
-    \setlength{\abovecaptionskip}{0pt plus 0pt minus 0pt}
-    \setlength{\belowcaptionskip}{#2 plus 0pt minus 0pt}
-    \caption*{\normalsize{#3}}
-    \rule{0.4\textwidth}{.4pt}
-    \par
-    \centerline{\hspace*{8mm}\fcolorbox{white}{white}{\includegraphics[width=1.4\textwidth]{#4}}}
-}
  
 
-\begin{figure}[h]
+\begin{figure}[H]
 {
     \centering
     
@@ -408,7 +392,7 @@ However, these are likely to achieve higher scores after a longer training time.
     \photostrip{NN ALL CC}{figures/reconstruction_MNIST_NN_ALL_CC_epoch_100.png}
 }
 \end{figure}
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     
     \photostrip{RANDOM NN}{figures/reconstruction_MNIST_RANDOM_NN_epoch_100.png}
@@ -419,7 +403,7 @@ However, these are likely to achieve higher scores after a longer training time.
     \photostrip{RP ReLU CC}{figures/reconstruction_MNIST_RP_ReLU_CC_epoch_100.png}
     \photostrip{COMBINED CC}{figures/reconstruction_MNIST_COMBINED_CC_epoch_100.png}
     
-    \caption{Qualitative results of the reconstruction task on MNIST data set after 100 epochs}
+    \caption{Results of the reconstruction task on MNIST data set after 100 epochs}
     \label{fig:MNIST_Images}
 \end{figure}
 
@@ -429,7 +413,7 @@ However, these are likely to achieve higher scores after a longer training time.
 
 
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     
     \photostrip{\textit{Ground Truth}}{figures/reconstruction_CIFAR10_ground_truth.png}
@@ -441,7 +425,7 @@ However, these are likely to achieve higher scores after a longer training time.
     \photostrip{NN ALL CC}{figures/reconstruction_CIFAR10_NN_ALL_CC_epoch_100.png}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     
     \photostrip{RANDOM NN}{figures/reconstruction_CIFAR10_RANDOM_NN_epoch_100.png}
@@ -452,11 +436,11 @@ However, these are likely to achieve higher scores after a longer training time.
     \photostrip{RP ReLU CC}{figures/reconstruction_CIFAR10_RP_ReLU_CC_epoch_100.png}
     \photostrip{COMBINED CC}{figures/reconstruction_CIFAR10_COMBINED_CC_epoch_100.png}
     
-    \caption{Qualitative results of the reconstruction task on CIFAR10 data set after 100 epochs}
+    \caption{Results of the reconstruction task on CIFAR10 data set after 100 epochs}
     \label{fig:CIFAR_Images}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     
     \photostrip[5pt][16pt]{\textit{Ground Truth}}{figures/unsupervised/reconstruction_CIFAR10_ground_truth.png}
@@ -466,11 +450,10 @@ However, these are likely to achieve higher scores after a longer training time.
     \photostrip[5pt][16pt]{RANDOM NN}{figures/unsupervised/reconstruction_CIFAR10_RANDOM_NN_epoch_100.png}
     \photostrip[5pt][16pt]{RP}{figures/unsupervised/reconstruction_CIFAR10_RP_epoch_100.png}
     
-    \caption{Qualitative results of the reconstruction task on CIFAR10 data set in an unsupervised setting after 100 epochs}
+    \caption{Results of the reconstruction task on CIFAR10 data set in an unsupervised setting after 100 epochs}
 
     \label{fig:CIFAR_Images_unsupervised}
 \end{figure}
-
 
 
 
@@ -480,9 +463,41 @@ However, these are likely to achieve higher scores after a longer training time.
 
 
 
+Although research in machine-learning is being made at a rapid pace,
+the behavior and decision process of deep neural networks are 
+still poorly understood and largely
+regarded as black-box models.
+The susceptibility of neural networks to adversarial attacks (\cite{moosavidezfooli2016deepfool}) has raised awareness
+in security-critical areas (autonomous cars, ai in medical, face recognition).
+This has sparked research need of explainable ai and interpretability.
+Work unveiling the decision process of neural networks has been made 
+(LRP (\cite{Bach2015OnPE}, Masking, Feature-Vis).
+Feature-vis straightforward.. change input to maximally excite or minimize objective.
+Receive examples of inputs.
+Another concern raised by adversarial attacks has been regarding data privacy.
+Sensitive patient data, personal information can be leaked.
+Breaches in data privacy by adversarial attacks (\cite{carlini2020attack})
+and attacks on data privacy algorithms (\cite{carlini2020extracting})
 
 
-\begin{figure}[h]
+The following experiments have two goals.
+One aims at better understanding the feature-representation of  
+model by feature-visualization.
+The other inspects what data of data set can be reconstructed by sharing statistics.
+
+
+Danger of adversarial attacks has raised awareness for ai systems employed in 
+security and safety sensitive areas.
+Explainable Ai and interpretability have emerged as fields aiming to inspect the inner workings
+of ai models to address robustness.
+Lrp.. feature-visualisation.. exist. maximally excite neurons or optimize inputs for objective..
+Along with adv attacks come data privacy concerns.. reconstruction gpt3, instahide, differential privacy.
+Following experiments show results gaining insight into what optimal input for loss looks like..
+Inspects what information is shared by statistics of layers..
+
+
+
+\begin{figure}[H]
     \centering
     
     \photostrip[5pt]{CRITERION}{figures/inversion_MNIST_CRITERION_epoch_3000.png}
@@ -494,7 +509,7 @@ However, these are likely to achieve higher scores after a longer training time.
     \photostrip[5pt]{RANDOM NN CC}{figures/inversion_MNIST_RANDOM_NN_CC_epoch_3000.png}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     
     \photostrip[5pt][20pt]{RP}{figures/inversion_MNIST_RP_epoch_3000.png}
@@ -503,13 +518,13 @@ However, these are likely to achieve higher scores after a longer training time.
     \photostrip[5pt][20pt]{RP ReLU CC}{figures/inversion_MNIST_RP_ReLU_CC_epoch_3000.png}
     \photostrip[5pt][20pt]{COMBINED CC}{figures/inversion_MNIST_COMBINED_CC_epoch_3000.png}
     
-    \caption{Qualitative results of the inversion task on MNIST data set after 3000 epochs}
-    \label{fig:CIFAR_Images_Inversion}
+    \caption{Results of the inversion task on MNIST data set after 3000 epochs}
+    \label{fig:MNIST_Images_Inversion}
 \end{figure}
 
 
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     
     \photostrip[5pt]{CRITERION}{figures/inversion_CIFAR10_CRITERION_epoch_3000.png}
@@ -521,7 +536,7 @@ However, these are likely to achieve higher scores after a longer training time.
     \photostrip[5pt]{RANDOM NN CC}{figures/inversion_CIFAR10_RANDOM_NN_CC_epoch_3000.png}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     
     \photostrip[5pt][20pt]{RP}{figures/inversion_CIFAR10_RP_epoch_3000.png}
@@ -530,7 +545,7 @@ However, these are likely to achieve higher scores after a longer training time.
     \photostrip[5pt][20pt]{RP ReLU CC}{figures/inversion_CIFAR10_RP_ReLU_CC_epoch_3000.png}
     \photostrip[5pt][20pt]{COMBINED CC}{figures/inversion_CIFAR10_COMBINED_CC_epoch_3000.png}
     
-    \caption{Qualitative results of the inversion task on CIFAR10 data set after 3000 epochs}
+    \caption{Results of the inversion task on CIFAR10 data set after 3000 epochs}
     \label{fig:CIFAR_Images_Inversion}
 \end{figure}
 
@@ -555,6 +570,18 @@ The increase in performance compared to a randomly initialized neural network
 further shows that learned feature-representations are adapted to capture
 important information about the data set.
 The final effect of the class-conditional formulation is still to be verified.
+
+
+MNIST <-> CIFAR 
+CIFAR is forced to filter background noise.
+The results show that...
+neural networks are able to learn features that 
+capture invariant properties of the data set.
+By optimizing for image recognition, a lot of information
+about the data set is implicitly stored in the shapes of their filters.
+Also more explicitly, information about the data set is stored in the batchnorm layers
+a lot of information in their layers
+which can be used for dataset adaption and inverse tasks, such as deconvolution.
 
 
 

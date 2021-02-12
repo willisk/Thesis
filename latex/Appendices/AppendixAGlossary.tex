@@ -7,7 +7,7 @@ using the popular machine-learning library PyTorch\footnote{\url{https://pytorch
 A copy of the code repository along with all the results 
 is made publicly available on Github\footnote{\url{https://github.com/willisk/Thesis}}.
 
-\begin{table}[!h]
+\begin{table}[!ht]
 \caption*{\Large\textbf{Glossary}\vspace{1cm}}
 \pgfplotstabletypeset[
 glossary,
@@ -25,7 +25,7 @@ input space & $\set X$ & vector space $\R^d$
 data set dimension & $d$ & dimension of vector space $\set X$
 input shape & $(d_1, d_2,\ldots)$ & shape of input sample $\vec x \in \R^d=\R^{d_1\times d_2 \times \ldots}$
 sample label & $y$ & label $y \in \set Y$
-label set &$\set Y$ & discreet set $\set Y = \{1,\ldots, C\}$
+label set &$\set Y$ & discrete set $\set Y = \{1,\ldots, C\}$
 number of classes &$C$ & number of distinct labels/classes of the data set
 sample & $\vec z$ & sample of $\set Z$; tuple of input and label $\vec z = (\vec x, y)$
 sample space & $\set Z$ & $\set Z = \set X \times \set Y$
@@ -43,9 +43,11 @@ class-constrained batch & $\set A|_c$ & subset of $\set A$ only containing sampl
 input mean & $\mean$ & empirical data set sample input mean (defined in \ref{eqn:sample_mean})
 input variance & $\var$ & empirical data set sample input variance (defined in \ref{eqn:sample_var})
 feature-mapping & $\varphi(\set A)$ & maps a data set to feature-space (defined in \ref{eqn:feature_mapping})
-statistics-loss & $\loss_\varphi$ & loss/objective function for given feature-mapping $\varphi$ 
+class criterion loss & $\loss_\text{crit}$ & cross-entropy loss function 
+statistics loss & $\loss_\varphi$ & loss/objective function for given feature-mapping $\varphi$ 
 &&(defined in \ref{eqn:statistics_loss})
-class-loss & $\lossCC_\varphi$ & class-dependent formulation of loss function (defined in \ref{eqn:class_statistics_loss})
+class-dependent & $\lossCC_\varphi$ & class-dependent formulation of loss function 
+statistics loss &&(defined in \ref{eqn:class_statistics_loss})
 normal distribution & $\mathcal N (\boldsymbol \mu, \boldsymbol \Sigma)$ & multivariate normal distribution 
 &&with mean $\boldsymbol \mu$ and covariance-matrix $\boldsymbol \Sigma$
 uniform distribution & $\mathcal U (a, b)$ & continuous uniform distribution over interval $(a, b)$
