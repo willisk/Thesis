@@ -137,20 +137,21 @@ net.eval()
 if not 'ipykernel_launcher' in sys.argv[0]:
     utility.print_net_accuracy(net, DATA_A, estimate_epochs=10)
 
-verifier_path, verifier_net = dataset.verifier_net()
-if verifier_net:
-    verifier_net.to(DEVICE)
-    optimizer = torch.optim.Adam(verifier_net.parameters(), lr=nn_lr)
-    utility.train(verifier_net, DATA_A, criterion, optimizer,
-                  model_path=verifier_path,
+verification_path, verification_net = dataset.verification_net()
+if verification_net:
+    verification_net.to(DEVICE)
+    optimizer = torch.optim.Adam(verification_net.parameters(), lr=nn_lr)
+    utility.train(verification_net, DATA_A, criterion, optimizer,
+                  model_path=verification_path,
                   epochs=nn_steps,
                   resume=nn_resume_training,
                   reset=nn_reset_training,
                   use_drive=USE_DRIVE,
                   )
     if not 'ipykernel_launcher' in sys.argv[0]:
-        print("verifier ", end='')
-        utility.print_net_accuracy(verifier_net, DATA_A, estimate_epochs=10)
+        print("verification ", end='')
+        utility.print_net_accuracy(
+            verification_net, DATA_A, estimate_epochs=10)
 print()
 
 
@@ -248,9 +249,9 @@ for method, loss_fn in methods:
 
     metrics[method]['acc'] = accuracy
 
-    if verifier_net:
-        accuracy_ver = utility.net_accuracy(verifier_net, DATA_B)
-        print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
+    if verification_net:
+        accuracy_ver = utility.net_accuracy(verification_net, DATA_B)
+        print(f"\tnn verification accuracy: {accuracy_ver * 100:.1f} %")
         metrics[method]['acc(ver)'] = accuracy_ver
 
 print("\n# Summary")

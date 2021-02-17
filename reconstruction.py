@@ -179,20 +179,21 @@ net.eval()
 if not args.silent:
     utility.print_net_accuracy(net, DATA_A, estimate_epochs=10)
 
-verifier_path, verifier_net = dataset.verifier_net()
-if verifier_net:
-    verifier_net.to(DEVICE)
-    optimizer = torch.optim.Adam(verifier_net.parameters(), lr=nn_lr)
-    utility.train(verifier_net, DATA_A, criterion, optimizer,
-                  model_path=verifier_path,
+verification_path, verification_net = dataset.verification_net()
+if verification_net:
+    verification_net.to(DEVICE)
+    optimizer = torch.optim.Adam(verification_net.parameters(), lr=nn_lr)
+    utility.train(verification_net, DATA_A, criterion, optimizer,
+                  model_path=verification_path,
                   epochs=nn_steps,
                   resume=nn_resume_training,
                   reset=nn_reset_training,
                   use_drive=USE_DRIVE,
                   )
     if not args.silent:
-        print("verifier ", end='')
-        utility.print_net_accuracy(verifier_net, DATA_A, estimate_epochs=10)
+        print("verification ", end='')
+        utility.print_net_accuracy(
+            verification_net, DATA_A, estimate_epochs=10)
 print()
 
 # ======= Distortion =======
@@ -492,12 +493,12 @@ for method, loss_fn in methods:
         print(f"\tnn accuracy: {accuracy * 100:.1f} %")
         print(f"\tnn validation set accuracy: {accuracy_val * 100:.1f} %")
 
-    if verifier_net:
+    if verification_net:
         accuracy_ver = utility.net_accuracy(
-            verifier_net, DATA_B, inputs_pre_fn=invert_fn)
+            verification_net, DATA_B, inputs_pre_fn=invert_fn)
         metrics[method]['acc(ver)'] = accuracy_ver
         if not args.silent:
-            print(f"\tnn verifier accuracy: {accuracy_ver * 100:.1f} %")
+            print(f"\tnn verification accuracy: {accuracy_ver * 100:.1f} %")
 
     iqa_invert = iqa_metrics(DATA_B, invert_fn)
 
@@ -520,13 +521,13 @@ accuracy_C_pert = utility.net_accuracy(
     net, DATA_C, inputs_pre_fn=distort)
 
 
-if verifier_net:
+if verification_net:
     accuracy_A_ver = utility.net_accuracy(
-        verifier_net, DATA_A)
+        verification_net, DATA_A)
     accuracy_B_ver = utility.net_accuracy(
-        verifier_net, DATA_B)
+        verification_net, DATA_B)
     accuracy_B_pert_ver = utility.net_accuracy(
-        verifier_net, DATA_B, inputs_pre_fn=distort)
+        verification_net, DATA_B, inputs_pre_fn=distort)
 
 
 baseline['Target A']['acc'] = accuracy_A
@@ -537,7 +538,7 @@ baseline['Source B (original)']['acc(val)'] = accuracy_C
 baseline['Source B (distorted)']['acc'] = accuracy_B_pert
 baseline['Source B (distorted)']['acc(val)'] = accuracy_C_pert
 
-if verifier_net:
+if verification_net:
     baseline['Source B (distorted)']['acc(ver)'] = accuracy_B_pert_ver
     baseline['Source B (original)']['acc(ver)'] = accuracy_B_ver
     baseline['Target A']['acc(ver)'] = accuracy_A_ver

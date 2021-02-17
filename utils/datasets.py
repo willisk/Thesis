@@ -70,7 +70,7 @@ class Dataset():
     def net(self):
         return None, None
 
-    def verifier_net(self):
+    def verification_net(self):
         return None, None
 
 
@@ -107,7 +107,7 @@ class CIFAR10(Dataset):
         model_path = os.path.join(self.data_dir, "net_resnet34.pt")
         return model_path, resnet
 
-    def verifier_net(self):
+    def verification_net(self):
         resnet = nets.resnet18()
         model_path = os.path.join(self.data_dir, "net_resnet18.pt")
         return model_path, resnet
@@ -142,7 +142,7 @@ class MNIST(Dataset):
         model_path = os.path.join(self.data_dir, "net_resnet20.pt")
         return model_path, resnet
 
-    def verifier_net(self):
+    def verification_net(self):
         resnet = nets.ResNet9(1, self.n_classes)
         model_path = os.path.join(self.data_dir, "net_resnet9.pt")
         return model_path, resnet
@@ -231,8 +231,8 @@ class MULTIGMM(Dataset):
         model_path = os.path.join(self.data_dir, model_name)
         return model_path, fcnet
 
-    def verifier_net(self):
-        return self.net(suffix="_verifier")
+    def verification_net(self):
+        return self.net(suffix="_verification")
 
     def sample(self, n_samples_per_class):
         X = Y = None
