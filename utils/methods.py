@@ -18,7 +18,7 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
 
     # ======= Setup Methods =======
     STD = args.use_std
-    stats_path = os.path.join(MODELDIR, "stats_{}.pt")
+    stats_path = os.path.join(MODELDIR, "stats_{args.batch_size}_{}.pt")
 
     # Random Projections
     n_random_projections = args.n_random_projections
