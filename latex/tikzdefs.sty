@@ -113,7 +113,7 @@ results/.style={
     empty cells with={--},
     string replace*={_}{\textsubscript},
     every column/.style={column type=c, precision=1, zerofill},
-    display columns/0/.style={column name=\textbf{method}, column type=l, string type},
+    display columns/0/.style={column name=\textbf{Method}, column type=l, string type},
     display columns/1/.style={column name=\hspace*{-2mm}\textbf{accuracy} [\%]\hspace*{-7mm}, multiply with=100},
     display columns/2/.style={column name=\hspace*{4mm}\makecell{\textbf{validation} \\ \textbf{accuracy}} [\%]\hspace*{-3mm}, multiply with=100},
     display columns/3/.style={column name=\hspace*{0mm}\makecell{\textbf{verification} \\ \textbf{accuracy}} [\%]\hspace*{-6mm}, multiply with=100},
@@ -122,6 +122,10 @@ results/.style={
         before row={\toprule},
         after row={\midrule},
     },
+},
+baseline/.style={
+    results,
+    display columns/0/.style={column name=\textbf{Baseline}, column type=l, string type},
 },
 gmm/.style={%
     columns={[index]0, [index]1, [index]2, [index]3, [index]4, [index]5},

@@ -56,18 +56,17 @@ For a given feature-mapping $\varphi$ that is piecewise $\mathcal C ^1$, the \te
     \label{eqn:statistics_loss}
 \end{equation}
 % 
-A \textbf{class-dependent} loss can be obtained as follows:
+A \textbf{class-dependent} loss can be obtained as follows.
 \begin{align}
 \begin{split}
 \label{eqn:class_statistics_loss}
     \lossCC _\varphi (\set A, \set B) =
     \sum _{c = 1, \dots, C}
-    % \|\mean ({\varphi (\set A|_c)}) &- \mean({\varphi (\set B|_c)}) \| \\
-    % {} + \|\var ({\varphi (\set A|_c)}) &- \var ({\varphi (\set B|_c)}) \| 
-    \begin{alignedat}[t]{1}
-        \|\mean ({\varphi (\set A|_c)}) - \mean({\varphi (\set B|_c)}) &\|_2 \\
-        {} + \|\var ({\varphi (\set A|_c)}) - \var ({\varphi (\set B|_c)}) &\|_2 
-    \end{alignedat}
+    \loss_\varphi(\set A|_c, \set B|_c)
+    % \begin{alignedat}[t]{1}
+    %     \|\mean ({\varphi (\set A|_c)}) - \mean({\varphi (\set B|_c)}) &\|_2 \\
+    %     {} + \|\var ({\varphi (\set A|_c)}) - \var ({\varphi (\set B|_c)}) &\|_2 
+    % \end{alignedat}
 \end{split}
 \end{align}
 
@@ -101,14 +100,16 @@ Preliminary tests have shown promising results with the use of \cref{eqn:cov_los
 \section{Neural Network}
 \label{sec:nn_def}
 
-In a multiple-class classification setting, a \textbf{neural network} $\Phi$ is a function that maps an input $\vec x \in \R^d$ to an output $\in \R^C$.
+In a multi-class classification setting, a \textbf{neural network} $\Phi$ is a function that maps an input $\vec x \in \R^d$ to an output $\hat y \in \R^C$.
 These outputs are referred to as the unnormalized logits, as they are 
 implicitly converted to a probability distribution.
 This can be done by a mapping to the positive orthant via the exponential function and
 a following normalization.
 The network then makes its prediction by returning the corresponding label
-of the output with highest "probability", the maximal value.
-The classic artificial neural network is a \textbf{multi-layer perceptron} (MLP) or fully-connected (FC) neural network.
+of the output with highest score.
+The classic artificial neural network is a 
+\textbf{multi-layer perceptron} (MLP) (\cite{rosenblatt1961principles})
+or fully-connected (FC) neural network.
 This network is composed of individual neurons or nodes 
 that are grouped into layers.
 In a typical, feed-forward neural network, an input signal is processed by the first
@@ -164,19 +165,19 @@ It applies $\max(0, \cdot \,)$ element-wise.
 \section{Convolutional Neural Networks}
 \label{sec:convolutions}
 The convolutional neural network (\cite{Convnet_origins}) 
-makes use of shared weights and a local receptive field 
+make use of shared weights and a local receptive field 
 resulting in sparse connections between the layers. 
 Convolutions are typically used for spatially structured data 
 where input features exhibit strong local correlations and 
-translation invariant features/filters are desired.
-The typical use-case is for object recognition in images.
+translation invariant features are desired.
+The typical use case is for object recognition in images.
 
 A convolution operation can be seen as a sliding filter
 that is able to extract features regardless of their location in the image.
-A discrete 2-dimensional convolution operator can be defined by a kernel $\vec k \in \R^{h_k\times w_k}$. 
+A discrete two-dimensional convolution operator can be defined by a kernel $\vec k \in \R^{h_k\times w_k}$. 
 The convolution operator is further illustrated for $\vec k \in \R^{3\times3}$, 
-as for the most part of this work, 3$\times$3 convolutions are used, 
 though a generalization is straightforward.
+For the most part of this work, 3$\times$3 convolutions are used.
 The convolution between $\vec x \in \R^{h\times w}$ and $\vec k \in \R^{3\times3}$ is given by
 \begin{equation}
 \label{eqn:convolution_kernel}
@@ -201,11 +202,11 @@ A padding mode is necessary in order to preserve the image dimensions in the out
 Different padding methods are also possible.
 
 
-An image containing multiple channel information, 
-is seen as a generalized matrix, or a tensor $\in \R^{n_\text{chan}\times h \times w}$
+An image containing multiple channel information 
+is seen as a generalized matrix, or a tensor in $\R^{n_\text{chan}\times h \times w}$
 with input shape $(n_\text{chan}, h , w)$.
 Here, $n_\text{chan}$ is the number of channels, and $h$ and $w$ are the image height and width.
-An example of a multi-channel image is a RGB image containing 3 color channels.
+An example of a multi-channel image is a RGB image containing three color channels.
 % The output of a convolution operation $\vec K: \R^{h \times w} \to \R^{h \times w}$ 
 % with kernel matrix $\vec k \in \R^{3 \times 3}$ on an image $\vec x \in \R^{h \times w}$
 % is calculated as follows.
@@ -222,7 +223,7 @@ The output is given by
 \begin{equation}
 \label{eqn:convolution_operator}   
     (\vec K (\vec x))_{f,i,j}
-    = \left (\sum_{c=1}^{n_\text{chan}} \vec x_{c,:,:} * \vec k^{[c,f]} \right )_{i,j} \,,
+    = \left (\sum_{c=1}^{n_\text{chan}} \vec x_{c,:,:} * \vec k^{[c,f]} \right )_{i,j} \,.
 \end{equation}
 
 As the operator $\vec K$ is linear in $\vec x$, the convolution can also be viewed as a matrix-vector multiplication
