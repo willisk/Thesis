@@ -50,7 +50,8 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
         nonlocal net_last_outputs
         inputs, labels = data
         net_last_outputs = net(inputs)
-        return [inputs] + layer_activations
+        # return [inputs] + layer_activations
+        return layer_activations[1:]
 
     # ======= Random Net =======
 
