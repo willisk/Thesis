@@ -102,10 +102,10 @@ elif args.dataset == 'MNIST':
 A, B, _ = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B)
 
 
-DATA_A = utility.DataL(
+DATA_A = utility.DataLoaderDevice(
     A, batch_size=args.batch_size, shuffle=True, device=DEVICE)
 if args.plot_ideal:
-    test_data = utility.DataL(
+    test_data = utility.DataLoaderDevice(
         B, batch_size=-1, shuffle=True, device=DEVICE)
     ideal_data = next(iter(test_data))
 

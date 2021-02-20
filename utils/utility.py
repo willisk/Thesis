@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torchvision
 from torch.cuda.amp import autocast, GradScaler
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoaderDeviceoader
 
 import pandas as pd
 
@@ -54,7 +54,7 @@ class tqdmEpoch(tqdm):
         )
 
 
-class DataL(DataLoader):
+class DataLoaderDevice(DataLoaderDeviceoader):
     def __init__(self, dataset, *args, batch_size=1, device='cpu', **kwargs):
         if batch_size == -1:
             batch_size = len(dataset)
@@ -519,7 +519,7 @@ def search_drive(path, use_drive=True):
 
 
 def valid_data_loader(data_loader):
-    return isinstance(data_loader, torch.utils.data.DataLoader) or isinstance(data_loader, list)
+    return isinstance(data_loader, torch.utils.data.DataLoaderDeviceoader) or isinstance(data_loader, list)
 
 
 def train(net, data_loader, criterion, optimizer,

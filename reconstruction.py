@@ -136,11 +136,11 @@ A, B, C = dataset.get_datasets(
     size_A=args.size_A, size_B=args.size_B, size_C=args.size_C)
 
 
-DATA_A = utility.DataL(
+DATA_A = utility.DataLoaderDevice(
     A, batch_size=args.batch_size, shuffle=True, device=DEVICE)
-DATA_B = utility.DataL(
+DATA_B = utility.DataLoaderDevice(
     B, batch_size=args.batch_size, shuffle=True, device=DEVICE)
-DATA_C = utility.DataL(
+DATA_C = utility.DataLoaderDevice(
     C, batch_size=args.batch_size, shuffle=True, device=DEVICE)
 
 

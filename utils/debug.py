@@ -18,7 +18,7 @@ _NONE = "__UNSET_VARIABLE__"
 def debug_init():
     debug.verbose = 2
     debug.silent = False
-    debug.expand_ignore = ["DataLoader"]
+    debug.expand_ignore = ["DataLoaderDeviceoader"]
     debug.raise_exception = True
     debug.full_stack = True
     debug.restore_defaults_on_exception = not interactive_notebook

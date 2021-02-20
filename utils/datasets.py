@@ -10,7 +10,7 @@ sys.path.append(PWD)
 import numpy as np
 import torch
 import torchvision
-from torch.utils.data import random_split, DataLoader, TensorDataset, Subset
+from torch.utils.data import random_split, DataLoaderDeviceoader, TensorDataset, Subset
 import torchvision.transforms as T
 
 # import matplotlib
