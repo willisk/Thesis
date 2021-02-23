@@ -440,7 +440,7 @@ for method, loss_fn in methods:
 
         return info
 
-    def callback_fn(epoch, *args):
+    def callback_fn(epoch, *rgs):
         if args.silent or args.dataset == 'GMM':
             return
         if args.show_after > 0 and epoch % args.show_after == 0:

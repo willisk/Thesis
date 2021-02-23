@@ -519,7 +519,7 @@ def search_drive(path, use_drive=True):
 
 
 def valid_data_loader(data_loader):
-    return isinstance(data_loader, torch.utils.data.DataLoaderDeviceoader) or isinstance(data_loader, list)
+    return isinstance(data_loader, torch.utils.data.DataLoader) or isinstance(data_loader, list)
 
 
 def train(net, data_loader, criterion, optimizer,
