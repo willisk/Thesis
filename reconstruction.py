@@ -177,7 +177,7 @@ utility.train(net, DATA_A, criterion, optimizer,
 net.eval()
 
 if not args.silent:
-    utility.print_net_accuracy(net, DATA_A, estimate_epochs=10)
+    utility.print_net_accuracy(net, DATA_A, estimate_epochs=-1)
 
 verification_path, verification_net = dataset.verification_net()
 if verification_net:
@@ -193,7 +193,7 @@ if verification_net:
     if not args.silent:
         print("verification ", end='')
         utility.print_net_accuracy(
-            verification_net, DATA_A, estimate_epochs=10)
+            verification_net, DATA_A, estimate_epochs=-1)
 print()
 
 # ======= Distortion =======
