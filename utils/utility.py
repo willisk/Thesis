@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torchvision
 from torch.cuda.amp import autocast, GradScaler
-from torch.utils.data import DataLoaderDeviceoader
+from torch.utils.data import DataLoader
 
 import pandas as pd
 
