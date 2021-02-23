@@ -652,7 +652,7 @@ def train(net, data_loader, criterion, optimizer,
             )
 
     print(flush=True, end='')
-    net.eval()
+    # net.eval()
 
     if TRACKING:
         plot_metrics(TRACKING, step_start=init_epoch)
@@ -1068,7 +1068,7 @@ def _plot_random_projections(RP, X_proj, mean, color='r', marker='o', scatter=Tr
     #     plt.plot(*list(zip(mean, mean + rp * 3)), c='black')
 
 
-def make_table(data, out=None, row_name="", sort_rows=False, spacing=2):
+def make_table(data, out=None, row_name="", sort_rows=False, spacing=2, precision=5):
     print()
     header = list(dict.fromkeys([k for d in data.values() for k in d.keys()]))
 
@@ -1092,7 +1092,7 @@ def make_table(data, out=None, row_name="", sort_rows=False, spacing=2):
             print('-' * len(line))
     if out:
         row_data = ([[row_name] + header] +
-                    [[m] + [f'{data[m][h]:.5f}' if h in data[m] else ''
+                    [[m] + [f'{data[m][h]:.{precision}f}' if h in data[m] else ''
                             for h in header]
                      for m in rows])
         table = '\n'.join(','.join(rd) for rd in row_data)

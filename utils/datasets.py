@@ -39,9 +39,6 @@ def split_dataset(dataset, split=0.8):
     return random_split(dataset, (n_a, n_b))
 
 
-random_split(range(10), [3, 7], )
-
-
 class Dataset():
     def __init__(self, input_shape, n_classes, A, B, C=None,
                  data_dir=MODELDIR, transform=None):
