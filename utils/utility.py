@@ -54,7 +54,7 @@ class tqdmEpoch(tqdm):
         )
 
 
-class DataLoaderDevice(DataLoaderDevice):
+class DataLoaderDevice(DataLoader):
     def __init__(self, dataset, *args, batch_size=1, device='cpu', **kwargs):
         if batch_size == -1:
             batch_size = len(dataset)
