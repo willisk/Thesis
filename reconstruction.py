@@ -402,7 +402,7 @@ methods = methods.get_methods(DATA_A, net, dataset, args, DEVICE)
 
 for method, loss_fn in methods:
     if args.methods is not None and method not in args.methods:
-        print(f"skipping {method}")
+        # print(f"skipping {method}")
         continue
 
     if not args.silent:
