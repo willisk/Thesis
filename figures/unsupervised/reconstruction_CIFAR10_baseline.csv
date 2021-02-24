@@ -1,4 +1,4 @@
 baseline,acc,acc(ver),acc(val),l2-err,PSNR,SSIM
-Source A,0.99707,0.99805,,,,
-Target B (original),0.99951,0.99707,0.93164,,,
-Target B (distorted),0.56738,0.51904,0.51758,16.41367,16.55089,0.83818
+Source A,99.7,99.6,,,,
+Target B (original),99.8,100,92.7,,,
+Target B (distorted),52.1,47.3,49.8,17.8,17.2,81.7

@@ -177,7 +177,7 @@ utility.train(net, DATA_A, criterion, optimizer,
 net.eval()
 
 if not args.silent:
-    utility.print_net_accuracy(net, DATA_A, estimate_epochs=-1)
+    utility.print_net_accuracy(net, DATA_A, estimate_epochs=10)
 
 verification_path, verification_net = dataset.verification_net()
 if verification_net:
@@ -193,7 +193,7 @@ if verification_net:
     if not args.silent:
         print("verification ", end='')
         utility.print_net_accuracy(
-            verification_net, DATA_A, estimate_epochs=-1)
+            verification_net, DATA_A, estimate_epochs=10)
 print()
 
 # ======= Distortion =======
@@ -495,7 +495,7 @@ for method, loss_fn in methods:
 
     if verification_net:
         accuracy_ver = utility.net_accuracy(
-            verification_net, DATA_B, inputs_pre_fn=invert_fn)
+            verification_net, DATA_C, inputs_pre_fn=invert_fn)
         metrics[method]['acc(ver)'] = accuracy_ver
         if not args.silent:
             print(f"\tnn verification accuracy: {accuracy_ver * 100:.1f} %")
@@ -526,31 +526,31 @@ if verification_net:
         verification_net, DATA_A)
     accuracy_B_ver = utility.net_accuracy(
         verification_net, DATA_B)
-    accuracy_B_pert_ver = utility.net_accuracy(
-        verification_net, DATA_B, inputs_pre_fn=distort)
+    accuracy_C_pert_ver = utility.net_accuracy(
+        verification_net, DATA_C, inputs_pre_fn=distort)
 
-
-baseline['Target A']['acc'] = accuracy_A
 
 baseline['Source B (original)']['acc'] = accuracy_B
 baseline['Source B (original)']['acc(val)'] = accuracy_C
 
-baseline['Source B (distorted)']['acc'] = accuracy_B_pert
-baseline['Source B (distorted)']['acc(val)'] = accuracy_C_pert
+baseline['Source B (perturbed)']['acc'] = accuracy_B_pert
+baseline['Source B (perturbed)']['acc(val)'] = accuracy_C_pert
 
 if verification_net:
-    baseline['Source B (distorted)']['acc(ver)'] = accuracy_B_pert_ver
+    baseline['Source B (perturbed)']['acc(ver)'] = accuracy_C_pert_ver
     baseline['Source B (original)']['acc(ver)'] = accuracy_B_ver
     baseline['Target A']['acc(ver)'] = accuracy_A_ver
 
 for k, v in reversed(sorted(iqa_distort.items())):
-    baseline['Source B (distorted)'][k] = v
+    baseline['Source B (perturbed)'][k] = v
 
 if args.dataset == 'GMM':
     baseline['Target A']['c-entropy'] = iqa_metrics(
         DATA_A, lambda x: x)['c-entropy']
     baseline['Source B (original)']['c-entropy'] = iqa_metrics(
         DATA_B, lambda x: x)['c-entropy']
+
+baseline['Target A']['acc'] = accuracy_A
 
 
 if not args.silent:
