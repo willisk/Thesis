@@ -170,12 +170,12 @@ class SVHN(Dataset):
                          transform=transform)
 
     def net(self):
-        resnet = nets.ResNet20(1, self.n_classes)
+        resnet = nets.ResNet20(3, self.n_classes)
         model_path = os.path.join(self.data_dir, "net_resnet20.pt")
         return model_path, resnet
 
     def verification_net(self):
-        resnet = nets.ResNet20(1, self.n_classes)
+        resnet = nets.ResNet20(3, self.n_classes)
         model_path = os.path.join(self.data_dir, "net_resnet20.pt")
         return model_path, resnet
 
