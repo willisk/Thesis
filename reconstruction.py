@@ -236,18 +236,14 @@ print(show_batch.shape)
 
 
 if not args.silent and args.dataset != 'GMM':
-    utility.im_show(show_batch,
-                    fig_path_fmt("ground_truth_full"))
-    utility.im_show(distort(show_batch),
-                    fig_path_fmt("distorted_full"))
+    utility.im_show(show_batch, fig_path_fmt("ground_truth_full"))
+    utility.im_show(distort(show_batch), fig_path_fmt("distorted_full"))
 
     print("\nground truth:", flush=True)
-    utility.im_show(show_batch[:10],
-                    fig_path_fmt("ground_truth"))
+    utility.im_show(show_batch[:10], fig_path_fmt("ground_truth"))
 
     print("\ndistorted:")
-    utility.im_show(distort(show_batch[:10]),
-                    fig_path_fmt("distorted"))
+    utility.im_show(distort(show_batch[:10]), fig_path_fmt("distorted"))
 
 
 Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
@@ -361,8 +357,7 @@ for method, loss_fn in methods:
             return
         if args.show_after > 0 and epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
-            utility.im_show(invert_fn(show_batch[:10]),
-                            fig_path_fmt(f"{method}_epoch_{epoch}"))
+            utility.im_show(invert_fn(show_batch[:10]), fig_path_fmt(f"{method}_epoch_{epoch}"))
 
     optimizer = torch.optim.Adam(reconstruct.parameters(), lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)

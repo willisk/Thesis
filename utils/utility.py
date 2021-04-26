@@ -96,6 +96,7 @@ def seed_everything(seed, deterministic=False):
 
 @torch.no_grad()
 def im_show(im_batch, fig_path=None, nrow=10, padding=2, fig_scale=4, interpolation='none', permute=False, scale_each=False, show=True):
+    debug(im_batch)
     nrow = min(nrow, len(im_batch))
     if permute:
         im_batch = im_batch.permute(2, 0, 1)
