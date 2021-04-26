@@ -2,9 +2,121 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import numpy as np
+
 # from torchvision.models import resnet34 as _resnet34, resnet50 as ResNet50
 from torchvision.models.resnet import ResNet, BasicBlock, Bottleneck
 # import torchvision.models as models
+import segmentation_models_pytorch as smp
+
+
+class DistortionModelAffine(nn.Module):
+    def __init__(self, lambd, n_dims):
+        super().__init__()
+        self.noise = nn.Parameter(
+            torch.randn((n_dims)).unsqueeze(0)) * lambd
+        self.linear = (torch.eye(n_dims) + torch.randn((n_dims, n_dims)) * lambd)
+
+    @torch.no_grad()
+    def forward(self, inputs):
+        outputs = inputs + self.noise
+        return outputs @ self.linear
+
+
+class DistortionModelConv(nn.Module):
+    def __init__(self, lambd, input_shape):
+        super().__init__()
+
+        kernel_size = 3
+        nch = input_shape[0]
+
+        self.conv1 = nn.Conv2d(nch, nch, kernel_size,
+                               padding=1, padding_mode='reflect')
+        self.conv2 = nn.Conv2d(nch, nch, kernel_size,
+                               padding=1, padding_mode='reflect')
+        self.noise = nn.Parameter(torch.randn(input_shape).unsqueeze(0))
+
+        self.conv1.weight.data.normal_()
+        self.conv2.weight.data.normal_()
+        self.conv1.weight.data *= lambd
+        self.conv2.weight.data *= lambd
+        for f in range(nch):
+            self.conv1.weight.data[f][f][1][1] += 1
+            self.conv2.weight.data[f][f][1][1] += 1
+
+        self.conv1.bias.data.normal_()
+        self.conv2.bias.data.normal_()
+        self.conv1.bias.data *= lambd
+        self.conv2.bias.data *= lambd
+
+        self.noise.data *= lambd
+
+    @torch.no_grad()
+    def forward(self, inputs):
+        outputs = inputs
+        outputs = outputs + self.noise
+        outputs = self.conv1(outputs)
+        outputs = self.conv2(outputs)
+        return outputs
+
+
+def conv1x1Id(n_chan):
+    conv = nn.Conv2d(n_chan, n_chan,
+                     kernel_size=1,
+                     bias=True,
+                     )
+    conv.weight.data.fill_(0)
+    for i in range(n_chan):
+        conv.weight.data[i, i, 0, 0] = 1
+    return conv
+
+
+class ReconstructionModelAffine(nn.Module):
+    def __init__(self, args, input_shape, n_dims, n_classes):
+        super().__init__()
+
+        self.bias = nn.Parameter(
+            torch.zeros((n_dims)).unsqueeze(0))
+        self.linear = nn.Parameter(
+            torch.eye(n_dims) + torch.randn((n_dims, n_dims)) / np.sqrt(n_dims))
+
+    def forward(self, inputs):
+        return inputs @ self.linear + self.bias
+
+
+class ReconstructionModelResnet(nn.Module):
+    def __init__(self, args, input_shape, n_dims, n_classes, bias=True):
+        super().__init__()
+
+        n_chan = input_shape[0]
+        self.conv1x1 = conv1x1Id(n_chan)
+        self.bn = nn.BatchNorm2d(n_chan)
+
+        self.invert_block = nn.Sequential(*[
+            InvertBlock(
+                n_chan,
+                args.r_block_width,
+                noise_level=1 / np.sqrt(n + 1),
+                relu_out=n < args.r_block_depth - 1,
+                bias=bias,
+            ) for n in range(args.r_block_depth)
+        ])
+
+    def forward(self, inputs):
+        outputs = self.conv1x1(inputs)
+        outputs = self.invert_block(outputs)
+        outputs = self.bn(outputs)
+        return outputs
+
+
+class ReconstructionModelUnet(smp.Unet):
+    def __init__(self, args, input_shape, n_dims, n_classes):
+        super().__init__(
+            encoder_name="resnet34",
+            encoder_weights="imagenet",
+            in_channels=input_shape[0],
+            classes=n_classes,
+        )
 
 
 class Net(nn.Module):

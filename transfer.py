@@ -46,8 +46,8 @@ from utils.debug import debug
 
 # ======= Arg Parse =======
 parser = argparse.ArgumentParser(description="Reconstruction Tests")
-parser.add_argument("-source_dataset", choices=['MNIST', 'SVHN'], required=True)
-parser.add_argument("-target_dataset", choices=['MNIST', 'SVHN'], required=True)
+parser.add_argument(
+    "-dataset", choices=['CIFAR10', 'MNIST', 'GMM', 'SVHN'], required=True)
 parser.add_argument("-seed", type=int, default=0)
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
@@ -76,6 +76,12 @@ parser.add_argument("--save_run", action="store_true")
 parser.add_argument("-run_name", type=str, default="")
 parser.add_argument("--silent", action="store_true")
 parser.add_argument("-methods", nargs='+', type=str)
+
+# # GMM
+# parser.add_argument("-g_modes", type=int, default=3)
+# parser.add_argument("-g_scale_mean", type=float, default=2)
+# parser.add_argument("-g_scale_cov", type=float, default=20)
+# parser.add_argument("-g_mean_shift", type=float, default=0)
 
 if 'ipykernel_launcher' in sys.argv[0]:
     args = parser.parse_args('-dataset MNIST'.split())
@@ -118,44 +124,26 @@ if not args.silent:
 
 
 # ======= Create Dataset =======
-def get_data_loaders(dataset):
-    A, B, C = dataset.get_datasets(size_A=args.size_A, size_B=args.size_B, size_C=args.size_C)
 
-    DATA_A = utility.DataLoaderDevice(A, batch_size=args.batch_size, shuffle=True, device=DEVICE)
-    DATA_B = utility.DataLoaderDevice(B, batch_size=args.batch_size, shuffle=True, device=DEVICE)
-    DATA_C = utility.DataLoaderDevice(C, batch_size=args.batch_size, shuffle=True, device=DEVICE)
-    return DATA_A, DATA_B, DATA_C
+if args.dataset == 'CIFAR10':
+    dataset = datasets.CIFAR10()
+elif args.dataset == 'MNIST':
+    dataset = datasets.MNIST()
+elif args.dataset == 'SVHN':
+    dataset = datasets.SVHN()
+elif args.dataset == 'GMM':
+    dataset = datasets.MULTIGMM()
+
+A, B, C = dataset.get_datasets(
+    size_A=args.size_A, size_B=args.size_B, size_C=args.size_C)
 
 
-if 'SVHN' in args.dataset:
-    if args.dataset == 'MNIST_SVHN':
-        source_dataset = datasets.SVHN()
-        target_dataset = datasets.MNIST()
-    elif args.dataset == 'SVHN_MNIST':
-        source_dataset = datasets.MNIST()
-        target_dataset = datasets.SVHN()
-    DATA_A, _, _ = get_data_loaders(source_dataset)
-    _, DATA_B, DATA_C = get_data_loaders(target_dataset)
-
-    input_shape = target_dataset.input_shape
-    n_dims = target_dataset.n_dims
-    n_classes = source_dataset.n_classes
-
-    dataset = source_dataset
-else:
-    if args.dataset == 'CIFAR10':
-        dataset = datasets.CIFAR10()
-    elif args.dataset == 'MNIST':
-        dataset = datasets.MNIST()
-    elif args.dataset == 'GMM':
-        dataset = datasets.MULTIGMM()
-    DATA_A, DATA_B, DATA_C = get_data_loaders(dataset)
-
-    input_shape = dataset.input_shape
-    n_dims = dataset.n_dims
-    n_classes = dataset.n_classes
-
-    Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
+DATA_A = utility.DataLoaderDevice(
+    A, batch_size=args.batch_size, shuffle=True, device=DEVICE)
+DATA_B = utility.DataLoaderDevice(
+    B, batch_size=args.batch_size, shuffle=True, device=DEVICE)
+DATA_C = utility.DataLoaderDevice(
+    C, batch_size=args.batch_size, shuffle=True, device=DEVICE)
 
 
 # dataset.plot()
@@ -164,6 +152,10 @@ else:
 # plt.savefig(f"figures/{args.dataset}_plot.pdf", bbox_inches='tight')
 # plt.show()
 
+
+input_shape = dataset.input_shape
+n_dims = dataset.n_dims
+n_classes = dataset.n_classes
 
 # ======= Neural Network =======
 nn_lr = args.nn_lr
@@ -206,20 +198,80 @@ if verification_net:
             verification_net, DATA_A, estimate_epochs=10)
 print()
 
-# ======= Reconstruction/Distortion Model =======
+# ======= Distortion =======
 if args.dataset == 'GMM':
-    distort = nets.DistortionModelAffine(args.r_distort_level, dataset.n_dims)
+    distort = nets.DistortionModelAffine(args.r_distort_level)
     distort.eval()
     distort.to(DEVICE)
-    ReconstructionModel = nets.ReconstructionModelAffine
 elif 'SVHN' in args.dataset:
     def distort(x): return x
-    ReconstructionModel = nets.ReconstructionModelUnet
 else:
     distort = nets.DistortionModelConv(args.r_distort_level)
     distort.eval()
     distort.to(DEVICE)
-    ReconstructionModel = nets.ReconstructionModelResnet
+
+
+# ======= Reconstruction Model =======
+if args.dataset == 'GMM':
+    class ReconstructionModel(nn.Module):
+        def __init__(self):
+            super().__init__()
+
+            self.bias = nn.Parameter(
+                torch.zeros((n_dims)).unsqueeze(0))
+            self.linear = nn.Parameter(
+                torch.eye(n_dims) + torch.randn((n_dims, n_dims)) / np.sqrt(n_dims))
+
+        def forward(self, inputs):
+            return inputs @ self.linear + self.bias
+elif args.dataset == 'SVHN':
+    import segmentation_models_pytorch as smp
+
+    class ReconstructionModel(smp.Unet):
+        def __init__(self):
+            super().__init__(
+                encoder_name="resnet34",        # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
+                encoder_weights="imagenet",     # use `imagenet` pre-trained weights for encoder initialization
+                in_channels=3,                  # model input channels (1 for gray-scale images, 3 for RGB, etc.)
+                classes=3,                      # model output channels (number of classes in your dataset)
+            )
+
+else:
+    def conv1x1Id(n_chan):
+        conv = nn.Conv2d(n_chan, n_chan,
+                         kernel_size=1,
+                         bias=True,
+                         )
+        conv.weight.data.fill_(0)
+        for i in range(n_chan):
+            conv.weight.data[i, i, 0, 0] = 1
+        return conv
+
+    class ReconstructionModel(nn.Module):
+        def __init__(self, relu_out=False, bias=True):
+            super().__init__()
+
+            utility.seed_everything(args.seed)
+
+            n_chan = input_shape[0]
+            self.conv1x1 = conv1x1Id(n_chan)
+            self.bn = nn.BatchNorm2d(n_chan)
+
+            self.invert_block = nn.Sequential(*[
+                nets.InvertBlock(
+                    n_chan,
+                    args.r_block_width,
+                    noise_level=1 / np.sqrt(n + 1),
+                    relu_out=n < args.r_block_depth - 1,
+                    bias=bias,
+                ) for n in range(args.r_block_depth)
+            ])
+
+        def forward(self, inputs):
+            outputs = self.conv1x1(inputs)
+            outputs = self.invert_block(outputs)
+            outputs = self.bn(outputs)
+            return outputs
 
 
 def fig_path_fmt(*name_args, filetype="png"):
@@ -252,10 +304,14 @@ if not args.silent and args.dataset != 'GMM':
                     fig_path_fmt("distorted"))
 
 
+Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
+
+
 @torch.no_grad()
 def iqa_metrics(data_loader, transform):
     metrics = {}
-    metrics['l2-err'] = ((transform(Id_mat) - Id_mat).norm() / Id_mat.norm()).item()
+    metrics['l2-err'] = ((transform(Id_mat) -
+                          Id_mat).norm() / Id_mat.norm()).item()
 
     if args.dataset == 'CIFAR10' or args.dataset == 'MNIST':
         metrics['PSNR'] = 0
@@ -322,8 +378,7 @@ for method, loss_fn in methods:
     if not args.silent:
         print("\n\n\n## Method:", method)
 
-    utility.seed_everything(args.seed)
-    reconstruct = ReconstructionModel(args, input_shape, n_dims, n_classes)
+    reconstruct = ReconstructionModel()
     reconstruct.train()
     reconstruct.to(DEVICE)
 
@@ -387,8 +442,8 @@ for method, loss_fn in methods:
 
     if not args.silent and args.dataset != 'GMM':
         print("Inverted:")
-        # if len(show_batch) != len(B):
-        #     print(f"{len(show_batch)} / {len(B)} ")
+        if len(show_batch) != len(B):
+            print(f"{len(show_batch)} / {len(B)} ")
         utility.im_show(invert_fn(show_batch), fig_path_fmt(
             f"{method}_epoch_{inv_steps}_full"))
 
@@ -437,9 +492,12 @@ accuracy_C_pert = utility.net_accuracy(
 
 
 if verification_net:
-    accuracy_A_ver = utility.net_accuracy(verification_net, DATA_A)
-    accuracy_B_ver = utility.net_accuracy(verification_net, DATA_B)
-    accuracy_C_pert_ver = utility.net_accuracy(verification_net, DATA_C, inputs_pre_fn=distort)
+    accuracy_A_ver = utility.net_accuracy(
+        verification_net, DATA_A)
+    accuracy_B_ver = utility.net_accuracy(
+        verification_net, DATA_B)
+    accuracy_C_pert_ver = utility.net_accuracy(
+        verification_net, DATA_C, inputs_pre_fn=distort)
 
 
 baseline['Source A (original)']['acc'] = accuracy_B
@@ -457,8 +515,10 @@ for k, v in reversed(sorted(iqa_distort.items())):
     baseline['Source A (perturbed)'][k] = v
 
 if args.dataset == 'GMM':
-    baseline['Target B']['c-entropy'] = iqa_metrics(DATA_A, lambda x: x)['c-entropy']
-    baseline['Source A (original)']['c-entropy'] = iqa_metrics(DATA_B, lambda x: x)['c-entropy']
+    baseline['Target B']['c-entropy'] = iqa_metrics(
+        DATA_A, lambda x: x)['c-entropy']
+    baseline['Source A (original)']['c-entropy'] = iqa_metrics(
+        DATA_B, lambda x: x)['c-entropy']
 
 baseline['Target B']['acc'] = accuracy_A
 
