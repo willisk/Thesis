@@ -340,9 +340,7 @@ for method, loss_fn in methods:
         if args.use_jitter:
             inputs = jitter(inputs)
 
-        debug(inputs)
         data_invert = (invert_fn(inputs), labels)
-        debug(data_invert)
         info = loss_fn(data_invert)
 
         if not args.silent:
@@ -355,7 +353,7 @@ for method, loss_fn in methods:
                 for k, v in iqa.items():
                     info[f'[IQA metrics] {k}'] = v
 
-            if args.plot_ideal:
+            if args.plot_ideal and not 'SVHN' in args.dataset:
                 with torch.no_grad():
                     info['reference'] = loss_fn(data)['loss'].item()
 
