@@ -128,11 +128,11 @@ def get_data_loaders(dataset):
 
 if 'SVHN' in args.dataset:
     if args.dataset == 'MNIST_SVHN':
-        source_dataset = datasets.SVHN()
-        target_dataset = datasets.MNIST()
-    elif args.dataset == 'SVHN_MNIST':
         source_dataset = datasets.MNIST()
         target_dataset = datasets.SVHN()
+    elif args.dataset == 'SVHN_MNIST':
+        source_dataset = datasets.SVHN()
+        target_dataset = datasets.MNIST()
     DATA_A, _, _ = get_data_loaders(source_dataset)
     _, DATA_B, DATA_C = get_data_loaders(target_dataset)
 
