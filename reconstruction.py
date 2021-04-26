@@ -208,7 +208,7 @@ print()
 
 # ======= Reconstruction/Distortion Model =======
 if args.dataset == 'GMM':
-    distort = nets.DistortionModelAffine(args.r_distort_level, dataset.n_dims)
+    distort = nets.DistortionModelAffine(args.r_distort_level, n_dims)
     distort.eval()
     distort.to(DEVICE)
     ReconstructionModel = nets.ReconstructionModelAffine
@@ -216,7 +216,7 @@ elif 'SVHN' in args.dataset:
     def distort(x): return x
     ReconstructionModel = nets.ReconstructionModelUnet
 else:
-    distort = nets.DistortionModelConv(args.r_distort_level)
+    distort = nets.DistortionModelConv(args.r_distort_level, input_shape)
     distort.eval()
     distort.to(DEVICE)
     ReconstructionModel = nets.ReconstructionModelResnet
