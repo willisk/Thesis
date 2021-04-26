@@ -320,7 +320,14 @@ for method, loss_fn in methods:
         print("\n\n\n## Method:", method)
 
     utility.seed_everything(args.seed)
-    reconstruct = ReconstructionModel(args, input_shape, n_dims, n_classes)
+
+    if 'SVHN' in args.dataset:
+        in_channels = target_dataset.input_shape[0]
+        out_channels = source_dataset.input_shape[0]
+        reconstruct = ReconstructionModel(in_channels, out_channels)
+    else:
+        reconstruct = ReconstructionModel(args, input_shape, n_dims, n_classes)
+
     reconstruct.train()
     reconstruct.to(DEVICE)
 

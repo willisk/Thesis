@@ -110,13 +110,12 @@ class ReconstructionModelResnet(nn.Module):
 
 
 class ReconstructionModelUnet(smp.Unet):
-    def __init__(self, args, input_shape, n_dims, n_classes):
-        print('input_shape', input_shape)
+    def __init__(self, in_channels, out_channels):
         super().__init__(
             encoder_name="resnet34",
             encoder_weights="imagenet",
-            in_channels=input_shape[0],
-            classes=input_shape[0],
+            in_channels=in_channels,
+            classes=out_channels,
         )
 
 
