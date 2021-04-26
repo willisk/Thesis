@@ -47,7 +47,7 @@ from utils.debug import debug
 # ======= Arg Parse =======
 parser = argparse.ArgumentParser(description="Reconstruction Tests")
 parser.add_argument(
-    "-dataset", choices=['CIFAR10', 'MNIST', 'GMM'], required=True)
+    "-dataset", choices=['CIFAR10', 'MNIST', 'GMM', 'SVHN'], required=True)
 parser.add_argument("-seed", type=int, default=0)
 parser.add_argument("-nn_lr", type=float, default=0.01)
 parser.add_argument("-nn_steps", type=int, default=100)
