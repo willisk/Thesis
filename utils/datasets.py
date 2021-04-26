@@ -161,7 +161,7 @@ class SVHN(Dataset):
 
         data_dir = os.path.join(MODELDIR, "SVHN")
 
-        super().__init__(input_shape=(1, 28, 28),
+        super().__init__(input_shape=(3, 32, 32),
                          n_classes=10,
                          A=A,
                          B=B,
