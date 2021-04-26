@@ -114,7 +114,7 @@ class ReconstructionModelUnet(smp.Unet):
         super().__init__(
             encoder_name="resnet34",
             encoder_weights="imagenet",
-            in_channels=input_shape[0],
+            in_channels=input_shape[1],
             classes=n_classes,
         )
 
