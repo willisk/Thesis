@@ -333,7 +333,9 @@ for method, loss_fn in methods:
         if args.use_jitter:
             inputs = jitter(inputs)
 
+        debug(inputs)
         data_invert = (invert_fn(inputs), labels)
+        debug(data_invert)
         info = loss_fn(data_invert)
 
         if not args.silent:
