@@ -154,8 +154,6 @@ else:
     n_dims = dataset.n_dims
     n_classes = dataset.n_classes
 
-    Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
-
 
 # dataset.plot()
 # plt.tight_layout()
@@ -249,6 +247,9 @@ if not args.silent and args.dataset != 'GMM':
     print("\ndistorted:")
     utility.im_show(distort(show_batch[:10]),
                     fig_path_fmt("distorted"))
+
+
+Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
 
 
 @torch.no_grad()
