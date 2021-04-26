@@ -84,9 +84,9 @@ parser.add_argument("-methods", nargs='+', type=str)
 # parser.add_argument("-g_mean_shift", type=float, default=0)
 
 if 'ipykernel_launcher' in sys.argv[0]:
-    # args = parser.parse_args('-dataset MNIST'.split())
+    args = parser.parse_args('-dataset MNIST'.split())
     # args = parser.parse_args('-dataset CIFAR10'.split())
-    args = parser.parse_args('-dataset GMM'.split())
+    # args = parser.parse_args('-dataset GMM'.split())
     args.inv_steps = 2
     args.size_A = -1
     args.size_B = 8
@@ -129,6 +129,8 @@ if args.dataset == 'CIFAR10':
     dataset = datasets.CIFAR10()
 elif args.dataset == 'MNIST':
     dataset = datasets.MNIST()
+elif args.dataset == 'SVHN':
+    dataset = datasets.SVHN()
 elif args.dataset == 'GMM':
     dataset = datasets.MULTIGMM()
 

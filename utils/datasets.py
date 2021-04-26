@@ -145,6 +145,41 @@ class MNIST(Dataset):
         return model_path, resnet
 
 
+class SVHN(Dataset):
+    def __init__(self):
+        transform = T.Compose([
+            T.ToTensor(),
+            T.Normalize([0.4377, 0.4438, 0.4728], [0.1201, 0.1231, 0.1052])
+        ])
+        train_set = torchvision.datasets.SVHN(
+            root=DATADIR, split='train', download=True, transform=transform)
+        test_set = torchvision.datasets.SVHN(
+            root=DATADIR, split='test', download=True, transform=transform)
+
+        A, B = split_dataset(train_set, split=0.8)
+        C = test_set
+
+        data_dir = os.path.join(MODELDIR, "SVHN")
+
+        super().__init__(input_shape=(1, 28, 28),
+                         n_classes=10,
+                         A=A,
+                         B=B,
+                         C=C,
+                         data_dir=data_dir,
+                         transform=transform)
+
+    def net(self):
+        resnet = nets.ResNet20(1, self.n_classes)
+        model_path = os.path.join(self.data_dir, "net_resnet20.pt")
+        return model_path, resnet
+
+    def verification_net(self):
+        resnet = nets.ResNet20(1, self.n_classes)
+        model_path = os.path.join(self.data_dir, "net_resnet20.pt")
+        return model_path, resnet
+
+
 # ========= GMMs ==========
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal, ortho_group
