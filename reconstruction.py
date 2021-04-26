@@ -232,6 +232,7 @@ def fig_path_fmt(*name_args, filetype="png"):
 
 
 show_batch = next(iter(DATA_B))[0][:50].to(DEVICE)
+print(show_batch.shape)
 
 
 if not args.silent and args.dataset != 'GMM':
