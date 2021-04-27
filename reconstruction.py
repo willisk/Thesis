@@ -448,8 +448,8 @@ accuracy_A = utility.net_accuracy(net, DATA_A)
 accuracy_B = utility.net_accuracy(net, DATA_B) if 'SVHN' not in args.dataset else '-'
 accuracy_C = utility.net_accuracy(net, DATA_C) if 'SVHN' not in args.dataset else '-'
 
-accuracy_B_pert = utility.net_accuracy(net, DATA_B, inputs_pre_fn=distort)
-accuracy_C_pert = utility.net_accuracy(net, DATA_C, inputs_pre_fn=distort)
+accuracy_B_pert = utility.net_accuracy(net, DATA_B, inputs_pre_fn=distort) if 'SVHN' not in args.dataset else '-'
+accuracy_C_pert = utility.net_accuracy(net, DATA_C, inputs_pre_fn=distort) if 'SVHN' not in args.dataset else '-'
 
 
 if verification_net:
