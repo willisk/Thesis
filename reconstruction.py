@@ -225,6 +225,8 @@ else:
     distort.to(DEVICE)
     ReconstructionModel = nets.ReconstructionModelResnet
 
+ReconstructionModel = debug(ReconstructionModel)
+
 
 def fig_path_fmt(*name_args, filetype="png"):
     if args.save_run:
@@ -259,7 +261,8 @@ Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
 @torch.no_grad()
 def iqa_metrics(data_loader, transform):
     metrics = {}
-    metrics['l2-err'] = ((transform(Id_mat) - Id_mat).norm() / Id_mat.norm()).item()
+    if not 'SVHN' in args.dataset:
+        metrics['l2-err'] = ((transform(Id_mat) - Id_mat).norm() / Id_mat.norm()).item()
 
     if args.dataset == 'CIFAR10' or args.dataset == 'MNIST':
         metrics['PSNR'] = 0
@@ -332,7 +335,6 @@ for method, loss_fn in methods:
         in_channels = target_dataset.input_shape[0]
         out_channels = source_dataset.input_shape[0]
         reconstruct = ReconstructionModel(in_channels, out_channels)
-        reconstruct.forward = debug(reconstruct.forward)
     else:
         reconstruct = ReconstructionModel(args, input_shape, n_dims, n_classes)
 
