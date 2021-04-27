@@ -366,6 +366,8 @@ for method, loss_fn in methods:
             return
         if args.show_after > 0 and epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
+            debug(show_batch)
+            debug(distort(show_batch)[:10])
             utility.im_show(invert_fn(show_batch[:10]), fig_path_fmt(
                 f"{method}_epoch_{epoch}"), scale_each=SCALE_EACH_IM)
 
