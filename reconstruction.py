@@ -213,6 +213,7 @@ if args.dataset == 'GMM':
 elif 'SVHN' in args.dataset:
     def distort(x): return x
     ReconstructionModel = nets.ReconstructionModelUnet
+    ReconstructionModel = debug(ReconstructionModel)
 else:
     distort = nets.DistortionModelConv(args.r_distort_level, input_shape)
     distort.eval()
