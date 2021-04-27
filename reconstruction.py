@@ -333,12 +333,12 @@ for method, loss_fn in methods:
         in_channels = target_dataset.input_shape[0]
         out_channels = source_dataset.input_shape[0]
         reconstruct = ReconstructionModel(in_channels, out_channels)
-        reconstruct = debug(reconstruct)
     else:
         reconstruct = ReconstructionModel(args, input_shape, n_dims, n_classes)
 
     reconstruct.train()
     reconstruct.to(DEVICE)
+    reconstruct = debug(reconstruct)
 
     def invert_fn(inputs):
         distorted_inputs = distort(inputs)
