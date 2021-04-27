@@ -341,11 +341,15 @@ for method, loss_fn in methods:
 
     def invert_fn(inputs):
         distorted_inputs = distort(inputs)
+        debug(distorted_inputs)
         if args.dataset == 'SVHN_MNIST':
             distorted_inputs = pad(distorted_inputs, (4, 4, 4, 4))
+        debug(distorted_inputs)
         reconstructed_inputs = reconstruct(distorted_inputs)
+        debug(reconstructed_inputs)
         if args.dataset == 'MNIST_SVHN':
             reconstructed_inputs = crop(reconstructed_inputs, 4, 4, 28, 28)
+        debug(reconstructed_inputs)
         return reconstructed_inputs
 
     def data_loss_fn(data):
