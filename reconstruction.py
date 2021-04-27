@@ -213,7 +213,6 @@ if args.dataset == 'GMM':
 elif 'SVHN' in args.dataset:
     def distort(x): return x
     ReconstructionModel = nets.ReconstructionModelUnet
-    ReconstructionModel = debug(ReconstructionModel)
 else:
     distort = nets.DistortionModelConv(args.r_distort_level, input_shape)
     distort.eval()
@@ -327,6 +326,7 @@ for method, loss_fn in methods:
         in_channels = target_dataset.input_shape[0]
         out_channels = source_dataset.input_shape[0]
         reconstruct = ReconstructionModel(in_channels, out_channels)
+        reconstruct.forward = debug(reconstruct.forward)
     else:
         reconstruct = ReconstructionModel(args, input_shape, n_dims, n_classes)
 
