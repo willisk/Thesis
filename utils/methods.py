@@ -174,12 +174,16 @@ def get_methods(DATA_A, net, dataset, args, DEVICE):
         diff2 = x[:, :, :-1, :] - x[:, :, 1:, :]
         diff3 = x[:, :, 1:, :-1] - x[:, :, :-1, 1:]
         diff4 = x[:, :, :-1, :-1] - x[:, :, 1:, 1:]
-        return (
-            torch.norm(diff1.reshape(len(x), -1), dim=1)
-            + torch.norm(diff2.reshape(len(x), -1), dim=1)
-            + torch.norm(diff3.reshape(len(x), -1), dim=1)
-            + torch.norm(diff4.reshape(len(x), -1), dim=1)
-        ).mean()  # / (x.prod)
+
+        tv = (torch.norm(diff1.reshape(len(x), -1), dim=1)
+              + torch.norm(diff2.reshape(len(x), -1), dim=1)
+              + torch.norm(diff3.reshape(len(x), -1), dim=1)
+              + torch.norm(diff4.reshape(len(x), -1), dim=1)
+              ).mean()  # / (x.prod)
+
+        standardize = x.mean(dim=(0, 2, 3)).norm() + x.std(dim=(0, 2, 3)).norm()
+
+        return tv + standardize
 
     # @debug
 

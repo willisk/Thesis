@@ -17,6 +17,7 @@ PWD = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(PWD)
 
 USE_DRIVE = True
+SCALE_EACH_IM = True
 
 from utils import utility
 from utils import methods
@@ -236,14 +237,14 @@ print(show_batch.shape)
 
 
 if not args.silent and args.dataset != 'GMM':
-    utility.im_show(show_batch, fig_path_fmt("ground_truth_full"))
-    utility.im_show(distort(show_batch), fig_path_fmt("distorted_full"))
+    utility.im_show(show_batch, fig_path_fmt("ground_truth_full"), scale_each=SCALE_EACH_IM)
+    utility.im_show(distort(show_batch), fig_path_fmt("distorted_full"), scale_each=SCALE_EACH_IM)
 
     print("\nground truth:", flush=True)
-    utility.im_show(show_batch[:10], fig_path_fmt("ground_truth"))
+    utility.im_show(show_batch[:10], fig_path_fmt("ground_truth"), scale_each=SCALE_EACH_IM)
 
     print("\ndistorted:")
-    utility.im_show(distort(show_batch[:10]), fig_path_fmt("distorted"))
+    utility.im_show(distort(show_batch[:10]), fig_path_fmt("distorted"), scale_each=SCALE_EACH_IM)
 
 
 Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
@@ -364,7 +365,8 @@ for method, loss_fn in methods:
             return
         if args.show_after > 0 and epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
-            utility.im_show(invert_fn(show_batch[:10]), fig_path_fmt(f"{method}_epoch_{epoch}"))
+            utility.im_show(invert_fn(show_batch[:10]), fig_path_fmt(
+                f"{method}_epoch_{epoch}"), scale_each=SCALE_EACH_IM)
 
     optimizer = torch.optim.Adam(reconstruct.parameters(), lr=inv_lr)
     # scheduler = ReduceLROnPlateau(optimizer, verbose=True)
@@ -393,7 +395,7 @@ for method, loss_fn in methods:
         # if len(show_batch) != len(B):
         #     print(f"{len(show_batch)} / {len(B)} ")
         utility.im_show(invert_fn(show_batch), fig_path_fmt(
-            f"{method}_epoch_{inv_steps}_full"))
+            f"{method}_epoch_{inv_steps}_full"), scale_each=SCALE_EACH_IM)
 
     # Loss
     if not args.silent:
