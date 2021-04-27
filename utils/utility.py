@@ -680,6 +680,7 @@ def smoothen(values, weight):
 jet = plt.cm.brg
 
 
+@debug
 def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_range=None, smoothing=0, **kwargs):
     if not isinstance(metrics, pd.DataFrame):
         metrics = pd.DataFrame(metrics)
