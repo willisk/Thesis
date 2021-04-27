@@ -343,7 +343,7 @@ for method, loss_fn in methods:
         distorted_inputs = distort(inputs)
         if args.dataset == 'SVHN_MNIST':
             distorted_inputs = pad(distorted_inputs, (2, 2, 2, 2))
-        reconstructed_inputs = debug(reconstruct)(distorted_inputs)
+        reconstructed_inputs = reconstruct(distorted_inputs)
         if args.dataset == 'MNIST_SVHN':
             reconstructed_inputs = crop(reconstructed_inputs, 2, 2, 28, 28)
         return reconstructed_inputs
