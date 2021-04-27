@@ -680,7 +680,6 @@ def smoothen(values, weight):
 jet = plt.cm.brg
 
 
-@debug
 def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_range=None, smoothing=0, **kwargs):
     if not isinstance(metrics, pd.DataFrame):
         metrics = pd.DataFrame(metrics)
@@ -776,12 +775,14 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
                        loc='upper left', fontsize='xx-small')
     else:
         if scaled_axis:
-            legend = main_ax.legend(loc=2)
-            legend.remove()
+            if len(unscaled) > 0:
+                legend = main_ax.legend(loc=2)
+                legend.remove()
             scaled_axis.set_ylabel('%')
             scaled_axis.set_ylim([-10, 110])
             scaled_axis.legend(loc=1)
-            scaled_axis.add_artist(legend)
+            if len(unscaled) > 0:
+                scaled_axis.add_artist(legend)
         else:
             main_ax.legend()
 
