@@ -225,8 +225,6 @@ else:
     distort.to(DEVICE)
     ReconstructionModel = nets.ReconstructionModelResnet
 
-ReconstructionModel = debug(ReconstructionModel)
-
 
 def fig_path_fmt(*name_args, filetype="png"):
     if args.save_run:
@@ -335,6 +333,7 @@ for method, loss_fn in methods:
         in_channels = target_dataset.input_shape[0]
         out_channels = source_dataset.input_shape[0]
         reconstruct = ReconstructionModel(in_channels, out_channels)
+        reconstruct = debug(reconstruct)
     else:
         reconstruct = ReconstructionModel(args, input_shape, n_dims, n_classes)
 
