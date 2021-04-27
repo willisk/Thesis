@@ -9,6 +9,9 @@ import torch
 import torch.nn as nn
 # from torch.optim.lr_scheduler import ReduceLROnPlateau
 
+from torch.nn.functional import pad
+from torchvision.transforms.functional import crop
+
 import matplotlib.pyplot as plt
 # plt.style.use('default')
 import numpy as np
@@ -137,7 +140,10 @@ if 'SVHN' in args.dataset:
     DATA_A, _, _ = get_data_loaders(source_dataset)
     _, DATA_B, DATA_C = get_data_loaders(target_dataset)
 
-    input_shape = target_dataset.input_shape
+    target_input_shape = target_dataset.input_shape
+    source_input_shape = source_dataset.input_shape
+
+    input_shape = target_input_shape
     n_dims = target_dataset.n_dims
     n_classes = source_dataset.n_classes
 
@@ -334,7 +340,13 @@ for method, loss_fn in methods:
     reconstruct.to(DEVICE)
 
     def invert_fn(inputs):
-        return reconstruct(distort(inputs))
+        distorted_inputs = distort(inputs)
+        if args.dataset == 'SVHN_MNIST':
+            distorted_inputs = pad(distorted_inputs, (4, 4, 4, 4))
+        reconstructed_inputs = reconstruct(distorted_inputs)
+        if args.dataset == 'MNIST_SVHN':
+            reconstructed_inputs = crop(reconstructed_inputs, 4, 4, 28, 28)
+        return reconstructed_inputs
 
     def data_loss_fn(data):
         inputs, labels = data
@@ -366,8 +378,6 @@ for method, loss_fn in methods:
             return
         if args.show_after > 0 and epoch % args.show_after == 0:
             print(f"\nepoch {epoch}:", flush=True)
-            debug(show_batch)
-            debug(distort(show_batch)[:10])
             utility.im_show(invert_fn(show_batch[:10]), fig_path_fmt(
                 f"{method}_epoch_{epoch}"), scale_each=SCALE_EACH_IM)
 
