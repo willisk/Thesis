@@ -715,12 +715,14 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
                               key=lambda e: order[e[0]] if e[0] in order else e[0])
 
     scaled = ['accuracy', 'SSIM', 'HaarPsi']
-    vals = np.ma.masked_invalid(np.vstack(
-        [metrics[k].ffill().values[a:b] for k in metrics if k.split(']')[-1].strip() not in scaled]))
-    vals_m = sgm(vals, axis=1, keepdims=True)
-    vals_s = np.sqrt(((vals - vals_m)**2).mean(axis=1))
-    y_max = min(vals.max(), max(vals_m.squeeze() + vals_s))
-    y_min = max(vals.min(), min(vals_m.squeeze() - vals_s))
+    unscaled = [k for k in metrics if k.split(']')[-1].strip() not in scaled]
+    if len(unscaled) > 0:
+        vals = np.ma.masked_invalid(np.vstack(
+            [metrics[k].ffill().values[a:b] for k in metrics if k in unscaled]))
+        vals_m = sgm(vals, axis=1, keepdims=True)
+        vals_s = np.sqrt(((vals - vals_m)**2).mean(axis=1))
+        y_max = min(vals.max(), max(vals_m.squeeze() + vals_s))
+        y_min = max(vals.min(), min(vals_m.squeeze() - vals_s))
 
     plt.figure(**kwargs)
     num_plots = len(metrics)
@@ -760,9 +762,10 @@ def plot_metrics(metrics, title='metrics', fig_path=None, step_start=1, plot_ran
                       label=label,
                       color=color)
 
-    buffer = 0.1 * (y_max - y_min)
-    buffer = 0
-    main_ax.set_ylim([y_min - buffer, y_max + buffer])
+    if len(unscaled) > 0:
+        buffer = 0.1 * (y_max - y_min)
+        buffer = 0
+        main_ax.set_ylim([y_min - buffer, y_max + buffer])
 
     if smoothing:
         title = f"{title} (smoothing={smoothing})"
