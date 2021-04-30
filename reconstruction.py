@@ -211,6 +211,20 @@ if verification_net:
 print()
 
 # ======= Reconstruction/Distortion Model =======
+
+
+def rbg_to_luminance(rgb):
+    return (
+        0.2126 * rgb[:, [0], ...]
+        + 0.7152 * rgb[:, [1], ...]
+        + 0.0722 * rgb[:, [2], ...]
+    )
+
+
+def gray_to_rgb(gray):
+    return torch.cat([gray, ] * 3, dim=1)
+
+
 if 'SVHN' in args.dataset:
     if args.dataset == 'SVHN_MNIST':
         distort = gray_to_rgb
@@ -443,18 +457,6 @@ for method, loss_fn in methods:
 
 
 baseline = defaultdict(dict)
-
-
-def rbg_to_luminance(rgb):
-    return (
-        0.2126 * rgb[:, [0], ...]
-        + 0.7152 * rgb[:, [1], ...]
-        + 0.0722 * rgb[:, [2], ...]
-    )
-
-
-def gray_to_rgb(gray):
-    return torch.cat([gray, ] * 3, dim=1)
 
 
 accuracy_A = utility.net_accuracy(net, DATA_A)
