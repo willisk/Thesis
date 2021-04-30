@@ -253,13 +253,11 @@ if not args.silent and args.dataset != 'GMM':
     utility.im_show(distort(show_batch[:10]), fig_path_fmt("distorted"), scale_each=SCALE_EACH_IM)
 
 
-Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
-
-
 @torch.no_grad()
-def iqa_metrics(data_loader, transform):
+def iqa_metrics(data_loader, transform=None):
     metrics = {}
     if not 'SVHN' in args.dataset:
+        Id_mat = torch.eye(n_dims, device=DEVICE).reshape(-1, *input_shape)
         metrics['l2-err'] = ((transform(Id_mat) - Id_mat).norm() / Id_mat.norm()).item()
 
     if args.dataset == 'CIFAR10' or args.dataset == 'MNIST':
@@ -444,40 +442,57 @@ for method, loss_fn in methods:
 baseline = defaultdict(dict)
 
 
+def rbg_to_luminance(rgb):
+    return (
+        0.2126 * rgb[:, [0], ...]
+        + 0.7152 * rgb[:, [1], ...]
+        + 0.0722 * rgb[:, [2], ...]
+    )
+
+
+def gray_to_rgb(gray):
+    return torch.cat([gray, ] * 3, dim=1)
+
+
+inputs_pre_fn = distort
+if args.dataset == 'SVHN_MNIST':
+    inputs_pre_fn = rbg_to_luminance
+elif args.dataset == 'MNIST_SVHN':
+    inputs_pre_fn = gray_to_rgb
+
 accuracy_A = utility.net_accuracy(net, DATA_A)
 accuracy_B = utility.net_accuracy(net, DATA_B) if 'SVHN' not in args.dataset else '-'
 accuracy_C = utility.net_accuracy(net, DATA_C) if 'SVHN' not in args.dataset else '-'
 
-accuracy_B_pert = utility.net_accuracy(net, DATA_B, inputs_pre_fn=distort) if 'SVHN' not in args.dataset else '-'
-accuracy_C_pert = utility.net_accuracy(net, DATA_C, inputs_pre_fn=distort) if 'SVHN' not in args.dataset else '-'
+accuracy_B_pert = utility.net_accuracy(net, DATA_B, inputs_pre_fn=distort)
+accuracy_C_pert = utility.net_accuracy(net, DATA_C, inputs_pre_fn=distort)
 
 
 if verification_net:
-    accuracy_A_ver = utility.net_accuracy(verification_net, DATA_A) if 'SVHN' not in args.dataset else '-'
+    accuracy_A_ver = utility.net_accuracy(verification_net, DATA_A)
     accuracy_B_ver = utility.net_accuracy(verification_net, DATA_B) if 'SVHN' not in args.dataset else '-'
-    accuracy_C_pert_ver = utility.net_accuracy(
-        verification_net, DATA_C, inputs_pre_fn=distort) if 'SVHN' not in args.dataset else '-'
+    accuracy_C_pert_ver = utility.net_accuracy(verification_net, DATA_C, inputs_pre_fn=distort)
 
 
-baseline['Source A (original)']['acc'] = accuracy_B
-baseline['Source A (original)']['acc(val)'] = accuracy_C
+baseline['Target B (original)']['acc'] = accuracy_B
+baseline['Target B (original)']['acc(val)'] = accuracy_C
 
-baseline['Source A (perturbed)']['acc'] = accuracy_B_pert
-baseline['Source A (perturbed)']['acc(val)'] = accuracy_C_pert
+baseline['Target B (perturbed)']['acc'] = accuracy_B_pert
+baseline['Target B (perturbed)']['acc(val)'] = accuracy_C_pert
 
 if verification_net:
-    baseline['Source A (perturbed)']['acc(ver)'] = accuracy_C_pert_ver
-    baseline['Source A (original)']['acc(ver)'] = accuracy_B_ver
-    baseline['Target B']['acc(ver)'] = accuracy_A_ver
+    baseline['Target B (perturbed)']['acc(ver)'] = accuracy_C_pert_ver
+    baseline['Target B (original)']['acc(ver)'] = accuracy_B_ver
+    baseline['Source A']['acc(ver)'] = accuracy_A_ver
 
 for k, v in reversed(sorted(iqa_distort.items())):
-    baseline['Source A (perturbed)'][k] = v
+    baseline['Target B (perturbed)'][k] = v
 
 if args.dataset == 'GMM':
-    baseline['Target B']['c-entropy'] = iqa_metrics(DATA_A, lambda x: x)['c-entropy']
-    baseline['Source A (original)']['c-entropy'] = iqa_metrics(DATA_B, lambda x: x)['c-entropy']
+    baseline['Source A']['c-entropy'] = iqa_metrics(DATA_A, lambda x: x)['c-entropy']
+    baseline['Target B (original)']['c-entropy'] = iqa_metrics(DATA_B, lambda x: x)['c-entropy']
 
-baseline['Target B']['acc'] = accuracy_A
+baseline['Source A']['acc'] = accuracy_A
 
 
 if not args.silent:

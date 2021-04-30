@@ -8,3 +8,7 @@ generated-members=numpy.*, torch.*, self.*
 [MESSAGES CONTROL]
 
 disable=not-callable
+
+[FORMAT]
+
+max-line-length=120
