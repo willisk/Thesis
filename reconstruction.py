@@ -455,9 +455,9 @@ def gray_to_rgb(gray):
 
 
 if args.dataset == 'SVHN_MNIST':
-    distort = rbg_to_luminance
-elif args.dataset == 'MNIST_SVHN':
     distort = gray_to_rgb
+elif args.dataset == 'MNIST_SVHN':
+    distort = rbg_to_luminance
 
 accuracy_A = utility.net_accuracy(net, DATA_A)
 accuracy_B = utility.net_accuracy(net, DATA_B) if 'SVHN' not in args.dataset else '-'
