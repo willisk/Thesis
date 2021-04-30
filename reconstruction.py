@@ -211,19 +211,21 @@ if verification_net:
 print()
 
 # ======= Reconstruction/Distortion Model =======
-if args.dataset == 'GMM':
-    distort = nets.DistortionModelAffine(args.r_distort_level, n_dims)
-    distort.eval()
-    distort.to(DEVICE)
-    ReconstructionModel = nets.ReconstructionModelAffine
-elif 'SVHN' in args.dataset:
-    def distort(x): return x
+if 'SVHN' in args.dataset:
+    if args.dataset == 'SVHN_MNIST':
+        distort = gray_to_rgb
+    elif args.dataset == 'MNIST_SVHN':
+        distort = rbg_to_luminance
     ReconstructionModel = nets.ReconstructionModelUnet
 else:
-    distort = nets.DistortionModelConv(args.r_distort_level, input_shape)
+    if args.dataset == 'GMM':
+        distort = nets.DistortionModelAffine(args.r_distort_level, n_dims)
+        ReconstructionModel = nets.ReconstructionModelAffine
+    else:
+        distort = nets.DistortionModelConv(args.r_distort_level, input_shape)
+        ReconstructionModel = nets.ReconstructionModelResnet
     distort.eval()
     distort.to(DEVICE)
-    ReconstructionModel = nets.ReconstructionModelResnet
 
 
 def fig_path_fmt(*name_args, filetype="png"):
@@ -338,12 +340,13 @@ for method, loss_fn in methods:
     reconstruct.to(DEVICE)
 
     def invert_fn(inputs):
-        distorted_inputs = distort(inputs)
+        if not 'SVHN' in args.dataset:
+            inputs = distort(inputs)
         if args.dataset == 'SVHN_MNIST':
-            distorted_inputs = pad(distorted_inputs, (2, 2, 2, 2))
-        reconstructed_inputs = reconstruct(distorted_inputs)
+            inputs = pad(inputs, (2, 2, 2, 2))
+        inputs = reconstruct(inputs)
         if args.dataset == 'MNIST_SVHN':
-            reconstructed_inputs = crop(reconstructed_inputs, 2, 2, 28, 28)
+            inputs = crop(inputs, 2, 2, 28, 28)
         return reconstructed_inputs
 
     def data_loss_fn(data):
@@ -453,11 +456,6 @@ def rbg_to_luminance(rgb):
 def gray_to_rgb(gray):
     return torch.cat([gray, ] * 3, dim=1)
 
-
-if args.dataset == 'SVHN_MNIST':
-    distort = gray_to_rgb
-elif args.dataset == 'MNIST_SVHN':
-    distort = rbg_to_luminance
 
 accuracy_A = utility.net_accuracy(net, DATA_A)
 accuracy_B = utility.net_accuracy(net, DATA_B) if 'SVHN' not in args.dataset else '-'
