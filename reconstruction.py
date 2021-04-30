@@ -361,7 +361,7 @@ for method, loss_fn in methods:
         inputs = reconstruct(inputs)
         if args.dataset == 'MNIST_SVHN':
             inputs = crop(inputs, 2, 2, 28, 28)
-        return reconstructed_inputs
+        return inputs
 
     def data_loss_fn(data):
         inputs, labels = data
