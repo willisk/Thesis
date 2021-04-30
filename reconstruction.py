@@ -460,8 +460,8 @@ baseline = defaultdict(dict)
 
 
 accuracy_A = utility.net_accuracy(net, DATA_A)
-accuracy_B = utility.net_accuracy(net, DATA_B) if 'SVHN' not in args.dataset else '-'
-accuracy_C = utility.net_accuracy(net, DATA_C) if 'SVHN' not in args.dataset else '-'
+accuracy_B = utility.net_accuracy(net, DATA_B) if 'SVHN' not in args.dataset else 0
+accuracy_C = utility.net_accuracy(net, DATA_C) if 'SVHN' not in args.dataset else 0
 
 accuracy_B_pert = utility.net_accuracy(net, DATA_B, inputs_pre_fn=distort)
 accuracy_C_pert = utility.net_accuracy(net, DATA_C, inputs_pre_fn=distort)
@@ -469,7 +469,7 @@ accuracy_C_pert = utility.net_accuracy(net, DATA_C, inputs_pre_fn=distort)
 
 if verification_net:
     accuracy_A_ver = utility.net_accuracy(verification_net, DATA_A)
-    accuracy_B_ver = utility.net_accuracy(verification_net, DATA_B) if 'SVHN' not in args.dataset else '-'
+    accuracy_B_ver = utility.net_accuracy(verification_net, DATA_B) if 0 not in args.dataset else '-'
     accuracy_C_pert_ver = utility.net_accuracy(verification_net, DATA_C, inputs_pre_fn=distort)
 
 
