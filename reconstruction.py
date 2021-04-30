@@ -454,11 +454,10 @@ def gray_to_rgb(gray):
     return torch.cat([gray, ] * 3, dim=1)
 
 
-inputs_pre_fn = distort
 if args.dataset == 'SVHN_MNIST':
-    inputs_pre_fn = rbg_to_luminance
+    distort = rbg_to_luminance
 elif args.dataset == 'MNIST_SVHN':
-    inputs_pre_fn = gray_to_rgb
+    distort = gray_to_rgb
 
 accuracy_A = utility.net_accuracy(net, DATA_A)
 accuracy_B = utility.net_accuracy(net, DATA_B) if 'SVHN' not in args.dataset else '-'
