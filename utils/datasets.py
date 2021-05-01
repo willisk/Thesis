@@ -140,8 +140,8 @@ class MNIST(Dataset):
         return model_path, resnet
 
     def verification_net(self):
-        resnet = nets.ResNet9(1, self.n_classes)
-        model_path = os.path.join(self.data_dir, "net_resnet9.pt")
+        resnet = nets.ResNet20(1, self.n_classes)
+        model_path = os.path.join(self.data_dir, "net_resnet20_ver.pt")
         return model_path, resnet
 
 
@@ -176,7 +176,7 @@ class SVHN(Dataset):
 
     def verification_net(self):
         resnet = nets.ResNet20(3, self.n_classes)
-        model_path = os.path.join(self.data_dir, "net_resnet20.pt")
+        model_path = os.path.join(self.data_dir, "net_resnet20_ver.pt")
         return model_path, resnet
 
 

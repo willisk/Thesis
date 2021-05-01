@@ -63,7 +63,7 @@ parser.add_argument("-f_crit", type=float, default=1)
 parser.add_argument("-f_stats", type=float, default=10)
 parser.add_argument("-size_A", type=int, default=-1)
 parser.add_argument("-size_B", type=int, default=64)
-parser.add_argument("-size_C", type=int, default=1024)
+parser.add_argument("-size_C", type=int, default=2048)
 parser.add_argument("-show_after", type=int, default=50)
 parser.add_argument("-r_distort_level", type=float, default=0.3)
 parser.add_argument("-r_block_depth", type=int, default=4)
@@ -458,10 +458,10 @@ for method, loss_fn in methods:
 
 baseline = defaultdict(dict)
 
-
 accuracy_A = utility.net_accuracy(net, DATA_A)
-accuracy_B = utility.net_accuracy(net, DATA_B) if 'SVHN' not in args.dataset else 0
-accuracy_C = utility.net_accuracy(net, DATA_C) if 'SVHN' not in args.dataset else 0
+if 'SVHN' not in args.dataset:
+    accuracy_B = utility.net_accuracy(net, DATA_B)
+    accuracy_C = utility.net_accuracy(net, DATA_C)
 
 accuracy_B_pert = utility.net_accuracy(net, DATA_B, inputs_pre_fn=distort)
 accuracy_C_pert = utility.net_accuracy(net, DATA_C, inputs_pre_fn=distort)
@@ -469,7 +469,8 @@ accuracy_C_pert = utility.net_accuracy(net, DATA_C, inputs_pre_fn=distort)
 
 if verification_net:
     accuracy_A_ver = utility.net_accuracy(verification_net, DATA_A)
-    accuracy_B_ver = utility.net_accuracy(verification_net, DATA_B) if 'SVHN' not in args.dataset else 0
+    if 'SVHN' not in args.dataset:
+        accuracy_B_ver = utility.net_accuracy(verification_net, DATA_B)
     accuracy_C_pert_ver = utility.net_accuracy(verification_net, DATA_C, inputs_pre_fn=distort)
 
 
