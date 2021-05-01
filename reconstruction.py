@@ -462,9 +462,13 @@ accuracy_A = utility.net_accuracy(net, DATA_A)
 if 'SVHN' not in args.dataset:
     accuracy_B = utility.net_accuracy(net, DATA_B)
     accuracy_C = utility.net_accuracy(net, DATA_C)
+    baseline['Target B (original)']['acc'] = accuracy_B
+    baseline['Target B (original)']['acc(val)'] = accuracy_C
 
 accuracy_B_pert = utility.net_accuracy(net, DATA_B, inputs_pre_fn=distort)
 accuracy_C_pert = utility.net_accuracy(net, DATA_C, inputs_pre_fn=distort)
+baseline['Target B (perturbed)']['acc'] = accuracy_B_pert
+baseline['Target B (perturbed)']['acc(val)'] = accuracy_C_pert
 
 
 if verification_net:
@@ -473,16 +477,9 @@ if verification_net:
         accuracy_B_ver = utility.net_accuracy(verification_net, DATA_B)
     accuracy_C_pert_ver = utility.net_accuracy(verification_net, DATA_C, inputs_pre_fn=distort)
 
-
-baseline['Target B (original)']['acc'] = accuracy_B
-baseline['Target B (original)']['acc(val)'] = accuracy_C
-
-baseline['Target B (perturbed)']['acc'] = accuracy_B_pert
-baseline['Target B (perturbed)']['acc(val)'] = accuracy_C_pert
-
-if verification_net:
     baseline['Target B (perturbed)']['acc(ver)'] = accuracy_C_pert_ver
-    baseline['Target B (original)']['acc(ver)'] = accuracy_B_ver
+    if 'SVHN' not in args.dataset:
+        baseline['Target B (original)']['acc(ver)'] = accuracy_B_ver
     baseline['Source A']['acc(ver)'] = accuracy_A_ver
 
 for k, v in reversed(sorted(iqa_distort.items())):
